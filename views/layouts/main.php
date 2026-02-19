@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= isset($pageTitle) ? \Hillmeet\Support\e($pageTitle) . ' — ' : '' ?>Hillmeet</title>
+  <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/tokens.css') ?>">
+  <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/base.css') ?>">
+  <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/components.css') ?>">
+  <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/app.css') ?>">
+</head>
+<body>
+  <header class="app-header">
+    <div class="container">
+      <a href="<?= \Hillmeet\Support\url('/') ?>" class="app-logo">Hillmeet</a>
+      <nav class="app-nav">
+        <?php if (!empty($_SESSION['user'])): ?>
+          <a href="<?= \Hillmeet\Support\url('/') ?>">Home</a>
+          <a href="<?= \Hillmeet\Support\url('/poll/new') ?>">Create poll</a>
+          <a href="<?= \Hillmeet\Support\url('/calendar') ?>">Calendar</a>
+          <span class="muted" style="font-size:var(--text-sm);"><?= \Hillmeet\Support\e($_SESSION['user']->email ?? '') ?></span>
+          <a href="<?= \Hillmeet\Support\url('/auth/signout') ?>">Sign out</a>
+        <?php else: ?>
+          <a href="<?= \Hillmeet\Support\url('/auth/login') ?>">Sign in</a>
+        <?php endif; ?>
+      </nav>
+    </div>
+  </header>
+  <main class="main">
+    <div class="container">
+      <?= $content ?? '' ?>
+    </div>
+  </main>
+  <script src="<?= \Hillmeet\Support\url('/assets/js/app.js') ?>"></script>
+  <script src="<?= \Hillmeet\Support\url('/assets/js/progressive.js') ?>"></script>
+</body>
+</html>

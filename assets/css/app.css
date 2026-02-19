@@ -1,0 +1,261 @@
+/* App-specific layout and screens */
+
+/* Header */
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) 0;
+}
+
+.app-header .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.app-header a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.app-header a:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.app-logo {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* Main content */
+.main {
+  padding: var(--space-6) 0;
+  min-height: calc(100vh - 60px);
+}
+
+/* Auth pages */
+.auth-page {
+  max-width: 24rem;
+  margin: 0 auto;
+  padding-top: var(--space-8);
+}
+
+.auth-page h1 {
+  margin-bottom: var(--space-2);
+}
+
+.auth-page .card {
+  margin-top: var(--space-5);
+}
+
+.auth-page .btn-primary {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Home */
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.poll-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.poll-list li {
+  margin-bottom: var(--space-3);
+}
+
+.poll-list a {
+  display: block;
+  padding: var(--space-4);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+
+.poll-list a:hover {
+  background: var(--card-2);
+  border-color: var(--accent);
+  text-decoration: none;
+}
+
+/* Poll editor steps */
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.steps a,
+.steps span {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.steps a:hover {
+  color: var(--text);
+  background: var(--card);
+}
+
+.steps .active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.steps .done {
+  background: var(--card-2);
+  color: var(--text);
+}
+
+/* Poll view: list/grid */
+.poll-options-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.poll-view-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.poll-view-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+.poll-view-grid .option-card {
+  padding: var(--space-3);
+}
+
+.option-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.option-card .vote-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* Results section */
+.results-section {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.results-section summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+  list-style: none;
+}
+
+.results-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.results-section summary::before {
+  content: '▶';
+  display: inline-block;
+  margin-right: var(--space-2);
+  transition: transform var(--dur-1) var(--ease);
+}
+
+.results-section[open] summary::before {
+  transform: rotate(90deg);
+}
+
+/* Finalize panel */
+.finalize-panel {
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.finalize-panel h3 {
+  margin-bottom: var(--space-3);
+}
+
+/* Calendar settings */
+.calendar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.calendar-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+}
+
+/* Error page */
+.error-page {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.error-page h1 {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-2);
+}
+
+.error-page p {
+  color: var(--muted);
+  margin-bottom: var(--space-5);
+}

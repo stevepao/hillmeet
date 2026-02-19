@@ -1,0 +1,29 @@
+# Config with secrets
+config/config.php
+.env
+
+# Composer
+/vendor/
+composer.lock
+composer.phar
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+*.log
+/tmp/
+/temp/
+
+# PHPUnit
+phpunit.xml
+.phpunit.result.cache
+coverage/

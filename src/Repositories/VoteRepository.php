@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Hillmeet\Repositories;
+
+use Hillmeet\Support\Database;
+use PDO;
+
+final class VoteRepository
+{
+    /** @return 'yes'|'maybe'|'no'|null */
+    public function getVote(int $pollOptionId, int $userId): ?string
+    {
+        $stmt = Database::get()->prepare("SELECT vote FROM votes WHERE poll_option_id = ? AND user_id = ?");
+        $stmt->execute([$pollOptionId, $userId]);
+        $v = $stmt->fetchColumn();
+        return $v !== false ? $v : null;
+    }
+
+    public function setVote(int $pollId, int $pollOptionId, int $userId, string $vote): void
+    {
+        $pdo = Database::get();
+        $stmt = $pdo->prepare("INSERT INTO votes (poll_id, poll_option_id, user_id, vote) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE vote = VALUES(vote), updated_at = NOW()");
+        $stmt->execute([$pollId, $pollOptionId, $userId, $vote]);
+    }
+
+    /** @return array<int, array{yes: int, maybe: int, no: int}> option_id => counts */
+    public function getTotalsByPoll(int $pollId): array
+    {
+        $stmt = Database::get()->prepare("
+            SELECT poll_option_id, vote, COUNT(*) AS cnt
+            FROM votes
+            WHERE poll_id = ?
+            GROUP BY poll_option_id, vote
+        ");
+        $stmt->execute([$pollId]);
+        $out = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $id = (int) $row['poll_option_id'];
+            if (!isset($out[$id])) {
+                $out[$id] = ['yes' => 0, 'maybe' => 0, 'no' => 0];
+            }
+            $out[$id][$row['vote']] = (int) $row['cnt'];
+        }
+        return $out;
+    }
+
+    /** @return array<int, array<int, string>> option_id => [ user_id => vote ] */
+    public function getMatrix(int $pollId): array
+    {
+        $stmt = Database::get()->prepare("SELECT poll_option_id, user_id, vote FROM votes WHERE poll_id = ?");
+        $stmt->execute([$pollId]);
+        $out = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $optId = (int) $row['poll_option_id'];
+            if (!isset($out[$optId])) {
+                $out[$optId] = [];
+            }
+            $out[$optId][(int) $row['user_id']] = $row['vote'];
+        }
+        return $out;
+    }
+
+    /** Weighted score: Works=2, If needed=1, Can't=0. Tiebreak: earliest start. */
+    public function getBestOptionId(int $pollId, array $optionIdsOrdered): ?int
+    {
+        $totals = $this->getTotalsByPoll($pollId);
+        $bestId = null;
+        $bestScore = -1;
+        $bestStart = null;
+        foreach ($optionIdsOrdered as $opt) {
+            $id = is_object($opt) ? $opt->id : (int) $opt;
+            $t = $totals[$id] ?? ['yes' => 0, 'maybe' => 0, 'no' => 0];
+            $score = $t['yes'] * 2 + $t['maybe'];
+            $stmt = Database::get()->prepare("SELECT start_utc FROM poll_options WHERE id = ?");
+            $stmt->execute([$id]);
+            $start = $stmt->fetchColumn();
+            if ($score > $bestScore || ($score === $bestScore && $start !== false && ($bestStart === null || $start < $bestStart))) {
+                $bestScore = $score;
+                $bestId = $id;
+                $bestStart = $start ?: null;
+            }
+        }
+        return $bestId;
+    }
+}

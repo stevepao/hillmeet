@@ -1,0 +1,39 @@
+{
+  "name": "stevepao/hillmeet",
+  "description": "Doodle-like group availability polls with Google Calendar integration",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "ext-openssl": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Hillmeet\\": "src/"
+    },
+    "files": [
+      "src/Support/helpers.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Hillmeet\\Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  },
+  "scripts": {
+    "migrate": "php bin/migrate.php",
+    "seed": "php bin/seed.php",
+    "cron": "php bin/cron.php",
+    "test": "phpunit"
+  }
+}

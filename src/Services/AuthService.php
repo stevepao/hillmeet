@@ -1,0 +1,105 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Hillmeet\Services;
+
+use Hillmeet\Repositories\EmailLoginPinRepository;
+use Hillmeet\Repositories\UserRepository;
+use Hillmeet\Support\AuditLog;
+use Hillmeet\Support\Config;
+use Hillmeet\Support\RateLimit;
+
+final class AuthService
+{
+    public function __construct(
+        private UserRepository $userRepo,
+        private EmailLoginPinRepository $pinRepo,
+        private EmailService $emailService
+    ) {}
+
+    /** Verify Google ID token and return user (create if needed). */
+    public function verifyGoogleIdToken(string $idToken): ?object
+    {
+        $clientId = config('google.client_id');
+        if ($clientId === '') {
+            return null;
+        }
+        try {
+            $payload = \Hillmeet\Services\GoogleIdToken::verify($idToken, $clientId);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        if ($payload === null || !isset($payload['sub'], $payload['email'])) {
+            return null;
+        }
+        $googleId = $payload['sub'];
+        $email = $payload['email'];
+        $name = $payload['name'] ?? $email;
+        $avatarUrl = $payload['picture'] ?? null;
+        $user = $this->userRepo->findByGoogleId($googleId);
+        if ($user === null) {
+            $user = $this->userRepo->findByEmail($email);
+            if ($user !== null) {
+                // Link Google to existing email account
+                $pdo = \Hillmeet\Support\Database::get();
+                $stmt = $pdo->prepare("UPDATE users SET google_id = ?, name = ?, avatar_url = ? WHERE id = ?");
+                $stmt->execute([$googleId, $name, $avatarUrl, $user->id]);
+                $user = $this->userRepo->findById($user->id);
+            } else {
+                $user = $this->userRepo->createFromGoogle($email, $name, $googleId, $avatarUrl);
+            }
+        }
+        AuditLog::log('auth.google_login', 'user', (string) $user->id);
+        return $user;
+    }
+
+    /** Send PIN to email. Returns error message or null on success. */
+    public function sendPin(string $email, string $ip): ?string
+    {
+        $key = 'pin_request:' . $ip;
+        if (!RateLimit::check($key, (int) config('rate.pin_request'))) {
+            return 'Too many attempts—please wait a minute and try again.';
+        }
+        $email = strtolower(trim($email));
+        if ($email === '') {
+            return 'Please enter your email.';
+        }
+        $pin = (string) random_int(100000, 999999);
+        $pinHash = password_hash($pin, PASSWORD_DEFAULT);
+        $this->pinRepo->create($email, $pinHash);
+        $this->emailService->sendPinEmail($email, $pin);
+        return null;
+    }
+
+    /** Verify PIN and sign in. Returns error message or null on success (user set in session). */
+    public function verifyPin(string $email, string $pin, string $ip): ?string
+    {
+        $key = 'pin_attempt:' . $ip;
+        if (!RateLimit::check($key, (int) config('rate.pin_attempt'))) {
+            return 'Too many attempts—please wait a minute and try again.';
+        }
+        $email = strtolower(trim($email));
+        $record = $this->pinRepo->findValid($email);
+        if ($record === null) {
+            return 'PIN expired. Request a new one.';
+        }
+        if (!password_verify($pin, $record->pin_hash)) {
+            $this->pinRepo->incrementAttempts((int) $record->id);
+            return "That PIN doesn't look right. Try again.";
+        }
+        $this->pinRepo->invalidate((int) $record->id);
+        $user = $this->userRepo->getOrCreateByEmail($email);
+        $_SESSION['user'] = $user;
+        AuditLog::log('auth.pin_login', 'user', (string) $user->id);
+        return null;
+    }
+
+    public function signOut(): void
+    {
+        if (isset($_SESSION['user']->id)) {
+            AuditLog::log('auth.sign_out', 'user', (string) $_SESSION['user']->id);
+        }
+        unset($_SESSION['user']);
+    }
+}

@@ -1,0 +1,23 @@
+# IONOS / Apache: point document root to this directory (public/)
+# All requests go through index.php except existing files
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Allow existing files and directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Route everything else to index.php
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Security
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+# Disable directory listing
+Options -Indexes

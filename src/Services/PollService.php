@@ -1,0 +1,169 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Hillmeet\Services;
+
+use Hillmeet\Models\Poll;
+use Hillmeet\Models\PollOption;
+use Hillmeet\Repositories\PollInviteRepository;
+use Hillmeet\Repositories\PollParticipantRepository;
+use Hillmeet\Repositories\PollRepository;
+use Hillmeet\Repositories\VoteRepository;
+use Hillmeet\Support\AuditLog;
+use Hillmeet\Support\RateLimit;
+
+final class PollService
+{
+    public function __construct(
+        private PollRepository $pollRepo,
+        private VoteRepository $voteRepo,
+        private PollParticipantRepository $participantRepo,
+        private PollInviteRepository $inviteRepo,
+        private EmailService $emailService
+    ) {}
+
+    public function createPoll(int $organizerId, array $input, string $ip): array
+    {
+        if (!RateLimit::check('poll_create:' . $ip, (int) config('rate.poll_create'))) {
+            return ['error' => 'Too many polls created. Please wait a minute.'];
+        }
+        $title = trim($input['title'] ?? '');
+        if ($title === '') {
+            return ['error' => 'Please enter a title.'];
+        }
+        $timezone = trim($input['timezone'] ?? 'UTC') ?: 'UTC';
+        $slug = $this->pollRepo->generateSlug();
+        $secret = bin2hex(random_bytes(16));
+        $secretHash = password_hash($secret, PASSWORD_DEFAULT);
+        $poll = $this->pollRepo->create(
+            $organizerId,
+            $slug,
+            $secretHash,
+            $title,
+            trim($input['description'] ?? '') ?: null,
+            trim($input['location'] ?? '') ?: null,
+            $timezone
+        );
+        AuditLog::log('poll.create', 'poll', (string) $poll->id, ['slug' => $slug], $organizerId, $ip);
+        return ['poll' => $poll, 'secret' => $secret];
+    }
+
+    public function addTimeOptions(int $pollId, array $options): array
+    {
+        $existing = $this->pollRepo->getOptions($pollId);
+        $sortOrder = count($existing);
+        foreach ($options as $opt) {
+            $start = $opt['start_utc'] ?? null;
+            $end = $opt['end_utc'] ?? null;
+            if ($start && $end) {
+                $this->pollRepo->addOption($pollId, $start, $end, $opt['label'] ?? null, $sortOrder++);
+            }
+        }
+        return [];
+    }
+
+    public function generateTimeOptions(string $timezone, string $dateFrom, string $dateTo, array $daysOfWeek, string $startTime, string $endTime, int $durationMinutes, int $gapMinutes): array
+    {
+        $tz = new \DateTimeZone($timezone);
+        $from = new \DateTimeImmutable($dateFrom . ' ' . $startTime, $tz);
+        $to = new \DateTimeImmutable($dateTo . ' ' . $endTime, $tz);
+        $duration = new \DateInterval('PT' . $durationMinutes . 'M');
+        $gap = new \DateInterval('PT' . $gapMinutes . 'M');
+        $slots = [];
+        $current = $from;
+        while ($current <= $to) {
+            $dow = (int) $current->format('w'); // 0=Sun, 6=Sat
+            if (in_array($dow, $daysOfWeek, true)) {
+                $endSlot = $current->add($duration);
+                if ($endSlot->format('H:i') <= $endTime || $endSlot <= $to) {
+                    $slots[] = [
+                        'start_utc' => $current->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+                        'end_utc' => $endSlot->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+                        'label' => null,
+                    ];
+                }
+            }
+            $current = $current->add($duration)->add($gap);
+            if ($current->format('H:i') < $startTime) {
+                $current = new \DateTimeImmutable($current->format('Y-m-d') . ' ' . $startTime, $tz);
+            }
+            if ($current > $to) {
+                $current = $current->modify('+1 day')->setTime((int) substr($startTime, 0, 2), (int) substr($startTime, 3, 2));
+            }
+        }
+        return $slots;
+    }
+
+    public function vote(int $pollId, int $optionId, int $userId, string $vote, string $ip): ?string
+    {
+        if (!in_array($vote, ['yes', 'maybe', 'no'], true)) {
+            return 'Invalid vote.';
+        }
+        $poll = $this->pollRepo->findById($pollId);
+        if ($poll === null || $poll->isLocked()) {
+            return 'Poll not found or locked.';
+        }
+        if (!RateLimit::check('vote:' . $userId . ':' . $pollId, (int) config('rate.vote'))) {
+            return 'Too many vote changes. Wait a moment.';
+        }
+        $options = $this->pollRepo->getOptions($pollId);
+        $optionIds = array_column($options, 'id');
+        if (!in_array($optionId, $optionIds, true)) {
+            return 'Invalid option.';
+        }
+        $this->participantRepo->add($pollId, $userId);
+        $this->voteRepo->setVote($pollId, $optionId, $userId, $vote);
+        return null;
+    }
+
+    public function lockPoll(int $pollId, int $optionId, int $organizerId): ?string
+    {
+        $poll = $this->pollRepo->findById($pollId);
+        if ($poll === null || !$poll->isOrganizer($organizerId) || $poll->isLocked()) {
+            return 'Not allowed or already locked.';
+        }
+        $options = $this->pollRepo->getOptions($pollId);
+        if (!in_array($optionId, array_column($options, 'id'), true)) {
+            return 'Invalid option.';
+        }
+        $this->pollRepo->lockPoll($pollId, $optionId);
+        AuditLog::log('poll.lock', 'poll', (string) $pollId, ['option_id' => $optionId], $organizerId);
+        return null;
+    }
+
+    public function sendInvites(int $pollId, array $emails, int $organizerId, string $pollUrl, string $ip): ?string
+    {
+        $poll = $this->pollRepo->findById($pollId);
+        if ($poll === null || !$poll->isOrganizer($organizerId)) {
+            return 'Poll not found.';
+        }
+        if (!RateLimit::check('invite:' . $ip, (int) config('rate.invite'))) {
+            return 'Too many invite sends. Wait a minute.';
+        }
+        foreach ($emails as $email) {
+            $email = strtolower(trim($email));
+            if ($email === '') {
+                continue;
+            }
+            $this->inviteRepo->add($pollId, $email);
+            $this->emailService->sendPollInvite($email, $poll->title, $pollUrl);
+        }
+        return null;
+    }
+
+    /** @return array{totals: array, matrix: array, best_option_id: int|null, options: PollOption[]} */
+    public function getResults(Poll $poll): array
+    {
+        $options = $this->pollRepo->getOptions($poll->id);
+        $totals = $this->voteRepo->getTotalsByPoll($poll->id);
+        $matrix = $this->voteRepo->getMatrix($poll->id);
+        $bestOptionId = $this->voteRepo->getBestOptionId($poll->id, $options);
+        return [
+            'totals' => $totals,
+            'matrix' => $matrix,
+            'best_option_id' => $bestOptionId,
+            'options' => $options,
+        ];
+    }
+}

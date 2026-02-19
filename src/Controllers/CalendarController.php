@@ -1,0 +1,103 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Hillmeet\Controllers;
+
+use Hillmeet\Repositories\FreebusyCacheRepository;
+use Hillmeet\Repositories\GoogleCalendarSelectionRepository;
+use Hillmeet\Repositories\OAuthConnectionRepository;
+use Hillmeet\Services\GoogleCalendarService;
+use Hillmeet\Support\config;
+use Hillmeet\Support\current_user;
+use Hillmeet\Support\url;
+
+final class CalendarController
+{
+    public function settings(): void
+    {
+        \Hillmeet\Middleware\RequireAuth::check();
+        $userId = (int) current_user()->id;
+        $oauthRepo = new OAuthConnectionRepository();
+        $selectionRepo = new GoogleCalendarSelectionRepository();
+        $connected = $oauthRepo->hasConnection($userId);
+        $calendars = [];
+        $calendarService = null;
+        if ($connected) {
+            $calendarService = new GoogleCalendarService($oauthRepo, $selectionRepo, new FreebusyCacheRepository());
+            $list = $calendarService->getCalendarList($userId);
+            $saved = $selectionRepo->getForUser($userId);
+            $savedById = [];
+            foreach ($saved as $s) {
+                $savedById[$s->calendar_id] = $s;
+            }
+            foreach ($list as $cal) {
+                $s = $savedById[$cal['id']] ?? null;
+                $calendars[] = [
+                    'id' => $cal['id'],
+                    'summary' => $cal['summary'],
+                    'selected' => $s ? (bool) $s->selected : true,
+                    'tentative_as_busy' => $s ? (bool) $s->tentative_as_busy : true,
+                ];
+            }
+        }
+        $authUrl = $connected ? '' : (new GoogleCalendarService($oauthRepo, $selectionRepo, new FreebusyCacheRepository()))->getAuthUrl('calendar');
+        $cacheTtl = config('freebusy_cache_ttl', 600);
+        require dirname(__DIR__, 2) . '/views/calendar/settings.php';
+    }
+
+    public function connect(): void
+    {
+        \Hillmeet\Middleware\RequireAuth::check();
+        $calendarService = new GoogleCalendarService(
+            new OAuthConnectionRepository(),
+            new GoogleCalendarSelectionRepository(),
+            new FreebusyCacheRepository()
+        );
+        $url = $calendarService->getAuthUrl('calendar');
+        header('Location: ' . $url);
+        exit;
+    }
+
+    public function callback(): void
+    {
+        \Hillmeet\Middleware\RequireAuth::check();
+        $code = $_GET['code'] ?? '';
+        if ($code === '') {
+            header('Location: ' . url('/calendar'));
+            exit;
+        }
+        $calendarService = new GoogleCalendarService(
+            new OAuthConnectionRepository(),
+            new GoogleCalendarSelectionRepository(),
+            new FreebusyCacheRepository()
+        );
+        $calendarService->exchangeCodeForTokens($code, (int) current_user()->id);
+        header('Location: ' . url('/calendar'));
+        exit;
+    }
+
+    public function save(): void
+    {
+        \Hillmeet\Middleware\RequireAuth::check();
+        $userId = (int) current_user()->id;
+        $selectionRepo = new GoogleCalendarSelectionRepository();
+        $calendars = $_POST['calendars'] ?? [];
+        $tentativeAsBusy = !empty($_POST['tentative_as_busy']);
+        $list = [];
+        foreach ($calendars as $id => $cal) {
+            if (is_array($cal) && !empty($cal['id'])) {
+                $list[] = [
+                    'id' => $cal['id'],
+                    'summary' => $cal['summary'] ?? $cal['id'],
+                    'selected' => !empty($cal['selected']),
+                    'tentative_as_busy' => $tentativeAsBusy,
+                ];
+            }
+        }
+        $selectionRepo->saveList($userId, $list);
+        $selectionRepo->setTentativeAsBusy($userId, $tentativeAsBusy);
+        header('Location: ' . url('/calendar'));
+        exit;
+    }
+}
