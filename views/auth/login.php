@@ -14,9 +14,9 @@ $content = ob_start();
   <?php endif; ?>
 
   <div class="card" style="margin-top:var(--space-5);">
-    <div id="google-button-container">
+    <p class="muted" style="margin:0 0 var(--space-3); font-weight:500;">Sign in with Google</p>
+    <div id="google-button-container" style="min-height:2.5rem;">
       <?php if (empty($googleClientId)): ?>
-        <p class="muted" style="margin:0 0 var(--space-2);">Sign in with Google</p>
         <p class="helper" style="margin:0;">Not configured. Set <code>GOOGLE_CLIENT_ID</code> in .env to enable.</p>
       <?php endif; ?>
     </div>
