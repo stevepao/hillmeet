@@ -19,6 +19,7 @@ function env(string $key, mixed $default = null): mixed
  * Does not override existing env vars.
  */
 function loadEnv(string $path): void
+{
     if (!is_readable($path)) {
         return;
     }

@@ -2,6 +2,13 @@
 
 declare(strict_types=1);
 
+// Temporary: add ?debug=1 to any URL to see the actual PHP error (remove in production)
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    error_reporting(E_ALL);
+}
+
 require_once dirname(__DIR__) . '/src/bootstrap.php';
 
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -83,5 +90,14 @@ if ($method === 'POST' && !\Hillmeet\Middleware\CsrfMiddleware::validate()) {
 }
 
 [$class, $action] = $handler;
-$controller = new $class();
-$controller->$action(...$params);
+try {
+    $controller = new $class();
+    $controller->$action(...$params);
+} catch (Throwable $e) {
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo "Application error: " . $e->getMessage() . "\n";
+    echo "File: " . $e->getFile() . " (" . $e->getLine() . ")\n";
+    echo "\nTrace:\n" . $e->getTraceAsString();
+    exit;
+}

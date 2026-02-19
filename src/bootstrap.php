@@ -31,8 +31,6 @@ try {
     header('Content-Type: text/plain; charset=utf-8');
     echo "Setup error: " . $e->getMessage() . "\n";
     echo "File: " . $e->getFile() . " (" . $e->getLine() . ")\n";
-    if (ini_get('display_errors')) {
-        echo "\n" . $e->getTraceAsString();
-    }
+    echo "\nTrace:\n" . $e->getTraceAsString();
     exit;
 }
