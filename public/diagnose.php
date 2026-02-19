@@ -64,5 +64,13 @@ step('5. config() helper', function () {
     }
 });
 
+step('6. Simulate GET /auth/login (AuthController->loginPage)', function () use ($root) {
+    unset($_SESSION['user']);
+    $controller = new \Hillmeet\Controllers\AuthController();
+    ob_start();
+    $controller->loginPage();
+    ob_end_clean();
+});
+
 echo "\n--- Done ---\n";
 echo "\nIf you see FAIL above, copy this entire output and paste it for debugging.\n";
