@@ -1,6 +1,7 @@
 <?php
 $pageTitle = 'Sign in';
 $content = ob_start();
+$showDebug = !empty($_GET['debug']);
 ?>
 <div class="auth-page">
   <h1>Sign in</h1>
@@ -11,6 +12,17 @@ $content = ob_start();
       <?= \Hillmeet\Support\e($_SESSION['auth_error']) ?>
     </div>
     <?php unset($_SESSION['auth_error']); ?>
+  <?php endif; ?>
+
+  <?php if ($showDebug): ?>
+  <div class="card card-2" style="margin-top:var(--space-4); font-size:0.9rem;">
+    <p style="margin:0 0 var(--space-2); font-weight:600;">Sign-in debug</p>
+    <ul style="margin:0; padding-left:1.25rem;">
+      <li><code>GOOGLE_CLIENT_ID</code> set: <?= !empty($googleClientId) ? 'yes' : 'no' ?></li>
+      <li id="google-signin-debug">Client-side: loading… (open Console for details)</li>
+    </ul>
+    <p class="muted" style="margin:var(--space-2) 0 0; font-size:0.85rem;">Remove <code>?debug=1</code> from the URL to hide this.</p>
+  </div>
   <?php endif; ?>
 
   <div class="card" style="margin-top:var(--space-5);">
@@ -27,33 +39,62 @@ $content = ob_start();
 
 <?php if (!empty($googleClientId)): ?>
 <script>
+function hillmeetDebugLog(msg, data) {
+  if (typeof console !== 'undefined' && console.log) console.log('[Hillmeet Google Sign-in] ' + msg, data !== undefined ? data : '');
+}
+function hillmeetSetDebugText(text) {
+  var el = document.getElementById('google-signin-debug');
+  if (el) el.textContent = text;
+}
 function hillmeetRenderGoogleButton(retries) {
   retries = retries || 0;
   var container = document.getElementById('google-button-container');
-  if (!container) return;
-  if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
-    if (retries < 40) setTimeout(function() { hillmeetRenderGoogleButton(retries + 1); }, 50);
+  if (!container) {
+    hillmeetDebugLog('Container #google-button-container not found');
+    hillmeetSetDebugText('Client-side: container not found');
     return;
   }
-  google.accounts.id.initialize({
-    client_id: <?= json_encode($googleClientId) ?>,
-    callback: function(response) {
-      fetch('<?= \Hillmeet\Support\url('/auth/google/token') ?>', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        body: JSON.stringify({ credential: response.credential })
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.redirect) window.location = d.redirect;
-      });
+  if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+    hillmeetDebugLog('GSI not ready yet (attempt ' + (retries + 1) + ')', {
+      google: typeof google,
+      accounts: typeof google !== 'undefined' && google.accounts,
+      id: typeof google !== 'undefined' && google.accounts && !!google.accounts.id
+    });
+    if (retries === 0) hillmeetSetDebugText('Client-side: waiting for GSI…');
+    if (retries < 40) setTimeout(function() { hillmeetRenderGoogleButton(retries + 1); }, 50);
+    else {
+      hillmeetDebugLog('Gave up after 40 retries – GSI may have failed to load (check Network, blockers, or authorized origins)');
+      hillmeetSetDebugText('Client-side: GSI never became ready (check Console & Network)');
     }
-  });
-  container.innerHTML = '';
-  google.accounts.id.renderButton(container, {
-    type: 'standard',
-    theme: 'filled_black',
-    size: 'large',
-    text: 'continue_with'
-  });
+    return;
+  }
+  hillmeetDebugLog('GSI ready, initializing and rendering button');
+  try {
+    google.accounts.id.initialize({
+      client_id: <?= json_encode($googleClientId) ?>,
+      callback: function(response) {
+        fetch('<?= \Hillmeet\Support\url('/auth/google/token') ?>', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          body: JSON.stringify({ credential: response.credential })
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          if (d.redirect) window.location = d.redirect;
+        });
+      }
+    });
+    container.innerHTML = '';
+    google.accounts.id.renderButton(container, {
+      type: 'standard',
+      theme: 'filled_black',
+      size: 'large',
+      text: 'continue_with'
+    });
+    hillmeetDebugLog('renderButton called successfully');
+    hillmeetSetDebugText('Client-side: button rendered');
+  } catch (e) {
+    hillmeetDebugLog('Error during init/render', e);
+    hillmeetSetDebugText('Client-side error: ' + (e && e.message ? e.message : String(e)));
+  }
 }
 </script>
 <script src="https://accounts.google.com/gsi/client?onload=hillmeetRenderGoogleButton" async defer></script>
