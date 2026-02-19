@@ -26,33 +26,37 @@ $content = ob_start();
 </div>
 
 <?php if (!empty($googleClientId)): ?>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-    google.accounts.id.initialize({
-      client_id: <?= json_encode($googleClientId) ?>,
-      callback: function(response) {
-        fetch('<?= \Hillmeet\Support\url('/auth/google/token') ?>', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-          body: JSON.stringify({ credential: response.credential })
-        }).then(function(r) { return r.json(); }).then(function(d) {
-          if (d.redirect) window.location = d.redirect;
-        });
-      }
-    });
-    var container = document.getElementById('google-button-container');
-    container.innerHTML = '';
-    google.accounts.id.renderButton(container, {
-      type: 'standard',
-      theme: 'filled_black',
-      size: 'large',
-      text: 'continue_with'
-    });
+function hillmeetRenderGoogleButton(retries) {
+  retries = retries || 0;
+  var container = document.getElementById('google-button-container');
+  if (!container) return;
+  if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+    if (retries < 40) setTimeout(function() { hillmeetRenderGoogleButton(retries + 1); }, 50);
+    return;
   }
-});
+  google.accounts.id.initialize({
+    client_id: <?= json_encode($googleClientId) ?>,
+    callback: function(response) {
+      fetch('<?= \Hillmeet\Support\url('/auth/google/token') ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ credential: response.credential })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.redirect) window.location = d.redirect;
+      });
+    }
+  });
+  container.innerHTML = '';
+  google.accounts.id.renderButton(container, {
+    type: 'standard',
+    theme: 'filled_black',
+    size: 'large',
+    text: 'continue_with'
+  });
+}
 </script>
+<script src="https://accounts.google.com/gsi/client?onload=hillmeetRenderGoogleButton" async defer></script>
 <?php endif; ?>
 
 <?php
