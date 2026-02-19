@@ -130,7 +130,7 @@ final class AuthController
         }
         $clientId = config('google.client_id');
         $clientSecret = config('google.client_secret');
-        $redirectUri = config('google.redirect_uri');
+        $redirectUri = config('google.redirect_uri') ?: (rtrim((string) config('app.url', ''), '/') . '/auth/google/callback');
         $res = @file_get_contents('https://oauth2.googleapis.com/token', false, stream_context_create([
             'http' => [
                 'method' => 'POST',

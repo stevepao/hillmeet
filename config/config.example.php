@@ -35,7 +35,7 @@ return [
     'google' => [
         'client_id'     => $e('GOOGLE_CLIENT_ID', ''),
         'client_secret' => $e('GOOGLE_CLIENT_SECRET', ''),
-        'redirect_uri'  => $e('GOOGLE_REDIRECT_URI', '') ?: (rtrim((string) $e('APP_URL', ''), '/') . '/auth/google/callback'),
+        'redirect_uri'  => $e('GOOGLE_REDIRECT_URI', ''),
     ],
     'rate' => [
         'pin_request'   => (int) $e('RATE_PIN_REQUEST', 3),

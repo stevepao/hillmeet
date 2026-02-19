@@ -21,7 +21,7 @@ final class GoogleCalendarService
     public function getAuthUrl(string $state): string
     {
         $clientId = config('google.client_id');
-        $redirectUri = config('google.redirect_uri');
+        $redirectUri = config('google.redirect_uri') ?: (rtrim((string) config('app.url', ''), '/') . '/auth/google/callback');
         $scope = urlencode('https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events');
         return "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={$clientId}&redirect_uri=" . urlencode($redirectUri) . "&scope={$scope}&access_type=offline&prompt=consent&state=" . urlencode($state);
     }
@@ -30,7 +30,7 @@ final class GoogleCalendarService
     {
         $clientId = config('google.client_id');
         $clientSecret = config('google.client_secret');
-        $redirectUri = config('google.redirect_uri');
+        $redirectUri = config('google.redirect_uri') ?: (rtrim((string) config('app.url', ''), '/') . '/auth/google/callback');
         $res = @file_get_contents('https://oauth2.googleapis.com/token', false, stream_context_create([
             'http' => [
                 'method' => 'POST',
