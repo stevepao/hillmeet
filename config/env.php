@@ -3,11 +3,22 @@
 declare(strict_types=1);
 
 /**
+ * Get env var (works on IONOS/shared hosts where getenv() can be unreliable).
+ */
+function env(string $key, mixed $default = null): mixed
+{
+    $v = getenv($key);
+    if ($v !== false) {
+        return $v;
+    }
+    return $_ENV[$key] ?? $_SERVER[$key] ?? $default;
+}
+
+/**
  * Load environment from .env file if present.
  * Does not override existing env vars.
  */
 function loadEnv(string $path): void
-{
     if (!is_readable($path)) {
         return;
     }
@@ -22,10 +33,13 @@ function loadEnv(string $path): void
         [$name, $value] = explode('=', $line, 2);
         $name = trim($name);
         $value = trim($value, " \t\"'");
-        if ($name !== '' && getenv($name) === false) {
-            putenv("$name=$value");
-            $_ENV[$name] = $value;
-            $_SERVER[$name] = $value;
+        if ($name !== '') {
+            $existing = getenv($name);
+            if ($existing === false && !isset($_ENV[$name])) {
+                putenv("$name=$value");
+                $_ENV[$name] = $value;
+                $_SERVER[$name] = $value;
+            }
         }
     }
 }

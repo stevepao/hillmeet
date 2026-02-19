@@ -47,6 +47,12 @@ $routes = [
     ],
 ];
 
+// Optional: show deploy check for debugging (remove or restrict in production)
+if (($path === '/deploy-check' || $path === '/deploy-check.php') && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    require dirname(__DIR__) . '/public/deploy-check.php';
+    exit;
+}
+
 $handler = null;
 $params = [];
 foreach ($routes[$method] ?? [] as $route => $target) {
