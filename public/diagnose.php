@@ -1,0 +1,68 @@
+<?php
+/**
+ * Step-by-step diagnostic. Visit https://meet.hillwork.net/diagnose.php
+ * Copy the FULL output and paste it for debugging. Delete this file when done.
+ */
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
+header('Content-Type: text/plain; charset=utf-8');
+
+$root = dirname(__DIR__);
+
+function step($label, $fn) {
+    echo "\n--- $label ---\n";
+    try {
+        $fn();
+        echo "OK\n";
+        return true;
+    } catch (Throwable $e) {
+        echo "FAIL: " . $e->getMessage() . "\n";
+        echo "File: " . $e->getFile() . " (" . $e->getLine() . ")\n";
+        echo $e->getTraceAsString() . "\n";
+        return false;
+    }
+}
+
+echo "PHP " . PHP_VERSION . " (" . PHP_SAPI . ")";
+echo "\nRoot: $root";
+
+step('1. env.php', function () use ($root) {
+    require_once $root . '/config/env.php';
+    if (!function_exists('env')) {
+        throw new Exception('env() not defined after loading env.php');
+    }
+});
+
+step('2. config.php', function () use ($root) {
+    $path = $root . '/config/config.php';
+    if (!is_file($path)) {
+        throw new Exception('config.php not found');
+    }
+    $config = require $path;
+    if (!is_array($config)) {
+        throw new Exception('config did not return array');
+    }
+});
+
+step('3. vendor/autoload.php', function () use ($root) {
+    $path = $root . '/vendor/autoload.php';
+    if (!is_file($path)) {
+        throw new Exception('vendor/autoload.php not found');
+    }
+    require_once $path;
+});
+
+step('4. bootstrap.php (full app init)', function () use ($root) {
+    require_once $root . '/src/bootstrap.php';
+});
+
+step('5. config() helper', function () {
+    $url = \Hillmeet\Support\config('app.url', '');
+    if ($url === null) {
+        throw new Exception('config("app.url") returned null');
+    }
+});
+
+echo "\n--- Done ---\n";
+echo "\nIf you see FAIL above, copy this entire output and paste it for debugging.\n";
