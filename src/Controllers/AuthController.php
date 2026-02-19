@@ -8,6 +8,7 @@ use Hillmeet\Repositories\EmailLoginPinRepository;
 use Hillmeet\Repositories\UserRepository;
 use Hillmeet\Services\AuthService;
 use Hillmeet\Services\EmailService;
+use function Hillmeet\Support\config;
 use function Hillmeet\Support\url;
 
 final class AuthController
