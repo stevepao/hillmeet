@@ -8,6 +8,13 @@ use function Hillmeet\Support\config;
 
 final class EmailService
 {
+    private string $lastError = '';
+
+    public function getLastError(): string
+    {
+        return $this->lastError;
+    }
+
     public function sendPinEmail(string $to, string $pin): bool
     {
         $subject = 'Your Hillmeet sign-in PIN';
@@ -38,8 +45,10 @@ final class EmailService
 
     private function send(string $to, string $subject, string $htmlBody, string $textBody): bool
     {
+        $this->lastError = '';
         $host = config('smtp.host', '');
         if ($host === '') {
+            $this->lastError = 'SMTP not configured: smtp.host is empty. Set SMTP_* in .env.';
             return false;
         }
         $from = config('smtp.from', 'noreply@localhost');
@@ -62,6 +71,7 @@ final class EmailService
             10
         );
         if (!$socket) {
+            $this->lastError = "Connection failed: {$errstr} ({$errno})";
             return false;
         }
         $user = config('smtp.user', '');
@@ -76,6 +86,7 @@ final class EmailService
             $r = $read();
             if (!preg_match('/^[23]\d{2}/', $r)) {
                 $ok = false;
+                $this->lastError = 'SMTP: ' . $r;
             }
             return $r;
         };

@@ -68,7 +68,9 @@ final class AuthService
         $pin = (string) random_int(100000, 999999);
         $pinHash = password_hash($pin, PASSWORD_DEFAULT);
         $this->pinRepo->create($email, $pinHash);
-        $this->emailService->sendPinEmail($email, $pin);
+        if (!$this->emailService->sendPinEmail($email, $pin)) {
+            return 'We couldn\'t send the email. Check SMTP settings in .env (see README) or try again.';
+        }
         return null;
     }
 

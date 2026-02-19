@@ -89,5 +89,23 @@ step('6. Simulate GET /auth/login (AuthController->loginPage)', function () use 
     ob_end_clean();
 });
 
+step('7. Email / SMTP (PIN emails)', function () {
+    $host = \Hillmeet\Support\config('smtp.host', '');
+    echo "SMTP host: " . ($host !== '' ? $host : '(not set – set SMTP_HOST in .env)') . "\n";
+    if ($host === '') {
+        echo "Skipping send test – configure SMTP_* in .env first.\n";
+        return;
+    }
+    $emailService = new \Hillmeet\Services\EmailService();
+    $sent = $emailService->sendPinEmail('diagnose-test@example.com', '123456');
+    if ($sent) {
+        echo "Test send: OK (example.com may not deliver; check your inbox if you use a real address).\n";
+    } else {
+        echo "Test send: FAIL\n";
+        echo "Last error: " . $emailService->getLastError() . "\n";
+        throw new Exception('SMTP test send failed: ' . $emailService->getLastError());
+    }
+});
+
 echo "\n--- Done ---\n";
 echo "\nIf you see FAIL above, copy this entire output and paste it for debugging.\n";
