@@ -16,9 +16,9 @@ use Hillmeet\Repositories\VoteRepository;
 use Hillmeet\Services\GoogleCalendarService;
 use Hillmeet\Services\PollService;
 use Hillmeet\Support\Csrf;
-use Hillmeet\Support\current_user;
-use Hillmeet\Support\e;
-use Hillmeet\Support\url;
+use function Hillmeet\Support\current_user;
+use function Hillmeet\Support\e;
+use function Hillmeet\Support\url;
 
 final class PollController
 {

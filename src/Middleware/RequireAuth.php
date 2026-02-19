@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Hillmeet\Middleware;
 
-use Hillmeet\Support\url;
+use function Hillmeet\Support\url;
 
 final class RequireAuth
 {

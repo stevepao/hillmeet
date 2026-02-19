@@ -8,9 +8,9 @@ use Hillmeet\Repositories\FreebusyCacheRepository;
 use Hillmeet\Repositories\GoogleCalendarSelectionRepository;
 use Hillmeet\Repositories\OAuthConnectionRepository;
 use Hillmeet\Services\GoogleCalendarService;
-use Hillmeet\Support\config;
-use Hillmeet\Support\current_user;
-use Hillmeet\Support\url;
+use function Hillmeet\Support\config;
+use function Hillmeet\Support\current_user;
+use function Hillmeet\Support\url;
 
 final class CalendarController
 {
