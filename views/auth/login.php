@@ -14,7 +14,12 @@ $content = ob_start();
   <?php endif; ?>
 
   <div class="card" style="margin-top:var(--space-5);">
-    <div id="google-button-container"></div>
+    <div id="google-button-container">
+      <?php if (empty($googleClientId)): ?>
+        <p class="muted" style="margin:0 0 var(--space-2);">Sign in with Google</p>
+        <p class="helper" style="margin:0;">Not configured. Set <code>GOOGLE_CLIENT_ID</code> in .env to enable.</p>
+      <?php endif; ?>
+    </div>
     <div class="auth-divider">or</div>
     <a href="<?= \Hillmeet\Support\url('/auth/email') ?>" class="btn btn-secondary" style="width:100%;">Use email instead</a>
   </div>
@@ -37,7 +42,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       }
     });
-    google.accounts.id.renderButton(document.getElementById('google-button-container'), {
+    var container = document.getElementById('google-button-container');
+    container.innerHTML = '';
+    google.accounts.id.renderButton(container, {
       type: 'standard',
       theme: 'filled_black',
       size: 'large',
@@ -46,8 +53,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-<?php else: ?>
-<p class="muted" style="margin-top:var(--space-4);">Google sign-in is not configured. <a href="<?= \Hillmeet\Support\url('/auth/email') ?>">Use email instead</a>.</p>
 <?php endif; ?>
 
 <?php
