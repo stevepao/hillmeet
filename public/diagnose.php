@@ -27,6 +27,15 @@ function step($label, $fn) {
 echo "PHP " . PHP_VERSION . " (" . PHP_SAPI . ")";
 echo "\nRoot: $root";
 
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        echo "\n*** FATAL ERROR (shutdown) ***\n";
+        echo $err['message'] . "\n";
+        echo $err['file'] . " (" . $err['line'] . ")\n";
+    }
+});
+
 step('1. env.php', function () use ($root) {
     require_once $root . '/config/env.php';
     if (!function_exists('env')) {
@@ -65,6 +74,14 @@ step('5. config() helper', function () {
 });
 
 step('6. Simulate GET /auth/login (AuthController->loginPage)', function () use ($root) {
+    $loginView = $root . '/views/auth/login.php';
+    $layout = $root . '/views/layouts/main.php';
+    if (!is_file($loginView)) {
+        throw new Exception("Login view missing: $loginView");
+    }
+    if (!is_file($layout)) {
+        throw new Exception("Layout missing: $layout");
+    }
     unset($_SESSION['user']);
     $controller = new \Hillmeet\Controllers\AuthController();
     ob_start();

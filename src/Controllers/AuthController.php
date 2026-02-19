@@ -179,5 +179,3 @@ function require_auth(): void
         exit;
     }
 }
-
-function config(string $key, $default = null) { return \Hillmeet\Support\config($key, $default); }
