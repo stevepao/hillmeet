@@ -31,7 +31,7 @@ function url(string $path, array $query = []): string
 /**
  * Get config value by dot key.
  */
-function config(string $key, mixed $default = null): mixed
+function config(string $key, $default = null)
 {
     static $config = null;
     if ($config === null) {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * Get env var (works on IONOS/shared hosts where getenv() can be unreliable).
  */
-function env(string $key, mixed $default = null): mixed
+function env(string $key, $default = null)
 {
     $v = getenv($key);
     if ($v !== false) {

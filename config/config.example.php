@@ -7,7 +7,7 @@ declare(strict_types=1);
  * config.php is gitignored.
  * Uses env() so .env and server vars work on IONOS.
  */
-$e = function (string $key, mixed $default = '') { return env($key, $default); };
+$e = function (string $key, $default = '') { return env($key, $default); };
 
 return [
     'db' => [
