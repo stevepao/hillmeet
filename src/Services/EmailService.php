@@ -77,25 +77,61 @@ final class EmailService
         $user = config('smtp.user', '');
         $pass = config('smtp.pass', '');
         $ok = true;
-        $read = function () use ($socket) {
+        $readBuf = null;
+        $read = function () use ($socket, &$readBuf) {
+            if ($readBuf !== null) {
+                $line = $readBuf;
+                $readBuf = null;
+                return $line;
+            }
             $line = fgets($socket);
             return $line !== false ? trim($line) : '';
         };
-        $cmd = function (string $s) use ($socket, $read, &$ok) {
+        // Read until we get the final SMTP line (code + space, not code + hyphen for continuation)
+        $readFullResponse = function () use ($read) {
+            $last = '';
+            do {
+                $last = $read();
+            } while ($last !== '' && preg_match('/^\d{3}-/', $last));
+            return $last;
+        };
+        $cmd = function (string $s) use ($socket, $read, $readFullResponse, &$ok) {
             fwrite($socket, $s . "\r\n");
-            $r = $read();
-            if (!preg_match('/^[23]\d{2}/', $r)) {
+            $r = $readFullResponse();
+            if (!preg_match('/^[23]\d{2}(\s|$)/', $r)) {
                 $ok = false;
-                $this->lastError = 'SMTP: ' . $r;
+                $safe = preg_replace('/[^\x20-\x7E]/', '?', $r);
+                $this->lastError = $r === '' ? 'SMTP: (empty response)' : ('SMTP: ' . ($safe !== '' ? $safe : '(non-printable response)'));
             }
             return $r;
         };
-        $read(); // banner
-        $cmd("EHLO " . ($_SERVER['SERVER_NAME'] ?? 'localhost'));
+        $ehloName = 'localhost';
+        $appUrl = config('app.url', '');
+        if ($appUrl !== '') {
+            $hostFromUrl = parse_url($appUrl, PHP_URL_HOST);
+            if (is_string($hostFromUrl) && $hostFromUrl !== '') {
+                $ehloName = $hostFromUrl;
+            }
+        }
+        if ($ehloName === 'localhost' && isset($_SERVER['SERVER_NAME']) && $_SERVER['SERVER_NAME'] !== '') {
+            $ehloName = $_SERVER['SERVER_NAME'];
+        }
+        $readFullResponse(); // banner
+        $cmd("EHLO " . $ehloName);
         if ($user !== '' && $pass !== '' && $port === 587) {
             $cmd('STARTTLS');
             stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
-            $cmd("EHLO " . ($_SERVER['SERVER_NAME'] ?? 'localhost'));
+            // IONOS and others send a new 220 after TLS; must consume before second EHLO or we get 503
+            $afterTls = $read();
+            while ($afterTls !== '' && preg_match('/^220\s/', $afterTls)) {
+                stream_set_timeout($socket, 1);
+                $afterTls = $read();
+            }
+            if ($afterTls !== '') {
+                $readBuf = $afterTls;
+            }
+            stream_set_timeout($socket, 10);
+            $cmd("EHLO " . $ehloName);
             $cmd('AUTH LOGIN');
             $cmd(base64_encode($user));
             $cmd(base64_encode($pass));
@@ -104,7 +140,7 @@ final class EmailService
         $cmd('RCPT TO:<' . $to . '>');
         $cmd('DATA');
         fwrite($socket, "Subject: {$subject}\r\n" . implode("\r\n", $headers) . "\r\n\r\n{$body}\r\n.\r\n");
-        $read();
+        $readFullResponse();
         fclose($socket);
         return $ok;
     }
