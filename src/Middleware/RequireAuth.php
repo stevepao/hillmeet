@@ -13,7 +13,8 @@ final class RequireAuth
         if (!empty($_SESSION['user'])) {
             return true;
         }
-        header('Location: ' . url('/auth/login'));
+        $query = (isset($_GET['debug']) && $_GET['debug'] === '1') ? ['debug' => '1'] : [];
+        header('Location: ' . url('/auth/login', $query));
         exit;
     }
 }
