@@ -7,8 +7,8 @@ namespace Hillmeet\Services;
 use Hillmeet\Repositories\FreebusyCacheRepository;
 use Hillmeet\Repositories\GoogleCalendarSelectionRepository;
 use Hillmeet\Repositories\OAuthConnectionRepository;
-use Hillmeet\Support\Encryption;
 use Hillmeet\Support\RateLimit;
+use function Hillmeet\Support\config;
 
 final class GoogleCalendarService
 {

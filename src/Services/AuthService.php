@@ -7,8 +7,8 @@ namespace Hillmeet\Services;
 use Hillmeet\Repositories\EmailLoginPinRepository;
 use Hillmeet\Repositories\UserRepository;
 use Hillmeet\Support\AuditLog;
-use Hillmeet\Support\Config;
 use Hillmeet\Support\RateLimit;
+use function Hillmeet\Support\config;
 
 final class AuthService
 {

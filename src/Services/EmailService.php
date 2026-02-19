@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Hillmeet\Services;
 
+use function Hillmeet\Support\config;
+
 final class EmailService
 {
     public function sendPinEmail(string $to, string $pin): bool

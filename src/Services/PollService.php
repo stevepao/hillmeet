@@ -12,6 +12,7 @@ use Hillmeet\Repositories\PollRepository;
 use Hillmeet\Repositories\VoteRepository;
 use Hillmeet\Support\AuditLog;
 use Hillmeet\Support\RateLimit;
+use function Hillmeet\Support\config;
 
 final class PollService
 {
