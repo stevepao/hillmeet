@@ -40,13 +40,13 @@ $csrfToken = \Hillmeet\Support\Csrf::token();
             <div style="display: flex; gap: var(--space-2); flex-shrink: 0;">
               <a href="<?= \Hillmeet\Support\url('/poll/' . $p->slug) ?>" class="btn btn-secondary btn-sm">View</a>
               <a href="<?= \Hillmeet\Support\url('/poll/' . $p->slug . '/edit') ?>" class="btn btn-secondary btn-sm">Edit</a>
-              <button type="button" class="btn btn-secondary btn-sm poll-delete-btn" data-poll-slug="<?= \Hillmeet\Support\e($p->slug) ?>" aria-label="Delete poll">Delete</button>
+              <button type="button" class="btn btn-secondary btn-sm poll-delete-btn" data-poll-slug="<?= \Hillmeet\Support\e($p->slug) ?>" data-delete-url="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/poll/' . $p->slug . '/delete')) ?>" aria-label="Delete poll">Delete</button>
             </div>
           </div>
         </li>
       <?php endforeach; ?>
     </ul>
-    <div id="confirm-delete-poll-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-poll-title" hidden data-csrf="<?= \Hillmeet\Support\e($csrfToken) ?>" data-delete-poll-base="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/poll/')) ?>">
+    <div id="confirm-delete-poll-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-poll-title" hidden data-csrf="<?= \Hillmeet\Support\e($csrfToken) ?>">
       <div class="card" style="max-width: 28rem;">
         <h2 id="confirm-delete-poll-title">Delete poll?</h2>
         <p class="helper">Delete this poll? This removes all time options and all votes. This cannot be undone.</p>
@@ -63,9 +63,8 @@ $csrfToken = \Hillmeet\Support\Csrf::token();
 (function() {
   var modal = document.getElementById('confirm-delete-poll-modal');
   if (!modal) return;
-  var baseUrl = modal.getAttribute('data-delete-poll-base') || '';
   var csrfToken = modal.getAttribute('data-csrf') || '';
-  var slugToDelete = null;
+  var deleteUrl = null;
   var cardToRemove = null;
 
   function showModal() {
@@ -75,15 +74,15 @@ $csrfToken = \Hillmeet\Support\Csrf::token();
   function hideModal() {
     modal.hidden = true;
     modal.style.display = 'none';
-    slugToDelete = null;
+    deleteUrl = null;
     cardToRemove = null;
   }
 
   document.querySelectorAll('.poll-delete-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      slugToDelete = btn.getAttribute('data-poll-slug');
+      deleteUrl = btn.getAttribute('data-delete-url');
       cardToRemove = btn.closest('.poll-card-owned');
-      if (slugToDelete && cardToRemove) showModal();
+      if (deleteUrl && cardToRemove) showModal();
     });
   });
 
@@ -93,11 +92,11 @@ $csrfToken = \Hillmeet\Support\Csrf::token();
   var confirmBtn = document.getElementById('confirm-delete-poll-confirm');
   if (confirmBtn) {
     confirmBtn.addEventListener('click', function() {
-      if (!slugToDelete || !cardToRemove) { hideModal(); return; }
+      if (!deleteUrl || !cardToRemove) { hideModal(); return; }
       var formData = new FormData();
       formData.append('csrf_token', csrfToken);
       confirmBtn.disabled = true;
-      fetch(baseUrl + slugToDelete + '/delete', { method: 'POST', body: formData, credentials: 'same-origin' })
+      fetch(deleteUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
         .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
         .then(function(result) {
           confirmBtn.disabled = false;
@@ -105,7 +104,9 @@ $csrfToken = \Hillmeet\Support\Csrf::token();
           if (result.ok && result.body && result.body.success) {
             cardToRemove.remove();
           } else {
-            alert(result.body && result.body.error ? result.body.error : 'Could not delete poll.');
+            var msg = result.body && result.body.error ? result.body.error : 'Could not delete poll.';
+            if (result.body && result.body.error_code) msg += ' (' + result.body.error_code + ')';
+            alert(msg);
           }
         })
         .catch(function() {

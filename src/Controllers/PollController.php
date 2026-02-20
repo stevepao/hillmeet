@@ -224,9 +224,15 @@ final class PollController
         $this->auth();
         header('Content-Type: application/json; charset=utf-8');
         $poll = $this->pollRepo->findBySlug($slug);
-        if ($poll === null || !$poll->isOrganizer((int) current_user()->id)) {
+        if ($poll === null) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Poll not found.', 'error_code' => 'not_found']);
+            exit;
+        }
+        $userId = (int) current_user()->id;
+        if (!$poll->isOrganizer($userId)) {
             http_response_code(403);
-            echo json_encode(['error' => 'Poll not found or access denied.']);
+            echo json_encode(['error' => 'Only the poll owner can delete it.', 'error_code' => 'access_denied']);
             exit;
         }
         $err = $this->pollService->deletePoll($poll->id, (int) current_user()->id);
