@@ -225,17 +225,14 @@ final class PollController
             ? (new PollInviteRepository())->listInvites($poll->id)
             : [];
         $resultsExpandOpen = isset($_GET['expand']) && $_GET['expand'] === 'results';
-        $resultsFragmentHtml = '';
-        if ($resultsExpandOpen) {
-            $participants = $participantRepo->getParticipantsWithUsers($poll->id);
-            $myVotes = [];
-            foreach ($results['matrix'] ?? [] as $optId => $userVotes) {
-                $myVotes[$optId] = $userVotes[$userId] ?? null;
-            }
-            ob_start();
-            require dirname(__DIR__, 2) . '/views/polls/results_fragment.php';
-            $resultsFragmentHtml = ob_get_clean();
+        $participants = $participantRepo->getParticipantsWithUsers($poll->id);
+        $myVotes = [];
+        foreach ($results['matrix'] ?? [] as $optId => $userVotes) {
+            $myVotes[$optId] = $userVotes[$userId] ?? null;
         }
+        ob_start();
+        require dirname(__DIR__, 2) . '/views/polls/results_fragment.php';
+        $resultsFragmentHtml = ob_get_clean();
         require dirname(__DIR__, 2) . '/views/polls/view.php';
     }
 

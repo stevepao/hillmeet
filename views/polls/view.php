@@ -86,11 +86,7 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 <details class="results-section" id="results-section" <?= !empty($resultsExpandOpen) ? 'open' : '' ?>>
   <summary>Results</summary>
   <div id="results-content">
-    <?php if (!empty($resultsFragmentHtml)): ?>
-      <?= $resultsFragmentHtml ?>
-    <?php else: ?>
-      <p class="muted">Loading…</p>
-    <?php endif; ?>
+    <?= $resultsFragmentHtml ?>
   </div>
 </details>
 

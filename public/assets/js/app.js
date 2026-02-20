@@ -238,32 +238,10 @@
     updateBar(false);
   })();
 
-  // Toggle results (expand/collapse); with timeout, error UI, retry; non-JS: link goes to ?expand=results
+  // Toggle results (expand/collapse); results are server-rendered, no fetch
   var toggleResults = document.getElementById('toggle-results');
   var resultsSection = document.getElementById('results-section');
-  var resultsContent = document.getElementById('results-content');
-  if (toggleResults && resultsSection && resultsContent && window.HILLMEET_POLL) {
-    function loadResults() {
-      resultsContent.innerHTML = '<p class="muted">Loading…</p>';
-      var controller = new AbortController();
-      var timeoutId = setTimeout(function() { controller.abort(); }, 8000);
-      fetch(window.HILLMEET_POLL.resultsUrl, { signal: controller.signal })
-        .then(function(r) {
-          clearTimeout(timeoutId);
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.text();
-        })
-        .then(function(html) {
-          resultsContent.innerHTML = html;
-        })
-        .catch(function(err) {
-          clearTimeout(timeoutId);
-          if (typeof console !== 'undefined' && console.error) console.error('Results fetch failed', err);
-          resultsContent.innerHTML = '<p class="muted">Couldn\'t load results.</p><button type="button" class="btn btn-secondary btn-sm" id="results-retry">Retry</button>';
-          var retryBtn = resultsContent.querySelector('#results-retry');
-          if (retryBtn) retryBtn.addEventListener('click', loadResults);
-        });
-    }
+  if (toggleResults && resultsSection) {
     toggleResults.addEventListener('click', function(e) {
       e.preventDefault();
       var open = resultsSection.hasAttribute('open');
@@ -272,8 +250,6 @@
         toggleResults.textContent = 'Show results';
         toggleResults.setAttribute('aria-expanded', 'false');
       } else {
-        var hasContent = resultsContent.querySelector('table') || resultsContent.querySelector('.your-saved-votes');
-        if (!hasContent && window.HILLMEET_POLL.resultsUrl) loadResults();
         resultsSection.setAttribute('open', 'open');
         toggleResults.textContent = 'Hide results';
         toggleResults.setAttribute('aria-expanded', 'true');
