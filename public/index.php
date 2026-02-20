@@ -84,7 +84,8 @@ if ($handler === null) {
     exit;
 }
 
-if ($method === 'POST' && !\Hillmeet\Middleware\CsrfMiddleware::validate()) {
+$csrfExempt = ($method === 'POST' && $path === '/auth/google/token');
+if ($method === 'POST' && !$csrfExempt && !\Hillmeet\Middleware\CsrfMiddleware::validate()) {
     http_response_code(403);
     require dirname(__DIR__) . '/views/errors/403.php';
     exit;
