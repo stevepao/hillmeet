@@ -302,11 +302,18 @@ final class PollController
         }
         $err = $this->pollService->voteBatch($poll->id, (int) current_user()->id, $votes, $_SERVER['REMOTE_ADDR'] ?? '');
         if ($err !== null) {
+            if (\env('APP_ENV', '') === 'local') {
+                error_log('[Hillmeet vote-batch] error: ' . $err . ' poll_id=' . $poll->id . ' votes_count=' . count($votes));
+            }
             http_response_code(400);
             echo json_encode(['error' => $err]);
             exit;
         }
-        echo json_encode(['success' => true]);
+        $savedCount = count(array_filter($votes, fn($v) => in_array($v, ['yes', 'maybe', 'no'], true)));
+        if (\env('APP_ENV', '') === 'local') {
+            error_log('[Hillmeet vote-batch] persisted count=' . $savedCount . ' poll_id=' . $poll->id);
+        }
+        echo json_encode(['success' => true, 'savedCount' => $savedCount]);
         exit;
     }
 

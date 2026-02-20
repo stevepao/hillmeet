@@ -247,7 +247,7 @@
   box-shadow: var(--focus);
 }
 
-/* Vote chips */
+/* Vote chips: single choice per slot; selected = filled + glow, unselected = outline */
 .vote-chip {
   display: inline-flex;
   align-items: center;
@@ -255,20 +255,26 @@
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
-  border: 1px solid transparent;
+  border: 2px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
   cursor: pointer;
-  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
 }
+.vote-chip[data-vote="yes"] { border-color: var(--vote-yes); color: var(--vote-yes); }
+.vote-chip[data-vote="maybe"] { border-color: var(--vote-maybe); color: var(--vote-maybe); }
+.vote-chip[data-vote="no"] { border-color: var(--vote-no); color: var(--vote-no); }
 
-.vote-chip[data-vote="yes"] { background: rgba(34,197,94,0.2); border-color: var(--vote-yes); color: var(--vote-yes); }
-.vote-chip[data-vote="maybe"] { background: rgba(245,158,11,0.2); border-color: var(--vote-maybe); color: var(--vote-maybe); }
-.vote-chip[data-vote="no"] { background: rgba(239,68,68,0.2); border-color: var(--vote-no); color: var(--vote-no); }
-.vote-chip[data-vote=""] { background: var(--card); border-color: var(--border); color: var(--muted); }
+.vote-chip.active[data-vote="yes"] { background: rgba(34,197,94,0.35); border-color: var(--vote-yes); color: var(--vote-yes); box-shadow: 0 0 0 3px rgba(34,197,94,0.25); font-weight: 600; }
+.vote-chip.active[data-vote="maybe"] { background: rgba(245,158,11,0.35); border-color: var(--vote-maybe); color: var(--vote-maybe); box-shadow: 0 0 0 3px rgba(245,158,11,0.25); font-weight: 600; }
+.vote-chip.active[data-vote="no"] { background: rgba(239,68,68,0.35); border-color: var(--vote-no); color: var(--vote-no); box-shadow: 0 0 0 3px rgba(239,68,68,0.25); font-weight: 600; }
 
-.vote-chip.active { font-weight: 600; box-shadow: 0 0 0 2px var(--border); }
 .vote-chip:hover { opacity: 0.9; }
 .vote-chip:focus-visible { box-shadow: var(--focus); }
+.vote-chip.active:focus-visible { box-shadow: var(--focus); }
 .vote-chip:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.vote-selected-label { font-size: var(--text-xs); color: var(--muted); margin-top: var(--space-1); margin-bottom: 0; }
 
 /* Results matrix (tabular data) */
 .results-table {

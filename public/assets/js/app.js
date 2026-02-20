@@ -80,14 +80,19 @@
       return state;
     }
 
+    var selectedLabels = { yes: 'Works', maybe: 'If needed', no: "Can't" };
     function applyStateToDom(state) {
       listEl.querySelectorAll('.option-card').forEach(function(card) {
         var optionId = card.getAttribute('data-option-id');
         var value = state[optionId] || '';
         card.querySelectorAll('.vote-chip').forEach(function(btn) {
           var v = btn.getAttribute('data-vote') || btn.value || '';
-          btn.classList.toggle('active', v === value);
+          var isActive = v === value;
+          btn.classList.toggle('active', isActive);
+          btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
+        var labelEl = card.querySelector('.vote-selected-label');
+        if (labelEl) labelEl.textContent = 'Selected: ' + (selectedLabels[value] || '—');
       });
     }
 
@@ -98,9 +103,11 @@
 
     function showBar() {
       barEl.hidden = false;
+      barEl.classList.add('is-visible');
     }
     function hideBar() {
       barEl.hidden = true;
+      barEl.classList.remove('is-visible');
     }
 
     listEl.querySelectorAll('.vote-form').forEach(function(form) {
@@ -137,7 +144,9 @@
         for (var optId in state) {
           if (state[optId]) formData.append('votes[' + optId + ']', state[optId]);
         }
+        var originalText = submitBtn.textContent;
         submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving…';
         fetch(poll.voteBatchUrl, { method: 'POST', body: formData })
           .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
           .then(function(result) {
@@ -147,6 +156,13 @@
               for (var k in state) initialState[k] = state[k];
               dirty = false;
               hideBar();
+              var resultsSection = document.getElementById('results-section');
+              var resultsContent = document.getElementById('results-content');
+              if (resultsContent && resultsSection && resultsSection.hasAttribute('open') && poll.resultsUrl) {
+                fetch(poll.resultsUrl).then(function(r) { return r.text(); }).then(function(html) {
+                  resultsContent.innerHTML = html;
+                });
+              }
             } else {
               showToast(result.body && result.body.error ? result.body.error : 'Could not save votes.');
             }
@@ -156,6 +172,7 @@
           })
           .then(function() {
             submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
           });
       });
     }

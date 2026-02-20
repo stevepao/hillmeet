@@ -46,7 +46,10 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
     <div class="option-card" data-option-id="<?= (int)$opt->id ?>">
       <div style="font-weight:500;"><?= \Hillmeet\Support\e($startLocal) ?> – <?= \Hillmeet\Support\e($endLocal) ?></div>
       <?php if (!$poll->isLocked()): ?>
-        <div class="vote-controls">
+        <?php
+          $selectedLabel = $vote === 'yes' ? 'Works' : ($vote === 'maybe' ? 'If needed' : ($vote === 'no' ? "Can't" : '—'));
+        ?>
+        <div class="vote-controls" role="radiogroup" aria-label="Vote for this time slot">
           <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/vote') ?>" style="display:inline;" class="vote-form">
             <?= \Hillmeet\Support\Csrf::field() ?>
             <?php if (!empty($accessByInvite) && $inviteToken !== ''): ?>
@@ -56,10 +59,11 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
             <?php endif; ?>
             <input type="hidden" name="option_id" value="<?= (int)$opt->id ?>">
             <input type="hidden" name="back" value="<?= \Hillmeet\Support\e($pollUrlWithSecret) ?>">
-            <button type="submit" name="vote" value="yes" class="vote-chip <?= $vote === 'yes' ? 'active' : '' ?>" data-vote="yes" title="Works">✅ Works</button>
-            <button type="submit" name="vote" value="maybe" class="vote-chip <?= $vote === 'maybe' ? 'active' : '' ?>" data-vote="maybe" title="If needed">🤷 If needed</button>
-            <button type="submit" name="vote" value="no" class="vote-chip <?= $vote === 'no' ? 'active' : '' ?>" data-vote="no" title="Can't">⛔ Can't</button>
+            <button type="submit" name="vote" value="yes" class="vote-chip <?= $vote === 'yes' ? 'active' : '' ?>" data-vote="yes" title="Works" aria-pressed="<?= $vote === 'yes' ? 'true' : 'false' ?>">✅ Works</button>
+            <button type="submit" name="vote" value="maybe" class="vote-chip <?= $vote === 'maybe' ? 'active' : '' ?>" data-vote="maybe" title="If needed" aria-pressed="<?= $vote === 'maybe' ? 'true' : 'false' ?>">🤷 If needed</button>
+            <button type="submit" name="vote" value="no" class="vote-chip <?= $vote === 'no' ? 'active' : '' ?>" data-vote="no" title="Can't" aria-pressed="<?= $vote === 'no' ? 'true' : 'false' ?>">⛔ Can't</button>
           </form>
+          <p class="vote-selected-label" aria-live="polite">Selected: <?= \Hillmeet\Support\e($selectedLabel) ?></p>
         </div>
       <?php else: ?>
         <span class="badge badge-muted">Locked</span>
