@@ -455,23 +455,34 @@ final class PollController
         if (!is_array($votes)) {
             $votes = [];
         }
-        $err = $this->pollService->voteBatch($poll->id, (int) current_user()->id, $votes, $_SERVER['REMOTE_ADDR'] ?? '');
+        $userId = (int) current_user()->id;
+        $err = $this->pollService->voteBatch($poll->id, $userId, $votes, $_SERVER['REMOTE_ADDR'] ?? '');
         if ($err !== null) {
-            if (\env('APP_ENV', '') === 'local') {
-                error_log('[Hillmeet vote-batch] error: ' . $err . ' poll_id=' . $poll->id . ' votes_count=' . count($votes));
+            if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
+                error_log('[Hillmeet vote-batch] error: ' . $err . ' poll_id=' . $poll->id . ' user_id=' . $userId . ' votes_submitted=' . count($votes));
             }
             http_response_code(400);
             echo json_encode(['error' => $err]);
             exit;
         }
+        $voteRepo = new VoteRepository();
+        $options = $this->pollRepo->getOptions($poll->id);
+        $savedByOption = $voteRepo->getVotesForUser($poll->id, $userId);
         $savedVotes = [];
-        foreach ($votes as $optId => $v) {
-            if (in_array($v, ['yes', 'maybe', 'no'], true)) {
-                $savedVotes[(int) $optId] = $v;
-            }
+        foreach ($options as $opt) {
+            $savedVotes[$opt->id] = $savedByOption[$opt->id] ?? '';
         }
-        if (\env('APP_ENV', '') === 'local') {
-            error_log('[Hillmeet vote-batch] persisted count=' . count($savedVotes) . ' poll_id=' . $poll->id);
+        if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
+            $user = current_user();
+            $userEmail = $user && (int) $user->id === $userId ? ($user->email ?? '') : '';
+            error_log(sprintf(
+                '[Hillmeet vote-batch] poll_id=%d user_id=%d email=%s options=%d saved_count=%d',
+                $poll->id,
+                $userId,
+                $userEmail,
+                count($options),
+                count(array_filter($savedVotes))
+            ));
         }
         echo json_encode(['success' => true, 'savedVotes' => $savedVotes]);
         exit;

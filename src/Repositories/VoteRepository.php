@@ -54,6 +54,24 @@ final class VoteRepository
         $stmt->execute([$pollId, $pollOptionId, $userId, $vote]);
     }
 
+    public function removeVote(int $pollId, int $pollOptionId, int $userId): void
+    {
+        $stmt = Database::get()->prepare("DELETE FROM votes WHERE poll_id = ? AND poll_option_id = ? AND user_id = ?");
+        $stmt->execute([$pollId, $pollOptionId, $userId]);
+    }
+
+    /** @return array<int, string> option_id => vote (yes|maybe|no) for this user in this poll */
+    public function getVotesForUser(int $pollId, int $userId): array
+    {
+        $stmt = Database::get()->prepare("SELECT poll_option_id, vote FROM votes WHERE poll_id = ? AND user_id = ?");
+        $stmt->execute([$pollId, $userId]);
+        $out = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $out[(int) $row['poll_option_id']] = $row['vote'];
+        }
+        return $out;
+    }
+
     /** @return array<int, array{yes: int, maybe: int, no: int}> option_id => counts */
     public function getTotalsByPoll(int $pollId): array
     {

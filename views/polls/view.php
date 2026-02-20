@@ -96,6 +96,12 @@ $canEdit = !$poll->isLocked();
       <button type="button" class="btn btn-primary btn-sm" id="vote-submit">Submit votes</button>
     </div>
   </div>
+  <?php if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true'): ?>
+  <div id="vote-debug-panel" class="muted" style="font-size:var(--text-xs); margin-top:var(--space-3); padding:var(--space-2); background:var(--card-2); border-radius:var(--radius-md); border:1px solid var(--border);">
+    <strong>Vote state (debug)</strong>
+    <p id="vote-debug-content" style="margin:var(--space-1) 0 0;">savedVotes: — · draftVotes: — · dirty: —</p>
+  </div>
+  <?php endif; ?>
 <?php endif; ?>
 
 <details class="results-section" id="results-section" <?= !empty($resultsExpandOpen) ? 'open' : '' ?>>
@@ -171,7 +177,8 @@ window.HILLMEET_POLL = {
   csrfToken: <?= json_encode(\Hillmeet\Support\Csrf::token()) ?>,
   resultsUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/results', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/results?secret=' . urlencode($_GET['secret'] ?? ''))) ?>,
   checkAvailabilityUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability?secret=' . urlencode($_GET['secret'] ?? ''))) ?>,
-  savedVotes: <?= json_encode(array_map(function ($v) { return $v ?? ''; }, $userVotes)) ?>
+  savedVotes: <?= json_encode(array_map(function ($v) { return $v ?? ''; }, $userVotes)) ?>,
+  debug: <?= (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') ? 'true' : 'false' ?>
 };
 </script>
 <?php

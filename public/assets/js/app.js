@@ -76,7 +76,8 @@
       var state = {};
       listEl.querySelectorAll('.option-card').forEach(function(card) {
         var optionId = card.getAttribute('data-option-id');
-        if (!optionId) return;
+        if (optionId == null || optionId === '') return;
+        optionId = String(optionId);
         var active = card.querySelector('.vote-chip.active');
         state[optionId] = active ? (active.getAttribute('data-vote') || active.value || '') : '';
       });
@@ -86,21 +87,21 @@
     function stateFromServer(obj) {
       var out = {};
       if (obj && typeof obj === 'object') {
-        for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) out[String(k)] = (obj[k] && String(obj[k])) || '';
+        for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) out[String(k)] = (obj[k] != null && obj[k] !== '') ? String(obj[k]) : '';
       }
       return out;
     }
 
     function copyState(s) {
       var out = {};
-      for (var k in s) out[k] = s[k];
+      for (var k in s) out[String(k)] = (s[k] != null && s[k] !== '') ? String(s[k]) : '';
       return out;
     }
 
     function deepEqualVotes(a, b) {
       var keys = {};
-      for (var k in a) keys[k] = true;
-      for (var k in b) keys[k] = true;
+      for (var k in a) keys[String(k)] = true;
+      for (var k in b) keys[String(k)] = true;
       for (var k in keys) if ((a[k] || '') !== (b[k] || '')) return false;
       return true;
     }
@@ -108,8 +109,8 @@
     var selectedLabels = { yes: 'Works', maybe: 'If needed', no: "Can't" };
     function applyStateToDom(state) {
       listEl.querySelectorAll('.option-card').forEach(function(card) {
-        var optionId = card.getAttribute('data-option-id');
-        var value = state[optionId] || '';
+        var optionId = String(card.getAttribute('data-option-id') || '');
+        var value = (state[optionId] != null && state[optionId] !== '') ? String(state[optionId]) : '';
         card.querySelectorAll('.vote-chip').forEach(function(btn) {
           var v = btn.getAttribute('data-vote') || btn.value || '';
           var isActive = v === value;
@@ -160,19 +161,29 @@
         if (statusEl) statusEl.textContent = n === 1 ? 'Unsaved changes (1)' : 'Unsaved changes (' + n + ')';
         if (actionsEl) actionsEl.hidden = false;
       } else {
-        if (statusEl) statusEl.textContent = '';
+        if (statusEl) statusEl.textContent = 'All changes saved';
         if (actionsEl) actionsEl.hidden = true;
+      }
+      if (poll.debug) {
+        var debugEl = document.getElementById('vote-debug-content');
+        if (debugEl) {
+          var savedN = 0, draftN = 0;
+          for (var k in savedVotes) if (savedVotes[k]) savedN++;
+          for (var k in draftVotes) if (draftVotes[k]) draftN++;
+          debugEl.textContent = 'savedVotes: ' + savedN + ' · draftVotes: ' + draftN + ' · dirty: ' + (isDirty() ? countUnsaved() : 0);
+        }
       }
     }
 
     listEl.querySelectorAll('.vote-form').forEach(function(form) {
       form.addEventListener('submit', function(e) {
         e.preventDefault();
-        var optionId = (form.querySelector('input[name="option_id"]') || {}).value;
+        var input = form.querySelector('input[name="option_id"]');
+        var optionId = input ? String(input.value || '').trim() : '';
         var submitter = e.submitter;
         if (!optionId || !submitter || !submitter.classList.contains('vote-chip')) return;
-        var vote = submitter.value || submitter.getAttribute('data-vote') || '';
-        draftVotes[optionId] = vote;
+        var vote = (submitter.value || submitter.getAttribute('data-vote') || '').trim();
+        if (vote) draftVotes[optionId] = vote;
         applyStateToDom(draftVotes);
         updateInlineControls(false);
       });
@@ -196,9 +207,10 @@
         formData.append('slug', poll.slug);
         if (poll.secret) formData.append('secret', poll.secret);
         if (poll.invite) formData.append('invite', poll.invite);
-        for (var optId in draftVotes) {
-          if (draftVotes[optId]) formData.append('votes[' + optId + ']', draftVotes[optId]);
-        }
+        listEl.querySelectorAll('.option-card').forEach(function(card) {
+          var optId = String(card.getAttribute('data-option-id') || '');
+          if (optId) formData.append('votes[' + optId + ']', draftVotes[optId] || '');
+        });
         var originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving…';
@@ -207,8 +219,7 @@
           .then(function(result) {
             if (result.ok && result.body && result.body.success) {
               var resp = result.body.savedVotes || {};
-              savedVotes = {};
-              for (var k in resp) savedVotes[String(k)] = resp[k];
+              savedVotes = stateFromServer(resp);
               draftVotes = copyState(savedVotes);
               applyStateToDom(draftVotes);
               showToast('Votes saved');

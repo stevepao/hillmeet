@@ -119,8 +119,10 @@ final class PollService
     }
 
     /**
-     * Save multiple votes in one go. Returns null on success or an error message.
-     * @param array<int, string> $votes option_id => 'yes'|'maybe'|'no'
+     * Replace all votes for this user in this poll with the submitted set.
+     * Empty or invalid values clear the vote for that option.
+     * Returns null on success or an error message.
+     * @param array<int|string, string> $votes option_id => 'yes'|'maybe'|'no'|''
      */
     public function voteBatch(int $pollId, int $userId, array $votes, string $ip): ?string
     {
@@ -134,15 +136,13 @@ final class PollService
         $options = $this->pollRepo->getOptions($pollId);
         $optionIds = array_column($options, 'id');
         $this->participantRepo->add($pollId, $userId);
-        foreach ($votes as $optionId => $vote) {
-            $optionId = (int) $optionId;
-            if (!in_array($vote, ['yes', 'maybe', 'no'], true)) {
-                return 'Invalid vote value.';
+        foreach ($optionIds as $optionId) {
+            $vote = isset($votes[$optionId]) ? trim((string) $votes[$optionId]) : '';
+            if (in_array($vote, ['yes', 'maybe', 'no'], true)) {
+                $this->voteRepo->setVote($pollId, $optionId, $userId, $vote);
+            } else {
+                $this->voteRepo->removeVote($pollId, $optionId, $userId);
             }
-            if (!in_array($optionId, $optionIds, true)) {
-                return 'Invalid option.';
-            }
-            $this->voteRepo->setVote($pollId, $optionId, $userId, $vote);
         }
         return null;
     }
