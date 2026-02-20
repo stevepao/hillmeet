@@ -54,18 +54,15 @@ php bin/migrate.php
 ## Google Cloud setup
 
 1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
-2. Enable **Google Identity** (for sign-in) and **Google Calendar API** (for calendar list, freebusy, events).
-3. Create **OAuth 2.0 credentials** (Desktop or Web application):
+2. Enable **Google Calendar API** (for calendar list, freebusy, events). Sign-in uses OpenID Connect (openid, email, profile) via the same OAuth client.
+3. Create **OAuth 2.0 credentials** (Web application):
    - **Authorized redirect URIs:** `https://your-domain.com/auth/google/callback` and `https://your-domain.com/calendar/callback` (replace with your `APP_URL`).
-4. **Scopes** (minimal):
-   - Identity: openid, email, profile (for GIS sign-in).
-   - Calendar: `https://www.googleapis.com/auth/calendar.readonly`, `https://www.googleapis.com/auth/calendar.events` (for calendar list, freebusy, create event).
-5. In `.env` set:
+4. In `.env` set:
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
-   - `GOOGLE_REDIRECT_URI` = `$APP_URL/auth/google/callback` (or leave and set `APP_URL` so the example config builds it).
+   - `GOOGLE_REDIRECT_URI` (optional; defaults to `APP_URL/auth/google/callback`).
 
-If Google Identity is not configured, the app shows **Use email instead** and uses email + one-time PIN sign-in.
+If Google OAuth is not configured, the app shows **Use email instead** and uses email + one-time PIN sign-in.
 
 ## Environment variables (summary)
 

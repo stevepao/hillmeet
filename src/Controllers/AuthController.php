@@ -34,7 +34,7 @@ final class AuthController
         require dirname(__DIR__, 2) . '/views/auth/login.php';
     }
 
-    /** Redirect to Google OAuth for sign-in (works when GSI script is blocked). */
+    /** Redirect to Google OAuth for sign-in (League OAuth2). */
     public function googleRedirect(): void
     {
         if (!empty($_SESSION['user'])) {
@@ -107,29 +107,6 @@ final class AuthController
         }
         unset($_SESSION['pin_sent_to'], $_SESSION['auth_error'], $_SESSION['auth_email']);
         header('Location: ' . url('/'));
-        exit;
-    }
-
-    public function googleToken(): void
-    {
-        $input = json_decode(file_get_contents('php://input') ?: '{}', true);
-        $idToken = $input['credential'] ?? $input['token'] ?? '';
-        if ($idToken === '') {
-            http_response_code(400);
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'Missing token']);
-            exit;
-        }
-        $user = $this->auth->verifyGoogleIdToken($idToken);
-        if ($user === null) {
-            http_response_code(401);
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'Invalid token']);
-            exit;
-        }
-        $_SESSION['user'] = $user;
-        header('Content-Type: application/json');
-        echo json_encode(['redirect' => url('/')]);
         exit;
     }
 

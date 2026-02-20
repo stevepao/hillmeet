@@ -18,43 +18,7 @@ final class AuthService
         private EmailService $emailService
     ) {}
 
-    /** Verify Google ID token and return user (create if needed). */
-    public function verifyGoogleIdToken(string $idToken): ?object
-    {
-        $clientId = config('google.client_id');
-        if ($clientId === '') {
-            return null;
-        }
-        try {
-            $payload = \Hillmeet\Services\GoogleIdToken::verify($idToken, $clientId);
-        } catch (\Throwable $e) {
-            return null;
-        }
-        if ($payload === null || !isset($payload['sub'], $payload['email'])) {
-            return null;
-        }
-        $googleId = $payload['sub'];
-        $email = $payload['email'];
-        $name = $payload['name'] ?? $email;
-        $avatarUrl = $payload['picture'] ?? null;
-        $user = $this->userRepo->findByGoogleId($googleId);
-        if ($user === null) {
-            $user = $this->userRepo->findByEmail($email);
-            if ($user !== null) {
-                // Link Google to existing email account
-                $pdo = \Hillmeet\Support\Database::get();
-                $stmt = $pdo->prepare("UPDATE users SET google_id = ?, name = ?, avatar_url = ? WHERE id = ?");
-                $stmt->execute([$googleId, $name, $avatarUrl, $user->id]);
-                $user = $this->userRepo->findById($user->id);
-            } else {
-                $user = $this->userRepo->createFromGoogle($email, $name, $googleId, $avatarUrl);
-            }
-        }
-        AuditLog::log('auth.google_login', 'user', (string) $user->id);
-        return $user;
-    }
-
-    /** Find or create user from Google profile (sub, email, name, picture). Used by OAuth redirect flow. */
+    /** Find or create user from Google profile (sub, email, name, picture). Used by League OAuth2 callback. */
     public function findOrCreateUserFromGoogleProfile(string $googleId, string $email, string $name, ?string $avatarUrl = null): ?object
     {
         $email = strtolower(trim($email));

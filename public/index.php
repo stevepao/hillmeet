@@ -43,7 +43,6 @@ $routes = [
     'POST' => [
         '/auth/send-pin' => [\Hillmeet\Controllers\AuthController::class, 'sendPin'],
         '/auth/verify-pin' => [\Hillmeet\Controllers\AuthController::class, 'verifyPin'],
-        '/auth/google/token' => [\Hillmeet\Controllers\AuthController::class, 'googleToken'],
         '/poll/create' => [\Hillmeet\Controllers\PollController::class, 'createPost'],
         '/poll/{slug}/options' => [\Hillmeet\Controllers\PollController::class, 'optionsPost'],
         '/poll/{slug}/share' => [\Hillmeet\Controllers\PollController::class, 'sharePost'],
@@ -84,8 +83,7 @@ if ($handler === null) {
     exit;
 }
 
-$csrfExempt = ($method === 'POST' && $path === '/auth/google/token');
-if ($method === 'POST' && !$csrfExempt && !\Hillmeet\Middleware\CsrfMiddleware::validate()) {
+if ($method === 'POST' && !\Hillmeet\Middleware\CsrfMiddleware::validate()) {
     http_response_code(403);
     require dirname(__DIR__) . '/views/errors/403.php';
     exit;
