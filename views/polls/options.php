@@ -150,6 +150,7 @@ window.addEventListener('load', function() {
     var endTime = document.getElementById('gen-end').value;
     var gap = parseInt(document.getElementById('gen-gap').value, 10) || 0;
     var days = [].slice.call(document.querySelectorAll('.gen-dow:checked')).map(function(c) { return parseInt(c.value, 10); });
+
     if (!from || !to) {
       showToast('Please pick a date range (From and To).');
       return;
@@ -158,28 +159,61 @@ window.addEventListener('load', function() {
       showToast('Please select at least one day of the week.');
       return;
     }
-    var start = new Date(from + 'T' + startTime);
-    var end = new Date(to + 'T' + endTime);
+
+    var startHour = parseInt(startTime.slice(0, 2), 10);
+    var startMin = parseInt(startTime.slice(3, 5), 10) || 0;
+    var endHour = parseInt(endTime.slice(0, 2), 10);
+    var endMin = parseInt(endTime.slice(3, 5), 10) || 0;
+    var fromParts = from.split('-');
+    var toParts = to.split('-');
+    var start = new Date(parseInt(fromParts[0], 10), parseInt(fromParts[1], 10) - 1, parseInt(fromParts[2], 10), startHour, startMin, 0, 0);
+    var end = new Date(parseInt(toParts[0], 10), parseInt(toParts[1], 10) - 1, parseInt(toParts[2], 10), endHour, endMin, 0, 0);
+
     if (start > end) {
       showToast('From date must be on or before To date.');
       return;
     }
-    var current = new Date(start);
+
+    /* DEBUG (temporary): set HILLMEET_DEBUG_GEN=true in console to enable; remove when verified */
+    if (window.HILLMEET_DEBUG_GEN === undefined) window.HILLMEET_DEBUG_GEN = true;
+    function dbg() { if (window.HILLMEET_DEBUG_GEN) console.log.apply(console, arguments); }
+    dbg('[gen] 1) Parsed range', 'start', start.toISOString(), 'valid', !isNaN(start.getTime()), 'end', end.toISOString(), 'valid', !isNaN(end.getTime()));
+    dbg('[gen] 2) Selected weekdays from UI (0=Sun..6=Sat)', days);
+
+    var current = new Date(start.getFullYear(), start.getMonth(), start.getDate(), startHour, startMin, 0, 0);
     var added = 0;
+    var candidateSlots = [];
+    var loggedOneMonday = false;
+
     while (current <= end) {
       var dow = current.getDay();
+      dbg('[gen] 3) Iterated date', current.toISOString().slice(0, 10), 'weekday', dow, '(0=Sun,1=Mon,...,6=Sat)');
+
       if (days.indexOf(dow) !== -1) {
-        var s = new Date(current);
+        var s = new Date(current.getTime());
         var e = new Date(current.getTime() + durationMinutes * 60000);
-        var dayEnd = new Date(current.toDateString() + 'T' + endTime);
+        var dayEnd = new Date(current.getFullYear(), current.getMonth(), current.getDate(), endHour, endMin, 0, 0);
+        var minsAvailable = (dayEnd.getTime() - current.getTime()) / 60000;
+        candidateSlots.push({ start: s.toISOString(), end: e.toISOString(), dayEnd: dayEnd.toISOString() });
+
+        if (!loggedOneMonday) {
+          dbg('[gen] 4) One matching Monday: startDateTime', s.toISOString(), 'endDateTime', e.toISOString(), 'dayEnd', dayEnd.toISOString(), 'minsAvailable', minsAvailable);
+          loggedOneMonday = true;
+        }
+
         if (e <= dayEnd) {
           addRow(formatInTz(s, pollTz), formatInTz(e, pollTz));
           added++;
+        } else {
+          dbg('[gen] 6) Rejected: slot end > dayEnd', 'e', e.toISOString(), 'dayEnd', dayEnd.toISOString(), 'condition (e <= dayEnd)', e <= dayEnd);
         }
       }
       current.setDate(current.getDate() + 1);
-      current.setHours(parseInt(startTime.slice(0,2), 10), parseInt(startTime.slice(3), 10), 0, 0);
+      current.setHours(startHour, startMin, 0, 0);
     }
+
+    dbg('[gen] 5) Candidate slot starts (before filtering)', candidateSlots);
+
     if (added > 0) showToast('Added ' + added + ' time option' + (added === 1 ? '' : 's') + '.');
     else showToast('No slots in that range. Try a wider date range or different days.');
   });
