@@ -1,6 +1,21 @@
 <?php
 $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 ?>
+<div class="your-saved-votes" style="margin-bottom:var(--space-4);">
+  <h4 style="font-size:var(--text-base); margin:0 0 var(--space-2);">Your saved votes</h4>
+  <ul class="your-votes-list" style="list-style:none; padding:0; margin:0; font-size:var(--text-sm);">
+    <?php foreach ($options as $opt):
+      $startLocal = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('D M j, g:i A');
+      $v = $myVotes[$opt->id] ?? null;
+      $label = $v ? ($voteLabels[$v] ?? $v) : '—';
+    ?>
+      <li style="padding:var(--space-1) 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:var(--space-3);">
+        <span><?= \Hillmeet\Support\e($startLocal) ?></span>
+        <span><?= \Hillmeet\Support\e($label) ?></span>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+</div>
 <div class="results-table-wrap">
   <table class="results-table">
     <thead>

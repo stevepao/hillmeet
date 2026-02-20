@@ -4,6 +4,7 @@ $content = ob_start();
 $pollUrlWithSecret = !empty($accessByInvite) && $inviteToken !== ''
   ? \Hillmeet\Support\url('/poll/' . $poll->slug, ['invite' => $inviteToken])
   : \Hillmeet\Support\url('/poll/' . $poll->slug . '?secret=' . urlencode($_GET['secret'] ?? ''));
+$resultsExpandUrl = $pollUrlWithSecret . (strpos($pollUrlWithSecret, '?') !== false ? '&' : '?') . 'expand=results';
 $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 ?>
 <h1><?= \Hillmeet\Support\e($poll->title) ?></h1>
@@ -32,7 +33,7 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
   <?php else: ?>
     <a href="<?= \Hillmeet\Support\url('/calendar') ?>" class="btn btn-secondary btn-sm">Connect Google Calendar</a>
   <?php endif; ?>
-  <button type="button" class="btn btn-secondary btn-sm" id="toggle-results" aria-expanded="false">Show results</button>
+  <a href="<?= \Hillmeet\Support\e($resultsExpandUrl) ?>" class="btn btn-secondary btn-sm" id="toggle-results" aria-expanded="false" data-no-js="Show results">Show results</a>
 </div>
 
 <p class="helper">We only check free/busy. We never store event details.</p>
@@ -82,10 +83,14 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 </div>
 <?php endif; ?>
 
-<details class="results-section" id="results-section">
+<details class="results-section" id="results-section" <?= !empty($resultsExpandOpen) ? 'open' : '' ?>>
   <summary>Results</summary>
   <div id="results-content">
-    <p class="muted">Loading…</p>
+    <?php if (!empty($resultsFragmentHtml)): ?>
+      <?= $resultsFragmentHtml ?>
+    <?php else: ?>
+      <p class="muted">Loading…</p>
+    <?php endif; ?>
   </div>
 </details>
 
