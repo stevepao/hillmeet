@@ -218,36 +218,19 @@
           .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, status: r.status, body: j }; }); })
           .then(function(result) {
             if (result.ok && result.body && result.body.success) {
-              var resp = result.body.savedVotes || {};
-              savedVotes = stateFromServer(resp);
-              draftVotes = copyState(savedVotes);
-              applyStateToDom(draftVotes);
               showToast('Votes saved');
-              updateInlineControls(true);
-              var resultsSection = document.getElementById('results-section');
-              var resultsContent = document.getElementById('results-content');
-              if (resultsContent && resultsSection && resultsSection.hasAttribute('open') && poll.resultsUrl) {
-                fetch(poll.resultsUrl, { cache: 'no-store', credentials: 'same-origin' })
-                  .then(function(r) {
-                    if (!r.ok) return '';
-                    return r.text();
-                  })
-                  .then(function(html) {
-                    if (html && html.trim().length > 0) resultsContent.innerHTML = html;
-                  })
-                  .catch(function() { /* keep existing content on fetch failure */ });
-              }
+              window.location.reload();
             } else {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
               var msg = result.body && result.body.error ? result.body.error : 'Could not save votes.';
               showToast(msg);
             }
           })
           .catch(function() {
-            showToast('Could not save votes.');
-          })
-          .then(function() {
-            submitBtn.disabled = !isDirty();
+            submitBtn.disabled = false;
             submitBtn.textContent = originalText;
+            showToast('Could not save votes.');
           });
       });
     }

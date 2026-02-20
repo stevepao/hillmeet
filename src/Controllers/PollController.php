@@ -477,20 +477,6 @@ final class PollController
         foreach ($options as $opt) {
             $savedVotes[$opt->id] = $savedByOption[$opt->id] ?? '';
         }
-        if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
-            $user = current_user();
-            $userEmail = $user && (int) $user->id === $userId ? ($user->email ?? '') : '';
-            $sessionUserId = isset($_SESSION['user']->id) ? (int) $_SESSION['user']->id : null;
-            error_log(sprintf(
-                '[Hillmeet vote-batch] session_id=%s session_user_id=%s auth_user_id=%d poll_id=%d votes_written=%d email=%s',
-                session_id(),
-                $sessionUserId !== null ? (string) $sessionUserId : 'null',
-                $userId,
-                $poll->id,
-                count(array_filter($savedVotes)),
-                $userEmail
-            ));
-        }
         echo json_encode(['success' => true, 'savedVotes' => $savedVotes]);
         exit;
     }
@@ -552,15 +538,6 @@ final class PollController
                 $votesCount += count($optVotes);
             }
             $curUser = current_user();
-            $sessionUserId = isset($_SESSION['user']->id) ? (int) $_SESSION['user']->id : null;
-            error_log(sprintf(
-                '[Hillmeet results-fragment] session_id=%s session_user_id=%s auth_user_id=%d poll_id=%d vote_rows_for_user=%d',
-                session_id(),
-                $sessionUserId !== null ? (string) $sessionUserId : 'null',
-                $currentUserId,
-                $poll->id,
-                $myVotesCount
-            ));
             $resultsDebug = [
                 'poll_id' => $poll->id,
                 'user_id' => $currentUserId,

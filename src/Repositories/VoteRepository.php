@@ -72,6 +72,22 @@ final class VoteRepository
         return $out;
     }
 
+    /** Count vote rows for (poll_id, user_id). Used for post-write assertion. */
+    public function countVotesForUser(int $pollId, int $userId): int
+    {
+        $stmt = Database::get()->prepare("SELECT COUNT(*) FROM votes WHERE poll_id = ? AND user_id = ?");
+        $stmt->execute([$pollId, $userId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** Total vote rows for this poll (all users). */
+    public function countVotesForPoll(int $pollId): int
+    {
+        $stmt = Database::get()->prepare("SELECT COUNT(*) FROM votes WHERE poll_id = ?");
+        $stmt->execute([$pollId]);
+        return (int) $stmt->fetchColumn();
+    }
+
     /** @return array<int, array{yes: int, maybe: int, no: int}> option_id => counts */
     public function getTotalsByPoll(int $pollId): array
     {
