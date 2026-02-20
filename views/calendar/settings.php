@@ -11,6 +11,9 @@ $content = ob_start();
   </div>
 <?php else: ?>
   <p class="muted">Connected. Choose which calendars to use for availability.</p>
+  <?php if (!empty($_SESSION['calendar_saved'])): unset($_SESSION['calendar_saved']); ?>
+    <p class="success-message" role="alert">Calendar preferences saved.</p>
+  <?php endif; ?>
   <form method="post" action="<?= \Hillmeet\Support\url('/calendar/save') ?>">
     <?= \Hillmeet\Support\Csrf::field() ?>
     <div class="form-group">
@@ -19,12 +22,12 @@ $content = ob_start();
       </label>
     </div>
     <ul class="calendar-list">
-      <?php foreach ($calendars as $cal): ?>
+      <?php foreach ($calendars as $i => $cal): ?>
         <li>
           <label class="checkbox-label">
-            <input type="checkbox" name="calendars[<?= \Hillmeet\Support\e($cal['id']) ?>][selected]" value="1" <?= $cal['selected'] ? 'checked' : '' ?>>
-            <input type="hidden" name="calendars[<?= \Hillmeet\Support\e($cal['id']) ?>][id]" value="<?= \Hillmeet\Support\e($cal['id']) ?>">
-            <input type="hidden" name="calendars[<?= \Hillmeet\Support\e($cal['id']) ?>][summary]" value="<?= \Hillmeet\Support\e($cal['summary']) ?>">
+            <input type="checkbox" name="calendars[<?= $i ?>][selected]" value="1" <?= $cal['selected'] ? 'checked' : '' ?>>
+            <input type="hidden" name="calendars[<?= $i ?>][id]" value="<?= \Hillmeet\Support\e($cal['id']) ?>">
+            <input type="hidden" name="calendars[<?= $i ?>][summary]" value="<?= \Hillmeet\Support\e($cal['summary']) ?>">
             <?= \Hillmeet\Support\e($cal['summary']) ?>
           </label>
         </li>

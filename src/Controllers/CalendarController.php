@@ -97,6 +97,7 @@ final class CalendarController
         }
         $selectionRepo->saveList($userId, $list);
         $selectionRepo->setTentativeAsBusy($userId, $tentativeAsBusy);
+        $_SESSION['calendar_saved'] = true;
         header('Location: ' . url('/calendar'));
         exit;
     }
