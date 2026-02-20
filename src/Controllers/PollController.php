@@ -76,6 +76,7 @@ final class PollController
         $poll = $this->pollRepo->findBySlug($slug);
         if ($poll === null || !$poll->isOrganizer((int) current_user()->id)) {
             http_response_code(404);
+            $pageMessage = 'This poll no longer exists.';
             require dirname(__DIR__, 2) . '/views/errors/404.php';
             exit;
         }
@@ -89,6 +90,7 @@ final class PollController
         $poll = $this->pollRepo->findBySlug($slug);
         if ($poll === null || !$poll->isOrganizer((int) current_user()->id)) {
             http_response_code(404);
+            $pageMessage = 'This poll no longer exists.';
             require dirname(__DIR__, 2) . '/views/errors/404.php';
             exit;
         }
@@ -217,6 +219,52 @@ final class PollController
         exit;
     }
 
+    public function deletePoll(string $slug): void
+    {
+        $this->auth();
+        header('Content-Type: application/json; charset=utf-8');
+        $poll = $this->pollRepo->findBySlug($slug);
+        if ($poll === null || !$poll->isOrganizer((int) current_user()->id)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Poll not found or access denied.']);
+            exit;
+        }
+        $err = $this->pollService->deletePoll($poll->id, (int) current_user()->id);
+        if ($err !== null) {
+            http_response_code(400);
+            echo json_encode(['error' => $err]);
+            exit;
+        }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    public function deleteOption(string $slug): void
+    {
+        $this->auth();
+        header('Content-Type: application/json; charset=utf-8');
+        $poll = $this->pollRepo->findBySlug($slug);
+        if ($poll === null || !$poll->isOrganizer((int) current_user()->id)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Poll not found or access denied.']);
+            exit;
+        }
+        $optionId = (int) ($_POST['option_id'] ?? 0);
+        if ($optionId <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid option.']);
+            exit;
+        }
+        $err = $this->pollService->deleteOption($poll->id, $optionId, (int) current_user()->id);
+        if ($err !== null) {
+            http_response_code(400);
+            echo json_encode(['error' => $err]);
+            exit;
+        }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     public function view(string $slug): void
     {
         $this->auth();
@@ -264,6 +312,7 @@ final class PollController
 
         if ($poll === null) {
             http_response_code(404);
+            $pageMessage = 'This poll no longer exists.';
             require dirname(__DIR__, 2) . '/views/errors/404.php';
             exit;
         }
@@ -466,8 +515,12 @@ final class PollController
             if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
                 error_log('[Hillmeet vote-batch] error: ' . $err . ' poll_id=' . $poll->id . ' user_id=' . $userId . ' votes_submitted=' . count($votes));
             }
+            $stale = str_starts_with($err, 'STALE_OPTIONS:');
             http_response_code(400);
-            echo json_encode(['error' => $err]);
+            echo json_encode([
+                'error' => $stale ? substr($err, strlen('STALE_OPTIONS:')) : $err,
+                'error_code' => $stale ? 'stale_options' : null,
+            ]);
             exit;
         }
         $voteRepo = new VoteRepository();

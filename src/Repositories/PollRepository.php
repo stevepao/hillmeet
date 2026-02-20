@@ -149,4 +149,20 @@ final class PollRepository
         } while ($exists);
         return $slug;
     }
+
+    /** Clear locked_option_id then delete poll; cascades remove options, votes, participants, invites, calendar_events. */
+    public function deletePoll(int $pollId): void
+    {
+        $pdo = Database::get();
+        $pdo->prepare("UPDATE polls SET locked_option_id = NULL WHERE id = ?")->execute([$pollId]);
+        $pdo->prepare("DELETE FROM polls WHERE id = ?")->execute([$pollId]);
+    }
+
+    /** Delete one option (votes cascade). Returns true if a row was deleted. */
+    public function deleteOption(int $pollId, int $optionId): bool
+    {
+        $stmt = Database::get()->prepare("DELETE FROM poll_options WHERE poll_id = ? AND id = ?");
+        $stmt->execute([$pollId, $optionId]);
+        return $stmt->rowCount() > 0;
+    }
 }

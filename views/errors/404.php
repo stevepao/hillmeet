@@ -12,7 +12,7 @@
 <body>
   <div class="error-page">
     <h1>404</h1>
-    <p>This page or poll could not be found.</p>
+    <p><?= isset($pageMessage) ? \Hillmeet\Support\e($pageMessage) : 'This page or poll could not be found.' ?></p>
     <a href="<?= \Hillmeet\Support\url('/') ?>" class="btn btn-primary">Go home</a>
   </div>
 </body>

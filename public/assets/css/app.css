@@ -282,3 +282,17 @@
   gap: var(--space-2);
   flex-wrap: wrap;
 }
+
+/* Confirm modal overlay */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+.modal-overlay[hidden] { display: none !important; }
+.modal-overlay:not([hidden]) { display: flex !important; }

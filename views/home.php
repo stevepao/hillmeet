@@ -5,6 +5,7 @@ $content = ob_start();
 $ownedPolls = $ownedPolls ?? [];
 $participatedPolls = $participatedPolls ?? [];
 $debugCounts = $debugCounts ?? null;
+$csrfToken = \Hillmeet\Support\Csrf::token();
 ?>
 <h1>Hillmeet</h1>
 <div class="home-actions" style="margin-bottom: var(--space-6);">
@@ -22,9 +23,9 @@ $debugCounts = $debugCounts ?? null;
   <?php if (empty($ownedPolls)): ?>
     <p class="muted">No polls yet. Create one to get started.</p>
   <?php else: ?>
-    <ul class="poll-card-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-4);">
+    <ul class="poll-card-list" id="your-polls-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-4);">
       <?php foreach ($ownedPolls as $p): ?>
-        <li class="card">
+        <li class="card poll-card-owned" data-poll-slug="<?= \Hillmeet\Support\e($p->slug) ?>">
           <div style="display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3);">
             <div style="flex: 1; min-width: 0;">
               <span class="badge <?= $p->isLocked() ? 'badge-muted' : 'badge-success' ?>"><?= $p->isLocked() ? 'Locked' : 'Open' ?></span>
@@ -39,13 +40,87 @@ $debugCounts = $debugCounts ?? null;
             <div style="display: flex; gap: var(--space-2); flex-shrink: 0;">
               <a href="<?= \Hillmeet\Support\url('/poll/' . $p->slug) ?>" class="btn btn-secondary btn-sm">View</a>
               <a href="<?= \Hillmeet\Support\url('/poll/' . $p->slug . '/edit') ?>" class="btn btn-secondary btn-sm">Edit</a>
+              <button type="button" class="btn btn-secondary btn-sm poll-delete-btn" data-poll-slug="<?= \Hillmeet\Support\e($p->slug) ?>" aria-label="Delete poll">Delete</button>
             </div>
           </div>
         </li>
       <?php endforeach; ?>
     </ul>
+    <div id="confirm-delete-poll-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-poll-title" hidden data-csrf="<?= \Hillmeet\Support\e($csrfToken) ?>" data-delete-poll-base="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/poll/')) ?>">
+      <div class="card" style="max-width: 28rem;">
+        <h2 id="confirm-delete-poll-title">Delete poll?</h2>
+        <p class="helper">Delete this poll? This removes all time options and all votes. This cannot be undone.</p>
+        <div style="display: flex; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-4);">
+          <button type="button" class="btn btn-secondary" id="confirm-delete-poll-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirm-delete-poll-confirm" style="background: var(--danger); border-color: var(--danger);">Delete</button>
+        </div>
+      </div>
+    </div>
   <?php endif; ?>
 </section>
+
+<script>
+(function() {
+  var modal = document.getElementById('confirm-delete-poll-modal');
+  if (!modal) return;
+  var baseUrl = modal.getAttribute('data-delete-poll-base') || '';
+  var csrfToken = modal.getAttribute('data-csrf') || '';
+  var slugToDelete = null;
+  var cardToRemove = null;
+
+  function showModal() {
+    modal.hidden = false;
+    modal.style.display = 'flex';
+  }
+  function hideModal() {
+    modal.hidden = true;
+    modal.style.display = 'none';
+    slugToDelete = null;
+    cardToRemove = null;
+  }
+
+  document.querySelectorAll('.poll-delete-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      slugToDelete = btn.getAttribute('data-poll-slug');
+      cardToRemove = btn.closest('.poll-card-owned');
+      if (slugToDelete && cardToRemove) showModal();
+    });
+  });
+
+  var cancelBtn = document.getElementById('confirm-delete-poll-cancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', hideModal);
+
+  var confirmBtn = document.getElementById('confirm-delete-poll-confirm');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', function() {
+      if (!slugToDelete || !cardToRemove) { hideModal(); return; }
+      var formData = new FormData();
+      formData.append('csrf_token', csrfToken);
+      confirmBtn.disabled = true;
+      fetch(baseUrl + slugToDelete + '/delete', { method: 'POST', body: formData, credentials: 'same-origin' })
+        .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
+        .then(function(result) {
+          confirmBtn.disabled = false;
+          hideModal();
+          if (result.ok && result.body && result.body.success) {
+            cardToRemove.remove();
+          } else {
+            alert(result.body && result.body.error ? result.body.error : 'Could not delete poll.');
+          }
+        })
+        .catch(function() {
+          confirmBtn.disabled = false;
+          hideModal();
+          alert('Could not delete poll.');
+        });
+    });
+  }
+
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) hideModal();
+  });
+})();
+</script>
 
 <section class="home-section" aria-labelledby="participated-heading" style="margin-top: var(--space-8);">
   <h2 id="participated-heading">Polls you're in</h2>

@@ -14,7 +14,7 @@ $content = ob_start();
 <div class="card" style="margin-top:var(--space-5);">
   <p class="helper" style="margin-bottom:var(--space-3);">Event duration: <strong><?= $pollDurationMinutes ?> min</strong> (set when creating the poll). Each slot is a start time; end is start + duration.</p>
   <h2>Manual entry</h2>
-  <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/options') ?>" id="options-form">
+  <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/options') ?>" id="options-form" data-csrf="<?= \Hillmeet\Support\e(\Hillmeet\Support\Csrf::token()) ?>" data-option-delete-url="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/poll/' . $poll->slug . '/option-delete')) ?>">
     <?= \Hillmeet\Support\Csrf::field() ?>
     <div id="options-container">
       <?php
@@ -24,11 +24,16 @@ $content = ob_start();
         $startLocal = (new DateTime($opt->start_utc, $utc))->setTimezone($pollTz)->format('Y-m-d\TH:i');
         $endLocal = (new DateTime($opt->end_utc, $utc))->setTimezone($pollTz)->format('Y-m-d\TH:i');
       ?>
-        <div class="form-group option-row">
-          <label>Start (<?= \Hillmeet\Support\e($poll->timezone) ?>)</label>
-          <input type="text" name="options[<?= $i ?>][start]" class="input option-start flatpickr-datetime" value="<?= \Hillmeet\Support\e($startLocal) ?>" placeholder="Date & time" autocomplete="off">
-          <label>End (<?= \Hillmeet\Support\e($poll->timezone) ?>)</label>
-          <input type="text" name="options[<?= $i ?>][end]" class="input option-end" value="<?= \Hillmeet\Support\e($endLocal) ?>" readonly tabindex="-1" aria-label="End time (auto from start + <?= $pollDurationMinutes ?> min)" autocomplete="off">
+        <div class="form-group option-row" data-option-id="<?= (int) $opt->id ?>">
+          <div style="display:flex;align-items:flex-start;gap:var(--space-2);flex-wrap:wrap;">
+            <div style="flex:1;min-width:0;">
+              <label>Start (<?= \Hillmeet\Support\e($poll->timezone) ?>)</label>
+              <input type="text" name="options[<?= $i ?>][start]" class="input option-start flatpickr-datetime" value="<?= \Hillmeet\Support\e($startLocal) ?>" placeholder="Date & time" autocomplete="off">
+              <label>End (<?= \Hillmeet\Support\e($poll->timezone) ?>)</label>
+              <input type="text" name="options[<?= $i ?>][end]" class="input option-end" value="<?= \Hillmeet\Support\e($endLocal) ?>" readonly tabindex="-1" aria-label="End time (auto from start + <?= $pollDurationMinutes ?> min)" autocomplete="off">
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm option-delete-btn" data-option-id="<?= (int) $opt->id ?>" aria-label="Delete this time option" title="Delete">&#10005;</button>
+          </div>
         </div>
       <?php endforeach; ?>
     </div>
@@ -57,6 +62,17 @@ $content = ob_start();
     <hr style="margin:var(--space-5) 0;border-color:var(--border);">
     <button type="submit" class="btn btn-primary">Save & continue</button>
   </form>
+</div>
+
+<div id="confirm-delete-option-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-option-title" hidden>
+  <div class="card" style="max-width: 28rem;">
+    <h2 id="confirm-delete-option-title">Delete time option?</h2>
+    <p class="helper">Delete this time option? Votes for this option will be removed.</p>
+    <div style="display: flex; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-4);">
+      <button type="button" class="btn btn-secondary" id="confirm-delete-option-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="confirm-delete-option-confirm" style="background: var(--danger); border-color: var(--danger);">Delete</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -118,9 +134,12 @@ window.addEventListener('load', function() {
     var i = container.querySelectorAll('.option-row').length;
     var div = document.createElement('div');
     div.className = 'form-group option-row';
-    div.innerHTML = '<label>Start (' + pollTz + ')</label><input type="text" name="options[' + i + '][start]" class="input option-start flatpickr-datetime" value="' + (startVal || '') + '" placeholder="Date & time" autocomplete="off">' +
-      '<label>End (' + pollTz + ')</label><input type="text" name="options[' + i + '][end]" class="input option-end" value="' + (endVal || '') + '" readonly tabindex="-1" aria-label="End (start + ' + durationMinutes + ' min)" autocomplete="off">';
+    div.innerHTML = '<div style="display:flex;align-items:flex-start;gap:var(--space-2);flex-wrap:wrap;"><div style="flex:1;min-width:0;">' +
+      '<label>Start (' + pollTz + ')</label><input type="text" name="options[' + i + '][start]" class="input option-start flatpickr-datetime" value="' + (startVal || '') + '" placeholder="Date & time" autocomplete="off">' +
+      '<label>End (' + pollTz + ')</label><input type="text" name="options[' + i + '][end]" class="input option-end" value="' + (endVal || '') + '" readonly tabindex="-1" aria-label="End (start + ' + durationMinutes + ' min)" autocomplete="off">' +
+      '</div><button type="button" class="btn btn-secondary btn-sm option-remove-row" aria-label="Remove this row" title="Remove">&#10005;</button></div>';
     container.appendChild(div);
+    div.querySelector('.option-remove-row').addEventListener('click', function() { div.remove(); });
     var startInput = div.querySelector('.option-start');
     initFlatpickrStart(startInput);
     if (startVal && !endVal) setEndFromStart(startInput);
@@ -201,6 +220,49 @@ window.addEventListener('load', function() {
     if (added > 0) showToast('Added ' + added + ' time option' + (added === 1 ? '' : 's') + '.');
     else showToast('No slots in that range. Try a wider date range or different days.');
   });
+
+  var optionModal = document.getElementById('confirm-delete-option-modal');
+  var optionDeleteUrl = document.getElementById('options-form') && document.getElementById('options-form').getAttribute('data-option-delete-url');
+  var optionCsrf = document.getElementById('options-form') && document.getElementById('options-form').getAttribute('data-csrf');
+  var optionIdToDelete = null;
+  var optionRowToRemove = null;
+  if (optionModal && optionDeleteUrl && optionCsrf) {
+    function showOptionModal() { optionModal.hidden = false; optionModal.style.display = 'flex'; }
+    function hideOptionModal() { optionModal.hidden = true; optionModal.style.display = 'none'; optionIdToDelete = null; optionRowToRemove = null; }
+    container.querySelectorAll('.option-delete-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.getAttribute('data-option-id');
+        var row = btn.closest('.option-row');
+        if (!id || !row) return;
+        optionIdToDelete = id;
+        optionRowToRemove = row;
+        showOptionModal();
+      });
+    });
+    document.getElementById('confirm-delete-option-cancel').addEventListener('click', hideOptionModal);
+    document.getElementById('confirm-delete-option-confirm').addEventListener('click', function() {
+      if (!optionIdToDelete || !optionRowToRemove) { hideOptionModal(); return; }
+      var formData = new FormData();
+      formData.append('csrf_token', optionCsrf);
+      formData.append('option_id', optionIdToDelete);
+      var confirmBtn = document.getElementById('confirm-delete-option-confirm');
+      confirmBtn.disabled = true;
+      fetch(optionDeleteUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
+        .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
+        .then(function(result) {
+          confirmBtn.disabled = false;
+          hideOptionModal();
+          if (result.ok && result.body && result.body.success) {
+            optionRowToRemove.remove();
+            showToast('Time option removed.');
+          } else {
+            showToast(result.body && result.body.error ? result.body.error : 'Could not delete option.');
+          }
+        })
+        .catch(function() { confirmBtn.disabled = false; hideOptionModal(); showToast('Could not delete option.'); });
+    });
+    optionModal.addEventListener('click', function(e) { if (e.target === optionModal) hideOptionModal(); });
+  }
 })();
 });
 </script>

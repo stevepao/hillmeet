@@ -129,6 +129,12 @@ final class PollService
         }
         $options = $this->pollRepo->getOptions($pollId);
         $optionIds = array_column($options, 'id');
+        foreach (array_keys($votes) as $k) {
+            $oid = (int) $k;
+            if ($oid > 0 && !in_array($oid, $optionIds, true)) {
+                return 'STALE_OPTIONS:One or more time options are no longer available. Please refresh and try again.';
+            }
+        }
         $this->participantRepo->add($pollId, $userId);
         foreach ($optionIds as $optionId) {
             $vote = isset($votes[$optionId]) ? trim((string) $votes[$optionId]) : '';
@@ -241,5 +247,42 @@ final class PollService
             'best_option_id' => $bestOptionId,
             'options' => $options,
         ];
+    }
+
+    /** Delete poll and all related data. Returns null on success or error message. */
+    public function deletePoll(int $pollId, int $userId): ?string
+    {
+        $poll = $this->pollRepo->findById($pollId);
+        if ($poll === null) {
+            return 'Poll not found.';
+        }
+        if (!$poll->isOrganizer($userId)) {
+            return 'Not allowed.';
+        }
+        $this->pollRepo->deletePoll($pollId);
+        AuditLog::log('poll.delete', 'poll', (string) $pollId, ['slug' => $poll->slug], $userId);
+        return null;
+    }
+
+    /** Delete one time option and its votes. Returns null on success or error message. */
+    public function deleteOption(int $pollId, int $optionId, int $userId): ?string
+    {
+        $poll = $this->pollRepo->findById($pollId);
+        if ($poll === null) {
+            return 'Poll not found.';
+        }
+        if (!$poll->isOrganizer($userId)) {
+            return 'Not allowed.';
+        }
+        $options = $this->pollRepo->getOptions($pollId);
+        $validIds = array_column($options, 'id');
+        if (!in_array($optionId, $validIds, true)) {
+            return 'Time option not found.';
+        }
+        if ($poll->isLocked() && $poll->locked_option_id === $optionId) {
+            return 'Cannot delete the locked option.';
+        }
+        $this->pollRepo->deleteOption($pollId, $optionId);
+        return null;
     }
 }

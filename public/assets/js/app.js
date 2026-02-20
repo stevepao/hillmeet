@@ -225,6 +225,9 @@
               submitBtn.textContent = originalText;
               var msg = result.body && result.body.error ? result.body.error : 'Could not save votes.';
               showToast(msg);
+              if (result.body && result.body.error_code === 'stale_options') {
+                window.location.reload();
+              }
             }
           })
           .catch(function() {
