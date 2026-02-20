@@ -598,43 +598,84 @@ final class PollController
         }
         if ($poll === null) {
             http_response_code(404);
-            echo json_encode(['error' => 'not_found', 'message' => 'Poll not found.']);
+            echo json_encode(['ok' => false, 'error_code' => 'not_found', 'error_message' => 'Poll not found.', 'action_hint' => 'Use the correct poll link.']);
             exit;
         }
         $userId = (int) current_user()->id;
         $oauthRepo = new OAuthConnectionRepository();
         $selectionRepo = new GoogleCalendarSelectionRepository();
         $freebusyCache = new \Hillmeet\Repositories\FreebusyCacheRepository();
-        if (!$oauthRepo->hasConnection($userId)) {
-            echo json_encode(['error' => 'not_connected', 'message' => 'Connect Google Calendar to check availability.']);
+        $options = $this->pollRepo->getOptions($poll->id);
+
+        $sendError = function (string $code, string $message, string $hint, int $httpStatus = 400, array $extra = []): void {
+            http_response_code($httpStatus);
+            $payload = array_merge(['ok' => false, 'error_code' => $code, 'error_message' => $message, 'action_hint' => $hint], $extra);
+            echo json_encode($payload);
             exit;
+        };
+
+        if (!$oauthRepo->hasConnection($userId)) {
+            $sendError('not_connected', 'Connect Google Calendar to check availability.', 'Go to Calendar and connect your Google account.', 403);
         }
         $selectedCalendarIds = $selectionRepo->getSelectedCalendarIds($userId);
         if ($selectedCalendarIds === []) {
-            echo json_encode(['error' => 'no_calendars', 'message' => 'Select at least one calendar.']);
-            exit;
+            $sendError('no_calendars', 'No calendars selected.', 'Select at least one calendar in Calendar settings.', 400);
         }
-        $options = $this->pollRepo->getOptions($poll->id);
+        if (count($options) === 0) {
+            $sendError('no_slots', 'No times to check.', 'Add time options to this poll first.', 400);
+        }
+
         $calendarService = new GoogleCalendarService($oauthRepo, $selectionRepo, $freebusyCache);
         $out = $calendarService->getFreebusyForPoll($userId, $poll->id, $options);
+
+        $timeMin = $options[0]->start_utc ?? null;
+        $timeMax = $options !== [] ? end($options)->end_utc : null;
+        $isLocal = \env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true';
+
         if (isset($out['error'])) {
+            $code = $out['error'];
             $messages = [
-                'not_connected' => 'Connect Google Calendar to check availability.',
-                'no_calendars' => 'Select at least one calendar.',
-                'api_error' => 'Calendar API error. Try again or reconnect.',
-                'rate_limited' => 'Too many checks. Wait a moment.',
+                'not_connected' => ['Calendar not connected.', 'Connect Google Calendar in Calendar settings.', 403],
+                'no_calendars' => ['No calendars selected.', 'Select at least one calendar.', 400],
+                'token_refresh_failed' => ['Calendar authorization expired.', 'Please reconnect your Google account.', 401],
+                'insufficient_permissions' => ['Permission missing.', 'Reconnect and allow Calendar access.', 403],
+                'rate_limited' => ['Too many checks.', 'Wait a moment and try again.', 429],
+                'api_error' => ['Calendar API error.', 'Try again or reconnect calendar.', 502],
             ];
-            $msg = $messages[$out['error']] ?? $out['error'];
-            echo json_encode(['error' => $out['error'], 'message' => $msg, 'busy' => $out['busy'] ?? [], 'checked_at' => $out['checked_at'] ?? date('c')]);
-            exit;
-        }
-        if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
+            $tuple = $messages[$code] ?? ['Something went wrong.', 'Try again or reconnect calendar.', 502];
+            $httpStatus = $tuple[2];
+            $desc = $out['error_description'] ?? $tuple[0];
             error_log(sprintf(
-                '[Hillmeet check-availability] poll_id=%d user_id=%d calendars=%d slots=%d cache_writes=%d',
-                $poll->id,
+                '[Hillmeet check-availability] error user_id=%d poll_id=%d code=%s desc=%s calendars=%d slots=%d api_status=%s',
                 $userId,
+                $poll->id,
+                $code,
+                $desc,
                 count($selectedCalendarIds),
                 count($options),
+                (string) ($out['api_status'] ?? '')
+            ));
+            $payload = ['ok' => false, 'error_code' => $code, 'error_message' => $desc, 'action_hint' => $tuple[1]];
+            if ($isLocal && isset($out['api_status'])) {
+                $payload['debug'] = ['api_status' => $out['api_status'], 'api_error_body' => $out['api_error_body'] ?? null];
+            }
+            if ($isLocal && isset($out['error_description']) && $out['error_description'] !== '') {
+                $payload['debug'] = ($payload['debug'] ?? []) + ['error_description' => $out['error_description']];
+            }
+            http_response_code($httpStatus);
+            echo json_encode($payload);
+            exit;
+        }
+
+        if ($isLocal) {
+            error_log(sprintf(
+                '[Hillmeet check-availability] ok user_id=%d poll_id=%d calendars=%d slots=%d time_min=%s time_max=%s cache_writes=%d',
+                $userId,
+                $poll->id,
+                count($selectedCalendarIds),
+                count($options),
+                $timeMin ?? '',
+                $timeMax ?? '',
                 count($out['busy'])
             ));
         }
@@ -645,7 +686,7 @@ final class PollController
             header('Location: ' . $back);
             exit;
         }
-        echo json_encode(['busy' => $out['busy'], 'checked_at' => $out['checked_at']]);
+        echo json_encode(['ok' => true, 'busy' => $out['busy'], 'checked_at' => $out['checked_at']]);
         exit;
     }
 }

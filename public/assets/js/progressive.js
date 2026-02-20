@@ -39,13 +39,17 @@
       .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, status: r.status, data: data || {} }; }); })
       .then(function(result) {
         var data = result.data;
-        if (!result.ok || (data.error && data.message)) {
-          var msg = (data.message) || 'Could not check availability.';
-          var calendarUrl = document.querySelector('a[href*="/calendar"]');
-          if ((data.error === 'not_connected' || data.error === 'api_error') && calendarUrl) {
-            showToast(msg + ' ', calendarUrl.getAttribute('href'), 'Reconnect calendar');
+        var isError = !result.ok || data.ok === false || (data.error_code || data.error);
+        if (isError) {
+          var msg = data.error_message || data.message || 'Could not check availability.';
+          var hint = data.action_hint;
+          var fullMsg = hint ? (msg + ' ' + hint) : msg;
+          var calendarLink = document.querySelector('a[href*="/calendar"]');
+          var showReconnect = (data.error_code === 'not_connected' || data.error_code === 'token_refresh_failed' || data.error_code === 'insufficient_permissions' || data.error_code === 'api_error') && calendarLink;
+          if (showReconnect) {
+            showToast(msg + ' ', calendarLink.getAttribute('href'), 'Reconnect calendar');
           } else {
-            showToast(msg);
+            showToast(fullMsg);
           }
           return;
         }

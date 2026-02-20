@@ -64,7 +64,8 @@ final class GoogleCalendarService
     /** @return array<array{id: string, summary: string}> */
     public function getCalendarList(int $userId): array
     {
-        $accessToken = $this->getAccessToken($userId);
+        $tokenResult = $this->getAccessToken($userId);
+        $accessToken = $tokenResult['access_token'] ?? null;
         if ($accessToken === null) {
             return [];
         }
@@ -108,9 +109,12 @@ final class GoogleCalendarService
         if ($toFetch === []) {
             return ['busy' => $result, 'checked_at' => date('c')];
         }
-        $accessToken = $this->getAccessToken($userId);
+        $tokenResult = $this->getAccessToken($userId);
+        $accessToken = $tokenResult['access_token'] ?? null;
         if ($accessToken === null) {
-            return ['busy' => $result, 'checked_at' => date('c'), 'error' => 'not_connected'];
+            $err = $tokenResult['error'] ?? 'not_connected';
+            $code = ($err === 'invalid_grant' || $err === 'invalid_token') ? 'token_refresh_failed' : 'not_connected';
+            return ['busy' => $result, 'checked_at' => date('c'), 'error' => $code, 'error_description' => $tokenResult['error_description'] ?? ''];
         }
         $calendarIds = $this->selectionRepo->getSelectedCalendarIds($userId);
         if ($calendarIds === []) {
@@ -123,9 +127,29 @@ final class GoogleCalendarService
             'timeMax' => date('c', strtotime($timeMax)),
             'items' => array_map(fn($id) => ['id' => $id], $calendarIds),
         ];
-        $res = $this->apiPost($accessToken, 'https://www.googleapis.com/calendar/v3/freeBusy', $body);
+        $freebusyUrl = 'https://www.googleapis.com/calendar/v3/freeBusy';
+        $apiResult = $this->apiPostWithStatus($accessToken, $freebusyUrl, $body);
+        $res = $apiResult['body'];
+        $status = $apiResult['status'];
         if ($res === null || !isset($res['calendars'])) {
-            return ['busy' => $result, 'checked_at' => date('c'), 'error' => 'api_error'];
+            $code = 'api_error';
+            if ($status === 401) {
+                $code = 'token_refresh_failed';
+            } elseif ($status === 403) {
+                $code = 'insufficient_permissions';
+            } elseif ($status === 429) {
+                $code = 'rate_limited';
+            } elseif ($status >= 500) {
+                $code = 'api_error';
+            }
+            return [
+                'busy' => $result,
+                'checked_at' => date('c'),
+                'error' => $code,
+                'error_description' => isset($res['error']['message']) ? $res['error']['message'] : ('HTTP ' . $status),
+                'api_status' => $status,
+                'api_error_body' => $res,
+            ];
         }
         $tentativeAsBusy = $this->selectionRepo->getTentativeAsBusy($userId);
         foreach ($toFetch as $opt) {
@@ -160,7 +184,8 @@ final class GoogleCalendarService
 
     public function createEvent(int $userId, string $calendarId, string $title, string $description, string $location, string $startUtc, string $endUtc, array $attendeeEmails = []): ?string
     {
-        $accessToken = $this->getAccessToken($userId);
+        $tokenResult = $this->getAccessToken($userId);
+        $accessToken = $tokenResult['access_token'] ?? null;
         if ($accessToken === null) {
             return null;
         }
@@ -179,11 +204,14 @@ final class GoogleCalendarService
         return $res['id'] ?? null;
     }
 
-    private function getAccessToken(int $userId): ?string
+    /**
+     * @return array{access_token: ?string, error: ?string, error_description: ?string}
+     */
+    private function getAccessToken(int $userId): array
     {
         $refreshToken = $this->oauthRepo->getRefreshToken($userId);
         if ($refreshToken === null) {
-            return null;
+            return ['access_token' => null, 'error' => null, 'error_description' => null];
         }
         $clientId = config('google.client_id');
         $clientSecret = config('google.client_secret');
@@ -197,40 +225,64 @@ final class GoogleCalendarService
                     'refresh_token' => $refreshToken,
                     'grant_type' => 'refresh_token',
                 ]),
+                'ignore_errors' => true,
             ],
         ]));
         if ($res === false) {
-            return null;
+            return ['access_token' => null, 'error' => 'request_failed', 'error_description' => 'Token refresh request failed'];
         }
         $data = json_decode($res, true);
+        if (isset($data['error'])) {
+            return ['access_token' => null, 'error' => $data['error'], 'error_description' => $data['error_description'] ?? ''];
+        }
         $accessToken = $data['access_token'] ?? null;
         if ($accessToken !== null && isset($data['expires_in'])) {
             $this->oauthRepo->upsert($userId, 'google', $refreshToken, $accessToken, date('Y-m-d H:i:s', time() + $data['expires_in']));
         }
-        return $accessToken;
+        return ['access_token' => $accessToken, 'error' => null, 'error_description' => null];
     }
 
     private function apiGet(string $accessToken, string $url): ?array
     {
-        $ctx = stream_context_create([
+        $r = $this->apiRequest('GET', $url, $accessToken, null);
+        return $r['body'];
+    }
+
+    /**
+     * @return array{body: ?array, status: int}
+     */
+    private function apiPostWithStatus(string $accessToken, string $url, array $body): array
+    {
+        return $this->apiRequest('POST', $url, $accessToken, $body);
+    }
+
+    /**
+     * @return array{body: ?array, status: int}
+     */
+    private function apiRequest(string $method, string $url, string $accessToken, ?array $body): array
+    {
+        $opts = [
             'http' => [
-                'header' => 'Authorization: Bearer ' . $accessToken,
+                'method' => $method,
+                'header' => 'Authorization: Bearer ' . $accessToken . "\r\n",
+                'ignore_errors' => true,
             ],
-        ]);
+        ];
+        if ($body !== null) {
+            $opts['http']['header'] .= "Content-Type: application/json\r\n";
+            $opts['http']['content'] = json_encode($body);
+        }
+        $ctx = stream_context_create($opts);
         $res = @file_get_contents($url, false, $ctx);
-        return $res !== false ? json_decode($res, true) : null;
+        $status = 0;
+        if (isset($http_response_header[0]) && preg_match('/HTTP\/\d\.\d\s+(\d+)/', $http_response_header[0], $m)) {
+            $status = (int) $m[1];
+        }
+        return ['body' => $res !== false ? json_decode($res, true) : null, 'status' => $status];
     }
 
     private function apiPost(string $accessToken, string $url, array $body): ?array
     {
-        $ctx = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Authorization: Bearer {$accessToken}\r\nContent-Type: application/json",
-                'content' => json_encode($body),
-            ],
-        ]);
-        $res = @file_get_contents($url, false, $ctx);
-        return $res !== false ? json_decode($res, true) : null;
+        $r = $this->apiPostWithStatus($accessToken, $url, $body);
+        return $r['body'];
     }
-}
