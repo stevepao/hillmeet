@@ -27,7 +27,8 @@
   if (!btn || !window.HILLMEET_POLL) return;
 
   var checkUrl = window.HILLMEET_POLL.checkAvailabilityUrl;
-  if (!checkUrl) return;
+  var csrfToken = window.HILLMEET_POLL.csrfToken;
+  if (!checkUrl || !csrfToken) return;
 
   btn.addEventListener('click', function() {
     var label = btn.textContent;
@@ -35,7 +36,9 @@
     btn.setAttribute('aria-busy', 'true');
     btn.textContent = 'Checking…';
 
-    fetch(checkUrl, { headers: { 'Accept': 'application/json' } })
+    var formData = new FormData();
+    formData.append('csrf_token', csrfToken);
+    fetch(checkUrl, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } })
       .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, status: r.status, data: data || {} }; }); })
       .then(function(result) {
         var data = result.data;
