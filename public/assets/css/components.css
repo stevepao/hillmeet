@@ -99,6 +99,21 @@
   border-color: rgba(255,255,255,0.2);
 }
 
+/* Date/time/datetime inputs: always light background so the field and native picker are readable in dark or light theme */
+.input[type="date"],
+.input[type="time"],
+.input[type="datetime-local"] {
+  background: #fff;
+  color: #1a1a1a;
+  border-color: #ccc;
+  color-scheme: light;
+}
+.input[type="date"]:hover:not(:disabled),
+.input[type="time"]:hover:not(:disabled),
+.input[type="datetime-local"]:hover:not(:disabled) {
+  border-color: #999;
+}
+
 .textarea {
   min-height: 100px;
   resize: vertical;

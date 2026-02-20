@@ -70,6 +70,17 @@ $content = ob_start();
   var pollTz = <?= json_encode($poll->timezone) ?>;
   var durationMinutes = <?= $pollDurationMinutes ?>;
 
+  function showToast(msg) {
+    var existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    var t = document.createElement('div');
+    t.className = 'toast';
+    t.setAttribute('role', 'status');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.remove(); }, 3500);
+  }
+
   function setEndFromStart(startInput) {
     var row = startInput.closest('.option-row');
     if (!row) return;
@@ -116,10 +127,22 @@ $content = ob_start();
     var endTime = document.getElementById('gen-end').value;
     var gap = parseInt(document.getElementById('gen-gap').value, 10) || 0;
     var days = [].slice.call(document.querySelectorAll('.gen-dow:checked')).map(function(c) { return parseInt(c.value, 10); });
-    if (!from || !to || days.length === 0) return;
+    if (!from || !to) {
+      showToast('Please pick a date range (From and To).');
+      return;
+    }
+    if (days.length === 0) {
+      showToast('Please select at least one day of the week.');
+      return;
+    }
     var start = new Date(from + 'T' + startTime);
     var end = new Date(to + 'T' + endTime);
+    if (start > end) {
+      showToast('From date must be on or before To date.');
+      return;
+    }
     var current = new Date(start);
+    var added = 0;
     while (current <= end) {
       var dow = current.getDay();
       if (days.indexOf(dow) !== -1) {
@@ -128,11 +151,14 @@ $content = ob_start();
         var dayEnd = new Date(current.toDateString() + 'T' + endTime);
         if (e <= dayEnd) {
           addRow(formatInTz(s, pollTz), formatInTz(e, pollTz));
+          added++;
         }
       }
       current.setDate(current.getDate() + 1);
       current.setHours(parseInt(startTime.slice(0,2), 10), parseInt(startTime.slice(3), 10), 0, 0);
     }
+    if (added > 0) showToast('Added ' + added + ' time option' + (added === 1 ? '' : 's') + '.');
+    else showToast('No slots in that range. Try a wider date range or different days.');
   });
 })();
 </script>
