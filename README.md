@@ -77,9 +77,11 @@ If Google OAuth is not configured, the app shows **Use email instead** and uses 
 | `RATE_*` | Rate limit counts per window (see `.env.example`) |
 | `FREEBUSY_CACHE_TTL` | Free/busy cache TTL in seconds |
 
-## Manual testing (invite deep link)
+## Manual testing
 
 - **Invite link after login:** Open an invite link (from email) in an incognito/private window while logged out. You should be redirected to login. Sign in (Google or email PIN). After successful login you must land back on the poll view for that invite. If you are sent to the home page instead, the return_to / invite deep-link flow is broken.
+
+- **Vote submission:** Open a poll as a signed-in user. Click a voting button (Works / If needed / Can’t) for a time slot. You should see: (1) “Vote saved.” message and/or toast after the page reloads, (2) the chosen button clearly highlighted (active state), (3) after a full page refresh the same choice still selected and reflected in results. If the vote does not persist or no feedback appears, check APP_ENV=local and server logs for vote errors.
 
 ## License
 

@@ -265,8 +265,10 @@
 .vote-chip[data-vote="no"] { background: rgba(239,68,68,0.2); border-color: var(--vote-no); color: var(--vote-no); }
 .vote-chip[data-vote=""] { background: var(--card); border-color: var(--border); color: var(--muted); }
 
+.vote-chip.active { font-weight: 600; box-shadow: 0 0 0 2px var(--border); }
 .vote-chip:hover { opacity: 0.9; }
 .vote-chip:focus-visible { box-shadow: var(--focus); }
+.vote-chip:disabled { cursor: not-allowed; opacity: 0.6; }
 
 /* Results matrix (tabular data) */
 .results-table {

@@ -17,6 +17,10 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
   <?php unset($_SESSION['vote_error']); ?>
 <?php endif; ?>
 
+<?php if (!empty($_SESSION['vote_saved'])): unset($_SESSION['vote_saved']); ?>
+  <p class="success-message" role="alert" data-vote-saved="1">Vote saved.</p>
+<?php endif; ?>
+
 <?php if (!empty($_SESSION['invitations_sent'])): unset($_SESSION['invitations_sent']); ?>
   <p class="success-message" role="alert">Invitations sent.</p>
 <?php endif; ?>

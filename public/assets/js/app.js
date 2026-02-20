@@ -62,6 +62,11 @@
     });
   }
 
+  // Vote saved toast (after POST-redirect-GET)
+  if (document.querySelector('[data-vote-saved="1"]') && typeof showToast === 'function') {
+    showToast('Vote saved');
+  }
+
   // Toggle results (expand/collapse)
   var toggleResults = document.getElementById('toggle-results');
   var resultsSection = document.getElementById('results-section');

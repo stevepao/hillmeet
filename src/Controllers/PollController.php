@@ -257,8 +257,16 @@ final class PollController
         $err = $this->pollService->vote($poll->id, $optionId, (int) current_user()->id, $vote, $_SERVER['REMOTE_ADDR'] ?? '');
         if ($err !== null) {
             $_SESSION['vote_error'] = $err;
+            if ((\env('APP_ENV', '') === 'local')) {
+                error_log('[Hillmeet vote] ' . $err . ' poll_id=' . $poll->id . ' option_id=' . $optionId . ' vote=' . $vote);
+            }
+        } else {
+            $_SESSION['vote_saved'] = true;
         }
         $back = $_POST['back'] ?? $backPath;
+        if ($back === '') {
+            $back = $secret !== '' ? url('/poll/' . $slug . '?secret=' . urlencode($secret)) : url('/poll/' . $slug . '?invite=' . urlencode($inviteToken));
+        }
         header('Location: ' . $back);
         exit;
     }
