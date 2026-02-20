@@ -1,7 +1,8 @@
 <?php
 $pageTitle = 'Sign in';
 $content = ob_start();
-$showDebug = !empty($_GET['debug']);
+$googleClientId = $googleClientId ?? '';
+$isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
 ?>
 <div class="auth-page">
   <h1>Sign in</h1>
@@ -14,97 +15,70 @@ $showDebug = !empty($_GET['debug']);
     <?php unset($_SESSION['auth_error']); ?>
   <?php endif; ?>
 
-  <?php if ($showDebug): ?>
-  <?php
-  $debugOrigin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '');
-  ?>
-  <div class="card card-2" style="margin-top:var(--space-4); font-size:0.9rem;">
-    <p style="margin:0 0 var(--space-2); font-weight:600;">Sign-in debug</p>
+  <?php if ($isLocal): ?>
+  <div class="card card-2" style="margin-top:var(--space-4); font-size:0.85rem;">
+    <p style="margin:0 0 var(--space-2); font-weight:600;">Diagnostics (APP_ENV=local)</p>
     <ul style="margin:0; padding-left:1.25rem;">
-      <li><code>GOOGLE_CLIENT_ID</code> set: <?= !empty($googleClientId) ? 'yes' : 'no' ?></li>
-      <li>Current origin: <code><?= \Hillmeet\Support\e($debugOrigin) ?></code> — add this to Authorized JavaScript origins in Google Cloud Console if the GSI script fails to load.</li>
-      <li id="google-signin-debug">Client-side: loading… (open Console for details)</li>
+      <li>GOOGLE_CLIENT_ID: <?= $googleClientId !== '' ? 'set' : 'missing' ?></li>
+      <li>GIS script: <span id="gis-load-status">checking…</span></li>
     </ul>
-    <p class="muted" style="margin:var(--space-2) 0 0; font-size:0.85rem;">Remove <code>?debug=1</code> from the URL to hide this.</p>
   </div>
   <?php endif; ?>
 
   <div class="card" style="margin-top:var(--space-5);">
     <p class="muted" style="margin:0 0 var(--space-3); font-weight:500;">Sign in with Google</p>
-    <div id="google-button-container" style="min-height:2.5rem;">
-      <?php if (empty($googleClientId)): ?>
-        <p class="helper" style="margin:0;">Not configured. Set <code>GOOGLE_CLIENT_ID</code> in .env to enable.</p>
-      <?php endif; ?>
-    </div>
-    <?php if (!empty($googleClientId)): ?>
-    <p class="helper" style="margin:var(--space-2) 0 0;"><a href="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/auth/google')) ?>">Continue with Google</a> (use this if the button above doesn’t appear)</p>
+    <?php if ($googleClientId === ''): ?>
+      <p class="helper" style="margin:0;">Not configured. Set <code>GOOGLE_CLIENT_ID</code> in .env to enable Google sign-in.</p>
+    <?php else: ?>
+      <div id="g_id_onload"
+           data-client_id="<?= \Hillmeet\Support\e($googleClientId) ?>"
+           data-callback="hillmeetHandleCredential"
+           data-auto_prompt="false">
+      </div>
+      <div class="g_id_signin"
+           data-type="standard"
+           data-size="large"
+           data-theme="filled_black"
+           data-text="continue_with"
+           data-shape="rectangular">
+      </div>
+      <p id="gis-fallback-msg" class="helper" style="margin:var(--space-2) 0 0; display:none; color:var(--danger);">Google sign-in button could not load. Add this site’s URL to Authorized JavaScript origins in Google Cloud Console, or use the link below.</p>
+      <p class="helper" style="margin:var(--space-2) 0 0;"><a href="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/auth/google')) ?>">Continue with Google</a> (use if the button doesn’t appear)</p>
     <?php endif; ?>
     <div class="auth-divider">or</div>
     <a href="<?= \Hillmeet\Support\url('/auth/email') ?>" class="btn btn-secondary" style="width:100%;">Use email instead</a>
   </div>
 </div>
 
-<?php if (!empty($googleClientId)): ?>
+<?php if ($googleClientId !== ''): ?>
 <script>
-function hillmeetDebugLog(msg, data) {
-  if (typeof console !== 'undefined' && console.log) console.log('[Hillmeet Google Sign-in] ' + msg, data !== undefined ? data : '');
-}
-function hillmeetSetDebugText(text) {
-  var el = document.getElementById('google-signin-debug');
-  if (el) el.textContent = text;
-}
-function hillmeetRenderGoogleButton(retries) {
-  retries = retries || 0;
-  var container = document.getElementById('google-button-container');
-  if (!container) {
-    hillmeetDebugLog('Container #google-button-container not found');
-    hillmeetSetDebugText('Client-side: container not found');
-    return;
-  }
-  if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
-    hillmeetDebugLog('GSI not ready yet (attempt ' + (retries + 1) + ')', {
-      google: typeof google,
-      accounts: typeof google !== 'undefined' && google.accounts,
-      id: typeof google !== 'undefined' && google.accounts && !!google.accounts.id
-    });
-    if (retries === 0) hillmeetSetDebugText('Client-side: waiting for GSI…');
-    if (retries < 40) setTimeout(function() { hillmeetRenderGoogleButton(retries + 1); }, 50);
-    else {
-      hillmeetDebugLog('Gave up after 40 retries – GSI may have failed to load (check Network, blockers, or authorized origins)');
-      hillmeetSetDebugText('Client-side: GSI script blocked or not allowed. Add this page’s origin to Google Cloud Console → Credentials → your OAuth client → Authorized JavaScript origins.');
-    }
-    return;
-  }
-  hillmeetDebugLog('GSI ready, initializing and rendering button');
-  try {
-    google.accounts.id.initialize({
-      client_id: <?= json_encode($googleClientId) ?>,
-      callback: function(response) {
-        fetch('<?= \Hillmeet\Support\url('/auth/google/token') ?>', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-          body: JSON.stringify({ credential: response.credential })
-        }).then(function(r) { return r.json(); }).then(function(d) {
-          if (d.redirect) window.location = d.redirect;
-        });
-      }
-    });
-    container.innerHTML = '';
-    google.accounts.id.renderButton(container, {
-      type: 'standard',
-      theme: 'filled_black',
-      size: 'large',
-      text: 'continue_with'
-    });
-    hillmeetDebugLog('renderButton called successfully');
-    hillmeetSetDebugText('Client-side: button rendered');
-  } catch (e) {
-    hillmeetDebugLog('Error during init/render', e);
-    hillmeetSetDebugText('Client-side error: ' + (e && e.message ? e.message : String(e)));
-  }
+function hillmeetHandleCredential(response) {
+  if (!response || !response.credential) return;
+  fetch('<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/auth/google/token')) ?>', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    body: JSON.stringify({ credential: response.credential })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.redirect) window.location = d.redirect;
+  });
 }
 </script>
-<script src="https://accounts.google.com/gsi/client?onload=hillmeetRenderGoogleButton" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script>
+(function() {
+  var statusEl = document.getElementById('gis-load-status');
+  var fallbackEl = document.getElementById('gis-fallback-msg');
+  function check() {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      if (statusEl) statusEl.textContent = 'loaded';
+      return;
+    }
+    if (statusEl) statusEl.textContent = 'failed to load';
+    if (fallbackEl) fallbackEl.style.display = 'block';
+  }
+  setTimeout(check, 2500);
+})();
+</script>
 <?php endif; ?>
 
 <?php
