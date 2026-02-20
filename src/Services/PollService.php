@@ -142,13 +142,18 @@ final class PollService
         if (!RateLimit::check('invite:' . $ip, (int) config('rate.invite'))) {
             return 'Too many invite sends. Wait a minute.';
         }
+        $valid = [];
         foreach ($emails as $email) {
             $email = strtolower(trim($email));
-            if ($email === '') {
-                continue;
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) !== false) {
+                $valid[] = $email;
             }
-            $this->inviteRepo->add($pollId, $email);
+        }
+        foreach ($valid as $email) {
+            $tokenHash = hash('sha256', random_bytes(32));
+            $id = $this->inviteRepo->createInvite($pollId, $email, $tokenHash, $organizerId);
             $this->emailService->sendPollInvite($email, $poll->title, $pollUrl);
+            $this->inviteRepo->markSent($id);
         }
         return null;
     }

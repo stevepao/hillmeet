@@ -20,6 +20,7 @@ try {
         exit;
     }
 
+    // Session must be started early so flash messages and auth persist consistently.
     \Hillmeet\Support\SessionHandler::configure();
     if (session_status() === PHP_SESSION_NONE) {
         session_start();

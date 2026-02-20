@@ -15,6 +15,10 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
   <?php unset($_SESSION['vote_error']); ?>
 <?php endif; ?>
 
+<?php if (!empty($_SESSION['invitations_sent'])): unset($_SESSION['invitations_sent']); ?>
+  <p class="success-message" role="alert">Invitations sent.</p>
+<?php endif; ?>
+
 <div class="poll-options-bar">
   <div class="segmented" role="group" aria-label="View">
     <button type="button" class="view-toggle" data-view="list" aria-pressed="true">List view</button>
@@ -86,6 +90,24 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
       </form>
     <?php else: ?>
       <p class="badge badge-success">Calendar event created</p>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
+
+<?php if ($poll->isOrganizer((int)\Hillmeet\Support\current_user()->id)): ?>
+  <div class="card" style="margin-top:var(--space-5);">
+    <h3>Invitations</h3>
+    <?php if (count($invites ?? []) > 0): ?>
+      <ul class="invite-list" style="list-style:none;padding:0;margin:0;">
+        <?php foreach ($invites as $inv): ?>
+          <li style="padding:var(--space-2) 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:var(--space-3);">
+            <span><?= \Hillmeet\Support\e($inv->email) ?></span>
+            <span class="muted" style="font-size:var(--text-sm);"><?= $inv->sent_at ? \Hillmeet\Support\e(date('M j, g:i A', strtotime($inv->sent_at))) : '—' ?></span>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php else: ?>
+      <p class="muted">No invitations sent yet.</p>
     <?php endif; ?>
   </div>
 <?php endif; ?>

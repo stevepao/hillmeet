@@ -156,11 +156,11 @@ final class PollController
             http_response_code(404);
             exit;
         }
-        $secret = $_SESSION['new_poll_secret'] ?? '';
+        $secret = $_POST['secret'] ?? $_SESSION['new_poll_secret'] ?? '';
         $pollUrl = url('/poll/' . $slug . '?secret=' . urlencode($secret));
         $emails = array_filter(array_map('trim', explode("\n", $_POST['emails'] ?? '')));
         $this->pollService->sendInvites($poll->id, $emails, (int) current_user()->id, $pollUrl, $_SERVER['REMOTE_ADDR'] ?? '');
-        $_SESSION['poll_shared'] = true;
+        $_SESSION['invitations_sent'] = true;
         header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
         exit;
     }
@@ -198,6 +198,9 @@ final class PollController
         $hasCalendar = $calendarService->getAuthUrl('x') !== '' && (new OAuthConnectionRepository())->hasConnection($userId);
         $eventRepo = new CalendarEventRepository();
         $eventCreated = $poll->locked_option_id && $eventRepo->existsForPollAndOption($poll->id, $poll->locked_option_id);
+        $invites = $poll->isOrganizer($userId)
+            ? (new PollInviteRepository())->listInvites($poll->id)
+            : [];
         require dirname(__DIR__, 2) . '/views/polls/view.php';
     }
 
