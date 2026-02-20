@@ -25,6 +25,28 @@ final class VoteRepository
         return $stmt->fetchColumn() !== false;
     }
 
+    /** @return array<int> distinct user_ids who have at least one vote in this poll */
+    public function getDistinctVoterIds(int $pollId): array
+    {
+        $stmt = Database::get()->prepare("SELECT DISTINCT user_id FROM votes WHERE poll_id = ?");
+        $stmt->execute([$pollId]);
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    /** @return array<object{id, email, name}> distinct users who have voted in this poll (for diagnostics) */
+    public function getVotersWithUsers(int $pollId): array
+    {
+        $stmt = Database::get()->prepare("
+            SELECT DISTINCT u.id, u.email, u.name
+            FROM votes v
+            JOIN users u ON u.id = v.user_id
+            WHERE v.poll_id = ?
+            ORDER BY u.name, u.email
+        ");
+        $stmt->execute([$pollId]);
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
     public function setVote(int $pollId, int $pollOptionId, int $userId, string $vote): void
     {
         $pdo = Database::get();

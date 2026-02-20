@@ -30,8 +30,8 @@ final class AuthService
             $user = $this->userRepo->findByEmail($email);
             if ($user !== null) {
                 $pdo = \Hillmeet\Support\Database::get();
-                $stmt = $pdo->prepare("UPDATE users SET google_id = ?, name = ?, avatar_url = ? WHERE id = ?");
-                $stmt->execute([$googleId, $name, $avatarUrl, $user->id]);
+                $stmt = $pdo->prepare("UPDATE users SET email = ?, google_id = ?, name = ?, avatar_url = ? WHERE id = ?");
+                $stmt->execute([$email, $googleId, $name, $avatarUrl, $user->id]);
                 $user = $this->userRepo->findById($user->id);
             } else {
                 $user = $this->userRepo->createFromGoogle($email, $name, $googleId, $avatarUrl);

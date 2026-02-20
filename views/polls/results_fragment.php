@@ -1,6 +1,28 @@
 <?php
 $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
+$resultsDebug = $resultsDebug ?? null;
 ?>
+<?php if (!empty($resultsDebug)): ?>
+<div class="results-debug muted" style="font-size:var(--text-xs); margin-bottom:var(--space-4); padding:var(--space-3); background:var(--card-2); border-radius:var(--radius-md); border:1px solid var(--border);">
+  <strong>Results debug</strong>
+  <p style="margin:var(--space-1) 0 0;">poll_participants: <?= (int) ($resultsDebug['participants_count'] ?? 0) ?> · distinct voters: <?= (int) ($resultsDebug['voters_count'] ?? 0) ?></p>
+  <?php if (!empty($resultsDebug['mismatch'])): ?>
+    <p style="margin:var(--space-1) 0 0;">Mismatch (user_ids with votes but not in poll_participants): <?= implode(', ', array_map('intval', $resultsDebug['mismatch'])) ?></p>
+  <?php endif; ?>
+  <p style="margin:var(--space-2) 0 0;"><strong>Participants (id, email):</strong></p>
+  <ul style="margin:0; padding-left:1.25rem;">
+    <?php foreach ($resultsDebug['participants'] ?? [] as $p): ?>
+      <li><?= (int) $p->id ?> — <?= \Hillmeet\Support\e($p->email) ?></li>
+    <?php endforeach; ?>
+  </ul>
+  <p style="margin:var(--space-2) 0 0;"><strong>Voters (id, email):</strong></p>
+  <ul style="margin:0; padding-left:1.25rem;">
+    <?php foreach ($resultsDebug['voters'] ?? [] as $v): ?>
+      <li><?= (int) $v->id ?> — <?= \Hillmeet\Support\e($v->email) ?></li>
+    <?php endforeach; ?>
+  </ul>
+</div>
+<?php endif; ?>
 <div class="your-saved-votes" style="margin-bottom:var(--space-4);">
   <h4 style="font-size:var(--text-base); margin:0 0 var(--space-2);">Your saved votes</h4>
   <ul class="your-votes-list" style="list-style:none; padding:0; margin:0; font-size:var(--text-sm);">

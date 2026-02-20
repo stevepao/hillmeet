@@ -238,10 +238,22 @@ final class PollController
             ? (new PollInviteRepository())->listInvites($poll->id)
             : [];
         $resultsExpandOpen = isset($_GET['expand']) && $_GET['expand'] === 'results';
-        $participants = $participantRepo->getParticipantsWithUsers($poll->id);
+        $participants = $participantRepo->getResultsParticipants($poll->id);
         $myVotes = [];
         foreach ($results['matrix'] ?? [] as $optId => $userVotes) {
             $myVotes[$optId] = $userVotes[$userId] ?? null;
+        }
+        $resultsDebug = null;
+        if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
+            $ppIds = $participantRepo->getParticipantIds($poll->id);
+            $voterIds = (new VoteRepository())->getDistinctVoterIds($poll->id);
+            $resultsDebug = [
+                'participants_count' => count($ppIds),
+                'voters_count' => count($voterIds),
+                'mismatch' => array_values(array_diff($voterIds, $ppIds)),
+                'participants' => $participants,
+                'voters' => (new VoteRepository())->getVotersWithUsers($poll->id),
+            ];
         }
         ob_start();
         require dirname(__DIR__, 2) . '/views/polls/results_fragment.php';
@@ -417,11 +429,24 @@ final class PollController
         $results = $this->pollService->getResults($poll);
         $options = $results['options'];
         $participantRepo = new PollParticipantRepository();
-        $participants = $participantRepo->getParticipantsWithUsers($poll->id);
+        $participants = $participantRepo->getResultsParticipants($poll->id);
         $currentUserId = (int) current_user()->id;
         $myVotes = [];
         foreach ($results['matrix'] ?? [] as $optId => $userVotes) {
             $myVotes[$optId] = $userVotes[$currentUserId] ?? null;
+        }
+        $resultsDebug = null;
+        if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
+            $voteRepo = new VoteRepository();
+            $ppIds = $participantRepo->getParticipantIds($poll->id);
+            $voterIds = $voteRepo->getDistinctVoterIds($poll->id);
+            $resultsDebug = [
+                'participants_count' => count($ppIds),
+                'voters_count' => count($voterIds),
+                'mismatch' => array_values(array_diff($voterIds, $ppIds)),
+                'participants' => $participants,
+                'voters' => $voteRepo->getVotersWithUsers($poll->id),
+            ];
         }
         require dirname(__DIR__, 2) . '/views/polls/results_fragment.php';
     }

@@ -18,9 +18,14 @@ final class UserRepository
         return $row ? User::fromRow($row) : null;
     }
 
+    /** Find by email (case-insensitive). */
     public function findByEmail(string $email): ?User
     {
-        $stmt = Database::get()->prepare("SELECT * FROM users WHERE email = ?");
+        $email = strtolower(trim($email));
+        if ($email === '') {
+            return null;
+        }
+        $stmt = Database::get()->prepare("SELECT * FROM users WHERE LOWER(email) = ?");
         $stmt->execute([$email]);
         $row = $stmt->fetch(PDO::FETCH_OBJ);
         return $row ? User::fromRow($row) : null;
@@ -36,14 +41,16 @@ final class UserRepository
 
     public function createFromGoogle(string $email, string $name, string $googleId, ?string $avatarUrl = null): User
     {
+        $email = strtolower(trim($email));
         $pdo = Database::get();
         $stmt = $pdo->prepare("INSERT INTO users (email, name, google_id, avatar_url) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$email, $name, $googleId, $avatarUrl]);
+        $stmt->execute([$email, $name ?: $email, $googleId, $avatarUrl]);
         return $this->findById((int) $pdo->lastInsertId());
     }
 
     public function createFromEmail(string $email, string $name = ''): User
     {
+        $email = strtolower(trim($email));
         $pdo = Database::get();
         $stmt = $pdo->prepare("INSERT INTO users (email, name) VALUES (?, ?)");
         $stmt->execute([$email, $name ?: $email]);
@@ -52,6 +59,7 @@ final class UserRepository
 
     public function getOrCreateByEmail(string $email, string $name = ''): User
     {
+        $email = strtolower(trim($email));
         $user = $this->findByEmail($email);
         if ($user !== null) {
             return $user;

@@ -43,4 +43,25 @@ final class PollParticipantRepository
         $stmt->execute([$pollId]);
         return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
+
+    /**
+     * Participants for Results: union of poll_participants and any user who has a vote in this poll.
+     * Ensures voters always appear in the results table even if a participant row was missing.
+     * @return array<object{id, email, name}>
+     */
+    public function getResultsParticipants(int $pollId): array
+    {
+        $stmt = Database::get()->prepare("
+            SELECT DISTINCT u.id, u.email, u.name
+            FROM (
+                SELECT user_id FROM poll_participants WHERE poll_id = ?
+                UNION
+                SELECT user_id FROM votes WHERE poll_id = ?
+            ) combined
+            JOIN users u ON u.id = combined.user_id
+            ORDER BY u.name, u.email
+        ");
+        $stmt->execute([$pollId, $pollId]);
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
 }
