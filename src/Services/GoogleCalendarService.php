@@ -85,12 +85,14 @@ final class GoogleCalendarService
         $this->freebusyCache->invalidateForUser($userId);
     }
 
-    /** @return array<int, bool> option_id => is_busy */
+    /**
+     * @return array{busy: array<int, bool>, checked_at: string, error?: string}
+     */
     public function getFreebusyForPoll(int $userId, int $pollId, array $options): array
     {
         $key = 'calendar_check:' . $userId . ':' . $pollId;
         if (!RateLimit::check($key, (int) config('rate.calendar_check'))) {
-            return [];
+            return ['busy' => [], 'checked_at' => date('c'), 'error' => 'rate_limited'];
         }
         $ttl = (int) config('freebusy_cache_ttl', 600);
         $result = [];
@@ -104,15 +106,15 @@ final class GoogleCalendarService
             }
         }
         if ($toFetch === []) {
-            return $result;
+            return ['busy' => $result, 'checked_at' => date('c')];
         }
         $accessToken = $this->getAccessToken($userId);
         if ($accessToken === null) {
-            return $result;
+            return ['busy' => $result, 'checked_at' => date('c'), 'error' => 'not_connected'];
         }
         $calendarIds = $this->selectionRepo->getSelectedCalendarIds($userId);
         if ($calendarIds === []) {
-            return $result;
+            return ['busy' => $result, 'checked_at' => date('c'), 'error' => 'no_calendars'];
         }
         $timeMin = $toFetch[0]->start_utc;
         $timeMax = end($toFetch)->end_utc;
@@ -123,28 +125,26 @@ final class GoogleCalendarService
         ];
         $res = $this->apiPost($accessToken, 'https://www.googleapis.com/calendar/v3/freeBusy', $body);
         if ($res === null || !isset($res['calendars'])) {
-            return $result;
+            return ['busy' => $result, 'checked_at' => date('c'), 'error' => 'api_error'];
         }
         $tentativeAsBusy = $this->selectionRepo->getTentativeAsBusy($userId);
         foreach ($toFetch as $opt) {
             $busy = false;
-            foreach ($res['calendars'] as $calId => $cal) {
+            $optStart = strtotime($opt->start_utc);
+            $optEnd = strtotime($opt->end_utc);
+            foreach ($res['calendars'] as $cal) {
                 foreach ($cal['busy'] ?? [] as $busySlot) {
                     $start = strtotime($busySlot['start']);
                     $end = strtotime($busySlot['end']);
-                    $optStart = strtotime($opt->start_utc);
-                    $optEnd = strtotime($opt->end_utc);
                     if ($start < $optEnd && $end > $optStart) {
                         $busy = true;
                         break 2;
                     }
                 }
-                if ($tentativeAsBusy && !empty($cal['busy'])) {
-                    foreach (($cal['busy'] ?? []) as $busySlot) {
-                        $start = strtotime($busySlot['start']);
-                        $end = strtotime($busySlot['end']);
-                        $optStart = strtotime($opt->start_utc);
-                        $optEnd = strtotime($opt->end_utc);
+                if ($tentativeAsBusy) {
+                    foreach ($cal['tentative'] ?? [] as $tentSlot) {
+                        $start = strtotime($tentSlot['start']);
+                        $end = strtotime($tentSlot['end']);
                         if ($start < $optEnd && $end > $optStart) {
                             $busy = true;
                             break 2;
@@ -155,7 +155,7 @@ final class GoogleCalendarService
             $this->freebusyCache->set($userId, $pollId, $opt->id, $busy);
             $result[$opt->id] = $busy;
         }
-        return $result;
+        return ['busy' => $result, 'checked_at' => date('c')];
     }
 
     public function createEvent(int $userId, string $calendarId, string $title, string $description, string $location, string $startUtc, string $endUtc, array $attendeeEmails = []): ?string

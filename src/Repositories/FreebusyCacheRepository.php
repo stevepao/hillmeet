@@ -33,6 +33,26 @@ final class FreebusyCacheRepository
         $stmt->execute([$userId, $pollId, $pollOptionId, $isBusy ? 1 : 0]);
     }
 
+    /** @return array<int, bool> poll_option_id => is_busy for cached entries within TTL */
+    public function getForPoll(int $userId, int $pollId, array $pollOptionIds, int $ttlSeconds): array
+    {
+        if ($pollOptionIds === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($pollOptionIds), '?'));
+        $stmt = Database::get()->prepare("
+            SELECT poll_option_id, is_busy FROM freebusy_cache
+            WHERE user_id = ? AND poll_id = ? AND poll_option_id IN ($placeholders)
+            AND cached_at > DATE_SUB(NOW(), INTERVAL ? SECOND)
+        ");
+        $stmt->execute([$userId, $pollId, ...$pollOptionIds, $ttlSeconds]);
+        $out = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $out[(int) $row['poll_option_id']] = (int) $row['is_busy'] === 1;
+        }
+        return $out;
+    }
+
     public function invalidateForUser(int $userId): void
     {
         $stmt = Database::get()->prepare("DELETE FROM freebusy_cache WHERE user_id = ?");

@@ -232,6 +232,13 @@ final class PollController
             new \Hillmeet\Repositories\FreebusyCacheRepository()
         );
         $hasCalendar = $calendarService->getAuthUrl('x') !== '' && (new OAuthConnectionRepository())->hasConnection($userId);
+        $freebusyByOption = [];
+        if ($hasCalendar) {
+            $freebusyCache = new \Hillmeet\Repositories\FreebusyCacheRepository();
+            $ttl = (int) \Hillmeet\Support\config('freebusy_cache_ttl', 600);
+            $optionIds = array_column($options, 'id');
+            $freebusyByOption = $freebusyCache->getForPoll($userId, $poll->id, $optionIds, $ttl);
+        }
         $eventRepo = new CalendarEventRepository();
         $eventCreated = $poll->locked_option_id && $eventRepo->existsForPollAndOption($poll->id, $poll->locked_option_id);
         $invites = $poll->isOrganizer($userId)
@@ -561,23 +568,84 @@ final class PollController
     public function checkAvailability(string $slug): void
     {
         $this->auth();
+        header('Content-Type: application/json; charset=utf-8');
         $secret = $_GET['secret'] ?? $_POST['secret'] ?? '';
-        $poll = $secret ? $this->pollRepo->findBySlugAndVerifySecret($slug, $secret) : null;
+        $inviteToken = $_GET['invite'] ?? $_POST['invite'] ?? '';
+        $poll = null;
+        if ($secret !== '') {
+            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
+        } elseif ($inviteToken !== '') {
+            $inviteRepo = new PollInviteRepository();
+            $tokenHash = hash('sha256', $inviteToken);
+            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
+            if ($invite !== null) {
+                $poll = $this->pollRepo->findById((int) $invite->poll_id);
+                if ($poll === null || $poll->slug !== $slug) {
+                    $poll = null;
+                }
+            }
+        } else {
+            $userId = (int) current_user()->id;
+            $candidate = $this->pollRepo->findBySlug($slug);
+            if ($candidate !== null) {
+                $participantRepo = new PollParticipantRepository();
+                $voteRepo = new VoteRepository();
+                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
+                if ($candidate->isOrganizer($userId) || $isParticipant) {
+                    $poll = $candidate;
+                }
+            }
+        }
         if ($poll === null) {
             http_response_code(404);
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'Not found']);
+            echo json_encode(['error' => 'not_found', 'message' => 'Poll not found.']);
+            exit;
+        }
+        $userId = (int) current_user()->id;
+        $oauthRepo = new OAuthConnectionRepository();
+        $selectionRepo = new GoogleCalendarSelectionRepository();
+        $freebusyCache = new \Hillmeet\Repositories\FreebusyCacheRepository();
+        if (!$oauthRepo->hasConnection($userId)) {
+            echo json_encode(['error' => 'not_connected', 'message' => 'Connect Google Calendar to check availability.']);
+            exit;
+        }
+        $selectedCalendarIds = $selectionRepo->getSelectedCalendarIds($userId);
+        if ($selectedCalendarIds === []) {
+            echo json_encode(['error' => 'no_calendars', 'message' => 'Select at least one calendar.']);
             exit;
         }
         $options = $this->pollRepo->getOptions($poll->id);
-        $calendarService = new GoogleCalendarService(
-            new OAuthConnectionRepository(),
-            new GoogleCalendarSelectionRepository(),
-            new \Hillmeet\Repositories\FreebusyCacheRepository()
-        );
-        $busy = $calendarService->getFreebusyForPoll((int) current_user()->id, $poll->id, $options);
-        header('Content-Type: application/json');
-        echo json_encode(['busy' => $busy]);
+        $calendarService = new GoogleCalendarService($oauthRepo, $selectionRepo, $freebusyCache);
+        $out = $calendarService->getFreebusyForPoll($userId, $poll->id, $options);
+        if (isset($out['error'])) {
+            $messages = [
+                'not_connected' => 'Connect Google Calendar to check availability.',
+                'no_calendars' => 'Select at least one calendar.',
+                'api_error' => 'Calendar API error. Try again or reconnect.',
+                'rate_limited' => 'Too many checks. Wait a moment.',
+            ];
+            $msg = $messages[$out['error']] ?? $out['error'];
+            echo json_encode(['error' => $out['error'], 'message' => $msg, 'busy' => $out['busy'] ?? [], 'checked_at' => $out['checked_at'] ?? date('c')]);
+            exit;
+        }
+        if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
+            error_log(sprintf(
+                '[Hillmeet check-availability] poll_id=%d user_id=%d calendars=%d slots=%d cache_writes=%d',
+                $poll->id,
+                $userId,
+                count($selectedCalendarIds),
+                count($options),
+                count($out['busy'])
+            ));
+        }
+        $wantsJson = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
+            || (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
+        if (!$wantsJson) {
+            $back = $inviteToken !== '' ? url('/poll/' . $slug . '?invite=' . urlencode($inviteToken)) : url('/poll/' . $slug . '?secret=' . urlencode($secret));
+            header('Location: ' . $back);
+            exit;
+        }
+        echo json_encode(['busy' => $out['busy'], 'checked_at' => $out['checked_at']]);
         exit;
     }
 }

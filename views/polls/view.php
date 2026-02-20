@@ -47,6 +47,17 @@ $canEdit = !$poll->isLocked();
   ?>
     <div class="option-card" data-option-id="<?= (int)$opt->id ?>">
       <div style="font-weight:500;"><?= \Hillmeet\Support\e($startLocal) ?> – <?= \Hillmeet\Support\e($endLocal) ?></div>
+      <?php if (!empty($hasCalendar)): ?>
+        <p class="freebusy-badge muted" style="font-size:var(--text-sm); margin:var(--space-1) 0 0;" data-option-id="<?= (int)$opt->id ?>" aria-live="polite">
+          Your calendar: <?php
+          if (isset($freebusyByOption[$opt->id])) {
+              echo $freebusyByOption[$opt->id] ? 'Busy ⛔' : 'Free ✅';
+          } else {
+              echo '—';
+          }
+          ?>
+        </p>
+      <?php endif; ?>
       <?php if (!$poll->isLocked()): ?>
         <?php
           $selectedLabel = $vote === 'yes' ? 'Works' : ($vote === 'maybe' ? 'If needed' : ($vote === 'no' ? "Can't" : '—'));
@@ -157,7 +168,8 @@ window.HILLMEET_POLL = {
   canEdit: <?= $canEdit ? 'true' : 'false' ?>,
   voteBatchUrl: <?= json_encode(\Hillmeet\Support\url('/poll/' . $poll->slug . '/vote-batch')) ?>,
   csrfToken: <?= json_encode(\Hillmeet\Support\Csrf::token()) ?>,
-  resultsUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/results', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/results?secret=' . urlencode($_GET['secret'] ?? ''))) ?>
+  resultsUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/results', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/results?secret=' . urlencode($_GET['secret'] ?? ''))) ?>,
+  checkAvailabilityUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability?secret=' . urlencode($_GET['secret'] ?? ''))) ?>
 };
 </script>
 <?php
