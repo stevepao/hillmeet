@@ -321,11 +321,16 @@ final class PollController
             echo json_encode(['error' => $err]);
             exit;
         }
-        $savedCount = count(array_filter($votes, fn($v) => in_array($v, ['yes', 'maybe', 'no'], true)));
-        if (\env('APP_ENV', '') === 'local') {
-            error_log('[Hillmeet vote-batch] persisted count=' . $savedCount . ' poll_id=' . $poll->id);
+        $savedVotes = [];
+        foreach ($votes as $optId => $v) {
+            if (in_array($v, ['yes', 'maybe', 'no'], true)) {
+                $savedVotes[(int) $optId] = $v;
+            }
         }
-        echo json_encode(['success' => true, 'savedCount' => $savedCount]);
+        if (\env('APP_ENV', '') === 'local') {
+            error_log('[Hillmeet vote-batch] persisted count=' . count($savedVotes) . ' poll_id=' . $poll->id);
+        }
+        echo json_encode(['success' => true, 'savedVotes' => $savedVotes]);
         exit;
     }
 

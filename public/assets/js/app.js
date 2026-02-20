@@ -62,11 +62,12 @@
     });
   }
 
-  // Vote state and submit bar (JS-enhanced: instant selection, single Submit)
+  // Vote state: savedVotes (server) vs draftVotes (UI); dirty = deep compare; bar reflects state
   (function initVoteSubmitBar() {
     var poll = window.HILLMEET_POLL;
     var listEl = document.getElementById('poll-options-list');
     var barEl = document.getElementById('vote-submit-bar');
+    var barMsg = document.getElementById('vote-submit-bar-message');
     if (!poll || !poll.voteBatchUrl || !poll.csrfToken || !listEl || !barEl) return;
 
     function getStateFromDom() {
@@ -78,6 +79,20 @@
         state[optionId] = active ? (active.getAttribute('data-vote') || active.value || '') : '';
       });
       return state;
+    }
+
+    function copyState(s) {
+      var out = {};
+      for (var k in s) out[k] = s[k];
+      return out;
+    }
+
+    function deepEqualVotes(a, b) {
+      var keys = {};
+      for (var k in a) keys[k] = true;
+      for (var k in b) keys[k] = true;
+      for (var k in keys) if ((a[k] || '') !== (b[k] || '')) return false;
+      return true;
     }
 
     var selectedLabels = { yes: 'Works', maybe: 'If needed', no: "Can't" };
@@ -96,10 +111,22 @@
       });
     }
 
-    var initialState = getStateFromDom();
-    var state = {};
-    for (var k in initialState) state[k] = initialState[k];
-    var dirty = false;
+    var savedVotes = getStateFromDom();
+    var draftVotes = copyState(savedVotes);
+    var savedMessageTimeout = null;
+
+    function countUnsaved() {
+      var n = 0;
+      var keys = {};
+      for (var k in draftVotes) keys[k] = true;
+      for (var k in savedVotes) keys[k] = true;
+      for (var k in keys) if ((draftVotes[k] || '') !== (savedVotes[k] || '')) n++;
+      return n;
+    }
+
+    function isDirty() {
+      return !deepEqualVotes(draftVotes, savedVotes);
+    }
 
     function showBar() {
       barEl.hidden = false;
@@ -108,6 +135,36 @@
     function hideBar() {
       barEl.hidden = true;
       barEl.classList.remove('is-visible');
+      if (savedMessageTimeout) clearTimeout(savedMessageTimeout);
+      savedMessageTimeout = null;
+    }
+
+    function updateBar(showSavedMessage) {
+      var dirty = isDirty();
+      var submitBtn = document.getElementById('vote-submit');
+      var cancelBtn = document.getElementById('vote-cancel');
+      if (submitBtn) submitBtn.disabled = !dirty;
+      if (showSavedMessage) {
+        if (barMsg) barMsg.textContent = 'All changes saved • just now';
+        showBar();
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        if (savedMessageTimeout) clearTimeout(savedMessageTimeout);
+        savedMessageTimeout = setTimeout(function() {
+          savedMessageTimeout = null;
+          if (cancelBtn) cancelBtn.style.display = '';
+          hideBar();
+        }, 2500);
+        return;
+      }
+      if (savedMessageTimeout) { clearTimeout(savedMessageTimeout); savedMessageTimeout = null; }
+      if (cancelBtn) cancelBtn.style.display = '';
+      if (dirty) {
+        var n = countUnsaved();
+        if (barMsg) barMsg.textContent = n === 1 ? '1 unsaved change' : n + ' unsaved changes';
+        showBar();
+      } else {
+        hideBar();
+      }
     }
 
     listEl.querySelectorAll('.vote-form').forEach(function(form) {
@@ -117,32 +174,31 @@
         var submitter = e.submitter;
         if (!optionId || !submitter || !submitter.classList.contains('vote-chip')) return;
         var vote = submitter.value || submitter.getAttribute('data-vote') || '';
-        state[optionId] = vote;
-        applyStateToDom(state);
-        dirty = true;
-        showBar();
+        draftVotes[optionId] = vote;
+        applyStateToDom(draftVotes);
+        updateBar(false);
       });
     });
 
     var cancelBtn = document.getElementById('vote-cancel');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', function() {
-        for (var k in initialState) state[k] = initialState[k];
-        applyStateToDom(state);
-        dirty = false;
-        hideBar();
+        draftVotes = copyState(savedVotes);
+        applyStateToDom(draftVotes);
+        updateBar(false);
       });
     }
 
     var submitBtn = document.getElementById('vote-submit');
     if (submitBtn) {
       submitBtn.addEventListener('click', function() {
+        if (!isDirty()) return;
         var formData = new FormData();
         formData.append('csrf_token', poll.csrfToken);
         if (poll.secret) formData.append('secret', poll.secret);
         if (poll.invite) formData.append('invite', poll.invite);
-        for (var optId in state) {
-          if (state[optId]) formData.append('votes[' + optId + ']', state[optId]);
+        for (var optId in draftVotes) {
+          if (draftVotes[optId]) formData.append('votes[' + optId + ']', draftVotes[optId]);
         }
         var originalText = submitBtn.textContent;
         submitBtn.disabled = true;
@@ -150,12 +206,14 @@
         fetch(poll.voteBatchUrl, { method: 'POST', body: formData })
           .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
           .then(function(result) {
-            if (result.ok && result.body.success) {
+            if (result.ok && result.body && result.body.success) {
+              var resp = result.body.savedVotes || {};
+              savedVotes = {};
+              for (var k in resp) savedVotes[String(k)] = resp[k];
+              draftVotes = copyState(savedVotes);
+              applyStateToDom(draftVotes);
               showToast('Votes saved');
-              initialState = {};
-              for (var k in state) initialState[k] = state[k];
-              dirty = false;
-              hideBar();
+              updateBar(true);
               var resultsSection = document.getElementById('results-section');
               var resultsContent = document.getElementById('results-content');
               if (resultsContent && resultsSection && resultsSection.hasAttribute('open') && poll.resultsUrl) {
@@ -171,11 +229,13 @@
             showToast('Could not save votes.');
           })
           .then(function() {
-            submitBtn.disabled = false;
+            submitBtn.disabled = !isDirty();
             submitBtn.textContent = originalText;
           });
       });
     }
+
+    updateBar(false);
   })();
 
   // Toggle results (expand/collapse); with timeout, error UI, retry; non-JS: link goes to ?expand=results

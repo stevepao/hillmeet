@@ -75,7 +75,7 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 
 <?php if (!$poll->isLocked()): ?>
 <div id="vote-submit-bar" class="vote-submit-bar" hidden aria-live="polite">
-  <span class="vote-submit-bar-message">You have unsaved changes.</span>
+  <span id="vote-submit-bar-message" class="vote-submit-bar-message">Unsaved changes</span>
   <div class="vote-submit-bar-actions">
     <button type="button" class="btn btn-secondary btn-sm" id="vote-cancel">Cancel</button>
     <button type="button" class="btn btn-primary btn-sm" id="vote-submit">Submit votes</button>
