@@ -96,6 +96,7 @@ step('7. Email / SMTP (PIN emails)', function () {
         echo "Skipping send test – configure SMTP_* in .env first.\n";
         return;
     }
+    set_time_limit(25);
     $emailService = new \Hillmeet\Services\EmailService();
     $sent = $emailService->sendPinEmail('diagnose-test@example.com', '123456');
     if ($sent) {

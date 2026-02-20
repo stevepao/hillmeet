@@ -54,16 +54,26 @@ final class EmailService
             return false;
         }
 
-        $mail = new PHPMailer(true);
+        $mail = new PHPMailer(false);
         try {
             $mail->isSMTP();
             $mail->Host = $host;
             $mail->Port = (int) config('smtp.port', 587);
+            $mail->Timeout = 15;
             $mail->SMTPAuth = true;
             $mail->Username = config('smtp.user', '');
             $mail->Password = config('smtp.pass', '');
             $mail->SMTPSecure = $mail->Port === 465 ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
             $mail->CharSet = PHPMailer::CHARSET_UTF8;
+
+            // IONOS and many SMTP servers return 503 if EHLO hostname is wrong; use app domain
+            $appUrl = config('app.url', '');
+            if ($appUrl !== '') {
+                $ehloHost = parse_url($appUrl, PHP_URL_HOST);
+                if (is_string($ehloHost) && $ehloHost !== '') {
+                    $mail->Hostname = $ehloHost;
+                }
+            }
 
             $mail->setFrom(config('smtp.from', 'noreply@localhost'), config('smtp.from_name', 'Hillmeet'));
             $mail->addAddress($to);
@@ -71,7 +81,6 @@ final class EmailService
             $mail->Body = $htmlBody;
             $mail->AltBody = $textBody;
 
-            $mail->exceptions = false;
             $ok = $mail->send();
             if (!$ok) {
                 $this->lastError = $mail->ErrorInfo ?: 'SMTP send failed.';
