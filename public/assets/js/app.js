@@ -62,13 +62,15 @@
     });
   }
 
-  // Vote state: savedVotes (server) vs draftVotes (UI); dirty = deep compare; bar reflects state
-  (function initVoteSubmitBar() {
+  // Vote state: savedVotes (server) vs draftVotes (UI); dirty only when they differ; inline controls below options
+  (function initVoteInlineControls() {
     var poll = window.HILLMEET_POLL;
     var listEl = document.getElementById('poll-options-list');
-    var barEl = document.getElementById('vote-submit-bar');
-    var barMsg = document.getElementById('vote-submit-bar-message');
-    if (!poll || !poll.voteBatchUrl || !poll.csrfToken || !listEl || !barEl) return;
+    var controlsEl = document.getElementById('vote-inline-controls');
+    var statusEl = document.getElementById('vote-status-message');
+    var actionsEl = document.getElementById('vote-inline-actions');
+    if (!poll || !poll.voteBatchUrl || !poll.csrfToken || !listEl || !controlsEl) return;
+    if (!poll.canEdit) return;
 
     function getStateFromDom() {
       var state = {};
@@ -128,42 +130,29 @@
       return !deepEqualVotes(draftVotes, savedVotes);
     }
 
-    function showBar() {
-      barEl.hidden = false;
-      barEl.classList.add('is-visible');
-    }
-    function hideBar() {
-      barEl.hidden = true;
-      barEl.classList.remove('is-visible');
-      if (savedMessageTimeout) clearTimeout(savedMessageTimeout);
-      savedMessageTimeout = null;
-    }
-
-    function updateBar(showSavedMessage) {
+    function updateInlineControls(showSavedMessage) {
       var dirty = isDirty();
       var submitBtn = document.getElementById('vote-submit');
       var cancelBtn = document.getElementById('vote-cancel');
       if (submitBtn) submitBtn.disabled = !dirty;
       if (showSavedMessage) {
-        if (barMsg) barMsg.textContent = 'All changes saved • just now';
-        showBar();
-        if (cancelBtn) cancelBtn.style.display = 'none';
+        if (statusEl) statusEl.textContent = 'All changes saved • just now';
+        if (actionsEl) actionsEl.hidden = true;
         if (savedMessageTimeout) clearTimeout(savedMessageTimeout);
         savedMessageTimeout = setTimeout(function() {
           savedMessageTimeout = null;
-          if (cancelBtn) cancelBtn.style.display = '';
-          hideBar();
+          if (statusEl) statusEl.textContent = '';
         }, 2500);
         return;
       }
       if (savedMessageTimeout) { clearTimeout(savedMessageTimeout); savedMessageTimeout = null; }
-      if (cancelBtn) cancelBtn.style.display = '';
       if (dirty) {
         var n = countUnsaved();
-        if (barMsg) barMsg.textContent = n === 1 ? '1 unsaved change' : n + ' unsaved changes';
-        showBar();
+        if (statusEl) statusEl.textContent = n === 1 ? 'Unsaved changes (1)' : 'Unsaved changes (' + n + ')';
+        if (actionsEl) actionsEl.hidden = false;
       } else {
-        hideBar();
+        if (statusEl) statusEl.textContent = '';
+        if (actionsEl) actionsEl.hidden = true;
       }
     }
 
@@ -176,7 +165,7 @@
         var vote = submitter.value || submitter.getAttribute('data-vote') || '';
         draftVotes[optionId] = vote;
         applyStateToDom(draftVotes);
-        updateBar(false);
+        updateInlineControls(false);
       });
     });
 
@@ -185,7 +174,7 @@
       cancelBtn.addEventListener('click', function() {
         draftVotes = copyState(savedVotes);
         applyStateToDom(draftVotes);
-        updateBar(false);
+        updateInlineControls(false);
       });
     }
 
@@ -195,6 +184,7 @@
         if (!isDirty()) return;
         var formData = new FormData();
         formData.append('csrf_token', poll.csrfToken);
+        formData.append('slug', poll.slug);
         if (poll.secret) formData.append('secret', poll.secret);
         if (poll.invite) formData.append('invite', poll.invite);
         for (var optId in draftVotes) {
@@ -204,7 +194,7 @@
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving…';
         fetch(poll.voteBatchUrl, { method: 'POST', body: formData })
-          .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
+          .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, status: r.status, body: j }; }); })
           .then(function(result) {
             if (result.ok && result.body && result.body.success) {
               var resp = result.body.savedVotes || {};
@@ -213,7 +203,7 @@
               draftVotes = copyState(savedVotes);
               applyStateToDom(draftVotes);
               showToast('Votes saved');
-              updateBar(true);
+              updateInlineControls(true);
               var resultsSection = document.getElementById('results-section');
               var resultsContent = document.getElementById('results-content');
               if (resultsContent && resultsSection && resultsSection.hasAttribute('open') && poll.resultsUrl) {
@@ -222,7 +212,8 @@
                 });
               }
             } else {
-              showToast(result.body && result.body.error ? result.body.error : 'Could not save votes.');
+              var msg = result.body && result.body.error ? result.body.error : 'Could not save votes.';
+              showToast(msg);
             }
           })
           .catch(function() {
@@ -235,7 +226,7 @@
       });
     }
 
-    updateBar(false);
+    updateInlineControls(false);
   })();
 
   // Toggle results (expand/collapse); results are server-rendered, no fetch

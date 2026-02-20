@@ -268,10 +268,35 @@ final class PollController
                 $poll = $this->pollRepo->findById((int) $invite->poll_id);
                 $backPath = $poll && $poll->slug === $slug ? url('/poll/' . $slug . '?invite=' . urlencode($inviteToken)) : '';
             }
+        } else {
+            $userId = (int) current_user()->id;
+            $candidate = $this->pollRepo->findBySlug($slug);
+            if ($candidate !== null) {
+                $participantRepo = new PollParticipantRepository();
+                $voteRepo = new VoteRepository();
+                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
+                if ($candidate->isOrganizer($userId) || $isParticipant) {
+                    $poll = $candidate;
+                    $backPath = url('/poll/' . $slug);
+                }
+            }
         }
 
         if ($poll === null) {
-            http_response_code(404);
+            $bySlug = $this->pollRepo->findBySlug($slug);
+            if ($bySlug === null) {
+                http_response_code(404);
+                require dirname(__DIR__, 2) . '/views/errors/404.php';
+                exit;
+            }
+            http_response_code(403);
+            $errorMessage = 'This poll link is missing or invalid. Use the link from your invitation or from the organizer.';
+            require dirname(__DIR__, 2) . '/views/errors/403.php';
+            exit;
+        }
+        if ($poll->isLocked()) {
+            $_SESSION['vote_error'] = 'This poll has been finalized.';
+            header('Location: ' . ($_POST['back'] ?? url('/poll/' . $slug)));
             exit;
         }
         $optionId = (int) ($_POST['option_id'] ?? 0);
@@ -312,10 +337,32 @@ final class PollController
                     $poll = null;
                 }
             }
+        } else {
+            $userId = (int) current_user()->id;
+            $candidate = $this->pollRepo->findBySlug($slug);
+            if ($candidate !== null) {
+                $participantRepo = new PollParticipantRepository();
+                $voteRepo = new VoteRepository();
+                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
+                if ($candidate->isOrganizer($userId) || $isParticipant) {
+                    $poll = $candidate;
+                }
+            }
         }
         if ($poll === null) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Poll not found.']);
+            $bySlug = $this->pollRepo->findBySlug($slug);
+            if ($bySlug === null) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Poll not found.']);
+                exit;
+            }
+            http_response_code(403);
+            echo json_encode(['error' => 'This poll link is missing or invalid. Use the link from your invitation or from the organizer.']);
+            exit;
+        }
+        if ($poll->isLocked()) {
+            http_response_code(403);
+            echo json_encode(['error' => 'This poll has been finalized.']);
             exit;
         }
         $votes = $_POST['votes'] ?? [];

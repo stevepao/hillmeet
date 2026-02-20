@@ -12,7 +12,7 @@
 <body>
   <div class="error-page">
     <h1>403</h1>
-    <p>You don't have permission to do that.</p>
+    <p><?= isset($errorMessage) ? \Hillmeet\Support\e($errorMessage) : 'You don\'t have permission to do that.' ?></p>
     <a href="<?= \Hillmeet\Support\url('/') ?>" class="btn btn-primary">Go home</a>
   </div>
 </body>

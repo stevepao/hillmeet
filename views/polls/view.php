@@ -6,6 +6,7 @@ $pollUrlWithSecret = !empty($accessByInvite) && $inviteToken !== ''
   : \Hillmeet\Support\url('/poll/' . $poll->slug . '?secret=' . urlencode($_GET['secret'] ?? ''));
 $resultsExpandUrl = $pollUrlWithSecret . (strpos($pollUrlWithSecret, '?') !== false ? '&' : '?') . 'expand=results';
 $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
+$canEdit = !$poll->isLocked();
 ?>
 <h1><?= \Hillmeet\Support\e($poll->title) ?></h1>
 <?php if ($poll->description): ?>
@@ -73,14 +74,16 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
   <?php endforeach; ?>
 </div>
 
-<?php if (!$poll->isLocked()): ?>
-<div id="vote-submit-bar" class="vote-submit-bar" hidden aria-live="polite">
-  <span id="vote-submit-bar-message" class="vote-submit-bar-message">Unsaved changes</span>
-  <div class="vote-submit-bar-actions">
-    <button type="button" class="btn btn-secondary btn-sm" id="vote-cancel">Cancel</button>
-    <button type="button" class="btn btn-primary btn-sm" id="vote-submit">Submit votes</button>
+<?php if ($poll->isLocked()): ?>
+  <p class="muted" style="margin-top: var(--space-3);">This poll has been finalized.</p>
+<?php elseif ($canEdit): ?>
+  <div id="vote-inline-controls" class="vote-inline-controls" aria-live="polite">
+    <p id="vote-status-message" class="vote-status-message muted" style="font-size: var(--text-sm); margin: var(--space-3) 0 var(--space-2);"></p>
+    <div class="vote-inline-actions" id="vote-inline-actions" hidden>
+      <button type="button" class="btn btn-secondary btn-sm" id="vote-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary btn-sm" id="vote-submit">Submit votes</button>
+    </div>
   </div>
-</div>
 <?php endif; ?>
 
 <details class="results-section" id="results-section" <?= !empty($resultsExpandOpen) ? 'open' : '' ?>>
@@ -151,6 +154,7 @@ window.HILLMEET_POLL = {
   slug: <?= json_encode($poll->slug) ?>,
   secret: <?= json_encode($_GET['secret'] ?? '') ?>,
   invite: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? $inviteToken : '') ?>,
+  canEdit: <?= $canEdit ? 'true' : 'false' ?>,
   voteBatchUrl: <?= json_encode(\Hillmeet\Support\url('/poll/' . $poll->slug . '/vote-batch')) ?>,
   csrfToken: <?= json_encode(\Hillmeet\Support\Csrf::token()) ?>,
   resultsUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/results', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/results?secret=' . urlencode($_GET['secret'] ?? ''))) ?>
