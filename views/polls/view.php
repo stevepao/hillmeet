@@ -17,10 +17,6 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
   <?php unset($_SESSION['vote_error']); ?>
 <?php endif; ?>
 
-<?php if (!empty($_SESSION['vote_saved'])): unset($_SESSION['vote_saved']); ?>
-  <p class="success-message" role="alert" data-vote-saved="1">Vote saved.</p>
-<?php endif; ?>
-
 <?php if (!empty($_SESSION['invitations_sent'])): unset($_SESSION['invitations_sent']); ?>
   <p class="success-message" role="alert">Invitations sent.</p>
 <?php endif; ?>
@@ -71,6 +67,16 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
     </div>
   <?php endforeach; ?>
 </div>
+
+<?php if (!$poll->isLocked()): ?>
+<div id="vote-submit-bar" class="vote-submit-bar" hidden aria-live="polite">
+  <span class="vote-submit-bar-message">You have unsaved changes.</span>
+  <div class="vote-submit-bar-actions">
+    <button type="button" class="btn btn-secondary btn-sm" id="vote-cancel">Cancel</button>
+    <button type="button" class="btn btn-primary btn-sm" id="vote-submit">Submit votes</button>
+  </div>
+</div>
+<?php endif; ?>
 
 <details class="results-section" id="results-section">
   <summary>Results</summary>
@@ -139,6 +145,9 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 window.HILLMEET_POLL = {
   slug: <?= json_encode($poll->slug) ?>,
   secret: <?= json_encode($_GET['secret'] ?? '') ?>,
+  invite: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? $inviteToken : '') ?>,
+  voteBatchUrl: <?= json_encode(\Hillmeet\Support\url('/poll/' . $poll->slug . '/vote-batch')) ?>,
+  csrfToken: <?= json_encode(\Hillmeet\Support\Csrf::token()) ?>,
   resultsUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/results', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/results?secret=' . urlencode($_GET['secret'] ?? ''))) ?>
 };
 </script>

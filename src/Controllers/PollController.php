@@ -271,6 +271,45 @@ final class PollController
         exit;
     }
 
+    public function voteBatch(string $slug): void
+    {
+        $this->auth();
+        header('Content-Type: application/json; charset=utf-8');
+        $secret = $_POST['secret'] ?? '';
+        $inviteToken = $_POST['invite'] ?? '';
+        $poll = null;
+        if ($secret !== '') {
+            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
+        } elseif ($inviteToken !== '') {
+            $inviteRepo = new PollInviteRepository();
+            $tokenHash = hash('sha256', $inviteToken);
+            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
+            if ($invite !== null) {
+                $poll = $this->pollRepo->findById((int) $invite->poll_id);
+                if ($poll === null || $poll->slug !== $slug) {
+                    $poll = null;
+                }
+            }
+        }
+        if ($poll === null) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Poll not found.']);
+            exit;
+        }
+        $votes = $_POST['votes'] ?? [];
+        if (!is_array($votes)) {
+            $votes = [];
+        }
+        $err = $this->pollService->voteBatch($poll->id, (int) current_user()->id, $votes, $_SERVER['REMOTE_ADDR'] ?? '');
+        if ($err !== null) {
+            http_response_code(400);
+            echo json_encode(['error' => $err]);
+            exit;
+        }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     public function resultsFragment(string $slug): void
     {
         $this->auth();

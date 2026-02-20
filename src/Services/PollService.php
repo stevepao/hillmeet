@@ -118,6 +118,35 @@ final class PollService
         return null;
     }
 
+    /**
+     * Save multiple votes in one go. Returns null on success or an error message.
+     * @param array<int, string> $votes option_id => 'yes'|'maybe'|'no'
+     */
+    public function voteBatch(int $pollId, int $userId, array $votes, string $ip): ?string
+    {
+        $poll = $this->pollRepo->findById($pollId);
+        if ($poll === null || $poll->isLocked()) {
+            return 'Poll not found or locked.';
+        }
+        if (!RateLimit::check('vote:' . $userId . ':' . $pollId, (int) config('rate.vote'))) {
+            return 'Too many vote changes. Wait a moment.';
+        }
+        $options = $this->pollRepo->getOptions($pollId);
+        $optionIds = array_column($options, 'id');
+        $this->participantRepo->add($pollId, $userId);
+        foreach ($votes as $optionId => $vote) {
+            $optionId = (int) $optionId;
+            if (!in_array($vote, ['yes', 'maybe', 'no'], true)) {
+                return 'Invalid vote value.';
+            }
+            if (!in_array($optionId, $optionIds, true)) {
+                return 'Invalid option.';
+            }
+            $this->voteRepo->setVote($pollId, $optionId, $userId, $vote);
+        }
+        return null;
+    }
+
     public function lockPoll(int $pollId, int $optionId, int $organizerId): ?string
     {
         $poll = $this->pollRepo->findById($pollId);

@@ -47,6 +47,7 @@ $routes = [
         '/poll/{slug}/options' => [\Hillmeet\Controllers\PollController::class, 'optionsPost'],
         '/poll/{slug}/share' => [\Hillmeet\Controllers\PollController::class, 'sharePost'],
         '/poll/{slug}/vote' => [\Hillmeet\Controllers\PollController::class, 'vote'],
+        '/poll/{slug}/vote-batch' => [\Hillmeet\Controllers\PollController::class, 'voteBatch'],
         '/poll/{slug}/lock' => [\Hillmeet\Controllers\PollController::class, 'lock'],
         '/poll/{slug}/create-event' => [\Hillmeet\Controllers\PollController::class, 'createEvent'],
         '/poll/{slug}/check-availability' => [\Hillmeet\Controllers\PollController::class, 'checkAvailability'],

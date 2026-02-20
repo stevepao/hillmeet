@@ -267,3 +267,42 @@
   color: var(--muted);
   margin-bottom: var(--space-5);
 }
+
+/* Vote submit bar: sticky bottom on mobile, top-right on desktop */
+.vote-submit-bar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-4) calc(-1 * var(--space-4)) 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+}
+.vote-submit-bar-message {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.vote-submit-bar-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+@media (min-width: 768px) {
+  .vote-submit-bar {
+    position: fixed;
+    top: var(--space-4);
+    right: var(--space-4);
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    max-width: 22rem;
+  }
+}
