@@ -34,6 +34,30 @@ final class AuthController
         require dirname(__DIR__, 2) . '/views/auth/login.php';
     }
 
+    /** Redirect to Google OAuth for sign-in (works when GSI script is blocked). */
+    public function googleRedirect(): void
+    {
+        if (!empty($_SESSION['user'])) {
+            header('Location: ' . url('/'));
+            exit;
+        }
+        $clientId = config('google.client_id', '');
+        if ($clientId === '') {
+            header('Location: ' . url('/auth/login'));
+            exit;
+        }
+        $redirectUri = config('google.redirect_uri') ?: (rtrim((string) config('app.url', ''), '/') . '/auth/google/callback');
+        $params = [
+            'response_type' => 'code',
+            'client_id' => $clientId,
+            'redirect_uri' => $redirectUri,
+            'scope' => 'openid email profile',
+            'state' => 'login',
+        ];
+        header('Location: https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($params));
+        exit;
+    }
+
     public function emailPage(): void
     {
         if (!empty($_SESSION['user'])) {

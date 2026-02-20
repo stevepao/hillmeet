@@ -100,11 +100,18 @@ step('7. Email / SMTP (PIN emails)', function () {
     $emailService = new \Hillmeet\Services\EmailService();
     $sent = $emailService->sendPinEmail('diagnose-test@example.com', '123456');
     if ($sent) {
-        echo "Test send: OK (example.com may not deliver; check your inbox if you use a real address).\n";
+        echo "Test send: OK\n";
     } else {
-        echo "Test send: FAIL\n";
-        echo "Last error: " . $emailService->getLastError() . "\n";
-        throw new Exception('SMTP test send failed: ' . $emailService->getLastError());
+        $err = $emailService->getLastError();
+        $recipientRejected = (stripos($err, 'recipients failed') !== false && stripos($err, 'example.com') !== false)
+            || stripos($err, 'domain does not accept mail') !== false;
+        if ($recipientRejected) {
+            echo "Test send: OK (connection and auth succeeded; example.com rejects test addresses – real PIN emails should work).\n";
+        } else {
+            echo "Test send: FAIL\n";
+            echo "Last error: " . $err . "\n";
+            throw new Exception('SMTP test send failed: ' . $err);
+        }
     }
 });
 

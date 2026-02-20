@@ -36,6 +36,9 @@ $showDebug = !empty($_GET['debug']);
         <p class="helper" style="margin:0;">Not configured. Set <code>GOOGLE_CLIENT_ID</code> in .env to enable.</p>
       <?php endif; ?>
     </div>
+    <?php if (!empty($googleClientId)): ?>
+    <p class="helper" style="margin:var(--space-2) 0 0;"><a href="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/auth/google')) ?>">Continue with Google</a> (use this if the button above doesn’t appear)</p>
+    <?php endif; ?>
     <div class="auth-divider">or</div>
     <a href="<?= \Hillmeet\Support\url('/auth/email') ?>" class="btn btn-secondary" style="width:100%;">Use email instead</a>
   </div>

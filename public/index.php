@@ -24,6 +24,7 @@ $routes = [
     'GET' => [
         '/' => [\Hillmeet\Controllers\HomeController::class, 'index'],
         '/auth/login' => [\Hillmeet\Controllers\AuthController::class, 'loginPage'],
+        '/auth/google' => [\Hillmeet\Controllers\AuthController::class, 'googleRedirect'],
         '/auth/email' => [\Hillmeet\Controllers\AuthController::class, 'emailPage'],
         '/auth/verify' => [\Hillmeet\Controllers\AuthController::class, 'verifyPage'],
         '/auth/google/callback' => [\Hillmeet\Controllers\AuthController::class, 'googleCallback'],
