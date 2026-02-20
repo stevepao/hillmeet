@@ -77,6 +77,40 @@ final class PollRepository
         return array_map(fn($r) => Poll::fromRow($r), $rows);
     }
 
+    /** Polls owned by the user (organizer_id = user). Ordered by most recent activity. */
+    public function listOwnedPolls(int $userId, int $limit = 100): array
+    {
+        $stmt = Database::get()->prepare("
+            SELECT p.* FROM polls p
+            WHERE p.organizer_id = ?
+            ORDER BY p.updated_at DESC
+            LIMIT ?
+        ");
+        $stmt->execute([$userId, $limit]);
+        $rows = $stmt->fetchAll(PDO::FETCH_OBJ);
+        return array_map(fn($r) => Poll::fromRow($r), $rows);
+    }
+
+    /** Polls the user participated in (in poll_participants or has a vote), excluding polls they own. Ordered by updated_at. */
+    public function listParticipatedPolls(int $userId, int $limit = 100): array
+    {
+        $stmt = Database::get()->prepare("
+            SELECT DISTINCT p.*
+            FROM polls p
+            INNER JOIN (
+                SELECT poll_id FROM poll_participants WHERE user_id = ?
+                UNION
+                SELECT poll_id FROM votes WHERE user_id = ?
+            ) u ON u.poll_id = p.id
+            WHERE p.organizer_id != ?
+            ORDER BY p.updated_at DESC
+            LIMIT ?
+        ");
+        $stmt->execute([$userId, $userId, $userId, $limit]);
+        $rows = $stmt->fetchAll(PDO::FETCH_OBJ);
+        return array_map(fn($r) => Poll::fromRow($r), $rows);
+    }
+
     public function create(int $organizerId, string $slug, string $secretHash, string $title, ?string $description, ?string $location, string $timezone): Poll
     {
         $pdo = Database::get();

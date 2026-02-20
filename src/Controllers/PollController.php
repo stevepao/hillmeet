@@ -195,6 +195,19 @@ final class PollController
                 exit;
             }
             $accessByInvite = true;
+        } else {
+            $userId = (int) current_user()->id;
+            $candidate = $this->pollRepo->findBySlug($slug);
+            if ($candidate !== null) {
+                $isOrganizer = $candidate->isOrganizer($userId);
+                $participantRepo = new PollParticipantRepository();
+                $voteRepo = new VoteRepository();
+                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
+                if ($isOrganizer || $isParticipant) {
+                    $poll = $candidate;
+                    $accessByInvite = false;
+                }
+            }
         }
 
         if ($poll === null) {

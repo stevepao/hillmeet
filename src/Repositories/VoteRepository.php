@@ -18,6 +18,13 @@ final class VoteRepository
         return $v !== false ? $v : null;
     }
 
+    public function hasVoteInPoll(int $pollId, int $userId): bool
+    {
+        $stmt = Database::get()->prepare("SELECT 1 FROM votes WHERE poll_id = ? AND user_id = ? LIMIT 1");
+        $stmt->execute([$pollId, $userId]);
+        return $stmt->fetchColumn() !== false;
+    }
+
     public function setVote(int $pollId, int $pollOptionId, int $userId, string $vote): void
     {
         $pdo = Database::get();

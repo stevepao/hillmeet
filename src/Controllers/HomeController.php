@@ -12,8 +12,14 @@ final class HomeController
     {
         \Hillmeet\Middleware\RequireAuth::check();
         $user = \Hillmeet\Support\current_user();
+        $userId = (int) $user->id;
         $pollRepo = new PollRepository();
-        $recentPolls = $pollRepo->listRecentForUser((int) $user->id, 10);
+        $ownedPolls = $pollRepo->listOwnedPolls($userId);
+        $participatedPolls = $pollRepo->listParticipatedPolls($userId);
+        $debugCounts = null;
+        if (\env('APP_ENV', '') === 'local') {
+            $debugCounts = ['owned' => count($ownedPolls), 'participated' => count($participatedPolls)];
+        }
         require dirname(__DIR__, 2) . '/views/home.php';
     }
 }
