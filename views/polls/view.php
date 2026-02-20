@@ -58,10 +58,10 @@ $canEdit = !$poll->isLocked();
           ?>
         </p>
       <?php endif; ?>
+      <?php
+        $selectedLabel = $vote === 'yes' ? 'Works' : ($vote === 'maybe' ? 'If needed' : ($vote === 'no' ? "Can't" : '—'));
+      ?>
       <?php if (!$poll->isLocked()): ?>
-        <?php
-          $selectedLabel = $vote === 'yes' ? 'Works' : ($vote === 'maybe' ? 'If needed' : ($vote === 'no' ? "Can't" : '—'));
-        ?>
         <div class="vote-controls" role="radiogroup" aria-label="Vote for this time slot">
           <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/vote') ?>" style="display:inline;" class="vote-form">
             <?= \Hillmeet\Support\Csrf::field() ?>
@@ -79,6 +79,7 @@ $canEdit = !$poll->isLocked();
           <p class="vote-selected-label" aria-live="polite">Selected: <?= \Hillmeet\Support\e($selectedLabel) ?></p>
         </div>
       <?php else: ?>
+        <p class="vote-selected-label muted" aria-live="polite">Selected: <?= \Hillmeet\Support\e($selectedLabel) ?></p>
         <span class="badge badge-muted">Locked</span>
       <?php endif; ?>
     </div>
@@ -169,7 +170,8 @@ window.HILLMEET_POLL = {
   voteBatchUrl: <?= json_encode(\Hillmeet\Support\url('/poll/' . $poll->slug . '/vote-batch')) ?>,
   csrfToken: <?= json_encode(\Hillmeet\Support\Csrf::token()) ?>,
   resultsUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/results', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/results?secret=' . urlencode($_GET['secret'] ?? ''))) ?>,
-  checkAvailabilityUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability?secret=' . urlencode($_GET['secret'] ?? ''))) ?>
+  checkAvailabilityUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability?secret=' . urlencode($_GET['secret'] ?? ''))) ?>,
+  savedVotes: <?= json_encode(array_map(function ($v) { return $v ?? ''; }, $userVotes)) ?>
 };
 </script>
 <?php

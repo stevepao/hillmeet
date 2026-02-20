@@ -83,6 +83,14 @@
       return state;
     }
 
+    function stateFromServer(obj) {
+      var out = {};
+      if (obj && typeof obj === 'object') {
+        for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) out[String(k)] = (obj[k] && String(obj[k])) || '';
+      }
+      return out;
+    }
+
     function copyState(s) {
       var out = {};
       for (var k in s) out[k] = s[k];
@@ -113,8 +121,9 @@
       });
     }
 
-    var savedVotes = getStateFromDom();
+    var savedVotes = (poll.savedVotes && typeof poll.savedVotes === 'object') ? stateFromServer(poll.savedVotes) : getStateFromDom();
     var draftVotes = copyState(savedVotes);
+    applyStateToDom(draftVotes);
     var savedMessageTimeout = null;
 
     function countUnsaved() {

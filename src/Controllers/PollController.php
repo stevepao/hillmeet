@@ -247,8 +247,8 @@ final class PollController
         $resultsExpandOpen = isset($_GET['expand']) && $_GET['expand'] === 'results';
         $participants = $participantRepo->getResultsParticipants($poll->id);
         $myVotes = [];
-        foreach ($results['matrix'] ?? [] as $optId => $userVotes) {
-            $myVotes[$optId] = $userVotes[$userId] ?? null;
+        foreach ($results['matrix'] ?? [] as $optId => $votesByUser) {
+            $myVotes[$optId] = $votesByUser[$userId] ?? null;
         }
         $resultsDebug = null;
         $resultsError = null;
