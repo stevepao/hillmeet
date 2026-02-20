@@ -66,34 +66,26 @@ final class PollService
         return [];
     }
 
-    public function generateTimeOptions(string $timezone, string $dateFrom, string $dateTo, array $daysOfWeek, string $startTime, string $endTime, int $durationMinutes, int $gapMinutes): array
+    /** One slot per matching weekday in range: start time + poll duration. */
+    public function generateTimeOptions(string $timezone, string $dateFrom, string $dateTo, array $daysOfWeek, string $startTime, int $durationMinutes): array
     {
         $tz = new \DateTimeZone($timezone);
         $from = new \DateTimeImmutable($dateFrom . ' ' . $startTime, $tz);
-        $to = new \DateTimeImmutable($dateTo . ' ' . $endTime, $tz);
+        $to = new \DateTimeImmutable($dateTo . ' ' . $startTime, $tz);
         $duration = new \DateInterval('PT' . $durationMinutes . 'M');
-        $gap = new \DateInterval('PT' . $gapMinutes . 'M');
         $slots = [];
         $current = $from;
         while ($current <= $to) {
             $dow = (int) $current->format('w'); // 0=Sun, 6=Sat
             if (in_array($dow, $daysOfWeek, true)) {
                 $endSlot = $current->add($duration);
-                if ($endSlot->format('H:i') <= $endTime || $endSlot <= $to) {
-                    $slots[] = [
-                        'start_utc' => $current->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
-                        'end_utc' => $endSlot->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
-                        'label' => null,
-                    ];
-                }
+                $slots[] = [
+                    'start_utc' => $current->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+                    'end_utc' => $endSlot->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+                    'label' => null,
+                ];
             }
-            $current = $current->add($duration)->add($gap);
-            if ($current->format('H:i') < $startTime) {
-                $current = new \DateTimeImmutable($current->format('Y-m-d') . ' ' . $startTime, $tz);
-            }
-            if ($current > $to) {
-                $current = $current->modify('+1 day')->setTime((int) substr($startTime, 0, 2), (int) substr($startTime, 3, 2));
-            }
+            $current = $current->modify('+1 day')->setTime((int) substr($startTime, 0, 2), (int) substr($startTime, 3, 2));
         }
         return $slots;
     }

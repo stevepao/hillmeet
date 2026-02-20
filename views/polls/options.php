@@ -52,12 +52,6 @@ $content = ob_start();
   <div class="form-group">
     <label>Start time</label>
     <input type="time" id="gen-start" class="input" value="09:00" style="width:auto;">
-    <label>End time</label>
-    <input type="time" id="gen-end" class="input" value="17:00" style="width:auto;">
-  </div>
-  <div class="form-group">
-    <label>Gap between slots (minutes)</label>
-    <input type="number" id="gen-gap" class="input" value="0" min="0" style="width:6rem;">
   </div>
   <button type="button" class="btn btn-secondary" id="generate-times">Generate time options</button>
     <hr style="margin:var(--space-5) 0;border-color:var(--border);">
@@ -103,8 +97,10 @@ window.addEventListener('load', function() {
     if (typeof flatpickr === 'undefined') return;
     flatpickr(el, {
       enableTime: true,
-      time_24hr: true,
+      time_24hr: false,
       dateFormat: fpDateFormat,
+      altInput: true,
+      altFormat: 'M j, Y h:i K',
       minuteIncrement: 5,
       allowInput: true,
       onChange: function(sel, datestr) { setEndFromStart(el); }
@@ -147,8 +143,6 @@ window.addEventListener('load', function() {
     var from = document.getElementById('gen-from').value;
     var to = document.getElementById('gen-to').value;
     var startTime = document.getElementById('gen-start').value;
-    var endTime = document.getElementById('gen-end').value;
-    var gap = parseInt(document.getElementById('gen-gap').value, 10) || 0;
     var days = [].slice.call(document.querySelectorAll('.gen-dow:checked')).map(function(c) { return parseInt(c.value, 10); });
 
     if (!from || !to) {
@@ -162,14 +156,12 @@ window.addEventListener('load', function() {
 
     var startHour = parseInt(startTime.slice(0, 2), 10);
     var startMin = parseInt(startTime.slice(3, 5), 10) || 0;
-    var endHour = parseInt(endTime.slice(0, 2), 10);
-    var endMin = parseInt(endTime.slice(3, 5), 10) || 0;
     var fromParts = from.split('-');
     var toParts = to.split('-');
-    var start = new Date(parseInt(fromParts[0], 10), parseInt(fromParts[1], 10) - 1, parseInt(fromParts[2], 10), startHour, startMin, 0, 0);
-    var end = new Date(parseInt(toParts[0], 10), parseInt(toParts[1], 10) - 1, parseInt(toParts[2], 10), endHour, endMin, 0, 0);
+    var rangeStart = new Date(parseInt(fromParts[0], 10), parseInt(fromParts[1], 10) - 1, parseInt(fromParts[2], 10), startHour, startMin, 0, 0);
+    var rangeEnd = new Date(parseInt(toParts[0], 10), parseInt(toParts[1], 10) - 1, parseInt(toParts[2], 10), startHour, startMin, 0, 0);
 
-    if (start > end) {
+    if (rangeStart > rangeEnd) {
       showToast('From date must be on or before To date.');
       return;
     }
@@ -177,42 +169,34 @@ window.addEventListener('load', function() {
     /* DEBUG (temporary): set HILLMEET_DEBUG_GEN=true in console to enable; remove when verified */
     if (window.HILLMEET_DEBUG_GEN === undefined) window.HILLMEET_DEBUG_GEN = true;
     function dbg() { if (window.HILLMEET_DEBUG_GEN) console.log.apply(console, arguments); }
-    dbg('[gen] 1) Parsed range', 'start', start.toISOString(), 'valid', !isNaN(start.getTime()), 'end', end.toISOString(), 'valid', !isNaN(end.getTime()));
+    dbg('[gen] 1) Parsed range', 'start', rangeStart.toISOString(), 'valid', !isNaN(rangeStart.getTime()), 'end', rangeEnd.toISOString(), 'valid', !isNaN(rangeEnd.getTime()));
     dbg('[gen] 2) Selected weekdays from UI (0=Sun..6=Sat)', days);
 
-    var current = new Date(start.getFullYear(), start.getMonth(), start.getDate(), startHour, startMin, 0, 0);
+    var current = new Date(rangeStart.getTime());
     var added = 0;
     var candidateSlots = [];
-    var loggedOneMonday = false;
+    var loggedOne = false;
 
-    while (current <= end) {
+    while (current <= rangeEnd) {
       var dow = current.getDay();
       dbg('[gen] 3) Iterated date', current.toISOString().slice(0, 10), 'weekday', dow, '(0=Sun,1=Mon,...,6=Sat)');
 
       if (days.indexOf(dow) !== -1) {
         var s = new Date(current.getTime());
         var e = new Date(current.getTime() + durationMinutes * 60000);
-        var dayEnd = new Date(current.getFullYear(), current.getMonth(), current.getDate(), endHour, endMin, 0, 0);
-        var minsAvailable = (dayEnd.getTime() - current.getTime()) / 60000;
-        candidateSlots.push({ start: s.toISOString(), end: e.toISOString(), dayEnd: dayEnd.toISOString() });
-
-        if (!loggedOneMonday) {
-          dbg('[gen] 4) One matching Monday: startDateTime', s.toISOString(), 'endDateTime', e.toISOString(), 'dayEnd', dayEnd.toISOString(), 'minsAvailable', minsAvailable);
-          loggedOneMonday = true;
+        candidateSlots.push({ start: s.toISOString(), end: e.toISOString() });
+        if (!loggedOne) {
+          dbg('[gen] 4) One matching day: startDateTime', s.toISOString(), 'endDateTime', e.toISOString());
+          loggedOne = true;
         }
-
-        if (e <= dayEnd) {
-          addRow(formatInTz(s, pollTz), formatInTz(e, pollTz));
-          added++;
-        } else {
-          dbg('[gen] 6) Rejected: slot end > dayEnd', 'e', e.toISOString(), 'dayEnd', dayEnd.toISOString(), 'condition (e <= dayEnd)', e <= dayEnd);
-        }
+        addRow(formatInTz(s, pollTz), formatInTz(e, pollTz));
+        added++;
       }
       current.setDate(current.getDate() + 1);
       current.setHours(startHour, startMin, 0, 0);
     }
 
-    dbg('[gen] 5) Candidate slot starts (before filtering)', candidateSlots);
+    dbg('[gen] 5) Candidate slots', candidateSlots);
 
     if (added > 0) showToast('Added ' + added + ' time option' + (added === 1 ? '' : 's') + '.');
     else showToast('No slots in that range. Try a wider date range or different days.');
