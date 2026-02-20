@@ -222,6 +222,9 @@ final class PollController
     public function deletePoll(string $slug): void
     {
         $this->auth();
+        if (ob_get_level()) {
+            ob_clean();
+        }
         header('Content-Type: application/json; charset=utf-8');
         $poll = $this->pollRepo->findBySlug($slug);
         if ($poll === null) {

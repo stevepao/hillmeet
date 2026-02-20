@@ -97,16 +97,27 @@ $csrfToken = \Hillmeet\Support\Csrf::token();
       formData.append('csrf_token', csrfToken);
       confirmBtn.disabled = true;
       fetch(deleteUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-        .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
+        .then(function(r) { return r.text().then(function(text) { return { ok: r.ok, status: r.status, text: text }; }); })
         .then(function(result) {
           confirmBtn.disabled = false;
           hideModal();
-          if (result.ok && result.body && result.body.success) {
+          var body = null;
+          try { body = result.text ? JSON.parse(result.text) : null; } catch (e) { body = null; }
+          if (result.ok && result.status === 200 && body && body.success) {
             cardToRemove.remove();
-          } else {
-            var msg = result.body && result.body.error ? result.body.error : 'Could not delete poll.';
-            if (result.body && result.body.error_code) msg += ' (' + result.body.error_code + ')';
+            return;
+          }
+          if (result.ok && result.status === 200 && !body) {
+            cardToRemove.remove();
+            window.location.reload();
+            return;
+          }
+          if (body && body.error) {
+            var msg = body.error;
+            if (body.error_code) msg += ' (' + body.error_code + ')';
             alert(msg);
+          } else {
+            alert('Could not delete poll.');
           }
         })
         .catch(function() {
