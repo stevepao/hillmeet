@@ -13,7 +13,7 @@ $myVotes = $myVotes ?? [];
 <?php if (!empty($resultsDebug)): ?>
 <div class="results-debug muted" style="font-size:var(--text-xs); margin-bottom:var(--space-4); padding:var(--space-3); background:var(--card-2); border-radius:var(--radius-md); border:1px solid var(--border);">
   <strong>Results debug</strong>
-  <p style="margin:var(--space-1) 0 0;">poll_id: <?= (int) ($resultsDebug['poll_id'] ?? 0) ?> · user_id: <?= (int) ($resultsDebug['user_id'] ?? 0) ?> · options: <?= (int) ($resultsDebug['options_count'] ?? 0) ?> · votes: <?= (int) ($resultsDebug['votes_count'] ?? 0) ?> · participants: <?= (int) ($resultsDebug['participants_count'] ?? 0) ?> · voters: <?= (int) ($resultsDebug['voters_count'] ?? 0) ?></p>
+  <p style="margin:var(--space-1) 0 0;">poll_id: <?= (int) ($resultsDebug['poll_id'] ?? 0) ?> · user_id: <?= (int) ($resultsDebug['user_id'] ?? 0) ?> · user_email: <?= \Hillmeet\Support\e($resultsDebug['user_email'] ?? '') ?> · my_votes_count: <?= (int) ($resultsDebug['my_votes_count'] ?? 0) ?> · options: <?= (int) ($resultsDebug['options_count'] ?? 0) ?> · votes: <?= (int) ($resultsDebug['votes_count'] ?? 0) ?> · participants: <?= (int) ($resultsDebug['participants_count'] ?? 0) ?> · voters: <?= (int) ($resultsDebug['voters_count'] ?? 0) ?></p>
   <?php if (!empty($resultsDebug['mismatch'])): ?>
     <p style="margin:var(--space-1) 0 0;">Mismatch: <?= implode(', ', array_map('intval', $resultsDebug['mismatch'])) ?></p>
   <?php endif; ?>

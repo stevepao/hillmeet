@@ -298,19 +298,24 @@ final class PollController
             : [];
         $resultsExpandOpen = isset($_GET['expand']) && $_GET['expand'] === 'results';
         $participants = $participantRepo->getResultsParticipants($poll->id);
+        $myVotesByOption = $voteRepo->getVotesForUser($poll->id, $userId);
         $myVotes = [];
-        foreach ($results['matrix'] ?? [] as $optId => $votesByUser) {
-            $myVotes[$optId] = $votesByUser[$userId] ?? null;
+        foreach ($options as $opt) {
+            $myVotes[$opt->id] = $myVotesByOption[$opt->id] ?? null;
         }
         $resultsDebug = null;
         $resultsError = null;
         if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
-            $voteRepo = new VoteRepository();
             $ppIds = $participantRepo->getParticipantIds($poll->id);
             $voterIds = $voteRepo->getDistinctVoterIds($poll->id);
+            $currentUser = current_user();
+            $userEmail = $currentUser ? ($currentUser->email ?? '') : '';
+            $myVotesCount = count(array_filter($myVotes));
             $resultsDebug = [
                 'poll_id' => $poll->id,
                 'user_id' => $userId,
+                'user_email' => $userEmail,
+                'my_votes_count' => $myVotesCount,
                 'options_count' => count($options),
                 'votes_count' => array_sum(array_map('count', $results['matrix'] ?? [])),
                 'participants_count' => count($ppIds),
@@ -529,22 +534,26 @@ final class PollController
         $participantRepo = new PollParticipantRepository();
         $participants = $participantRepo->getResultsParticipants($poll->id);
         $currentUserId = (int) current_user()->id;
+        $voteRepo = new VoteRepository();
+        $myVotesByOption = $voteRepo->getVotesForUser($poll->id, $currentUserId);
         $myVotes = [];
-        foreach ($results['matrix'] ?? [] as $optId => $userVotes) {
-            $myVotes[$optId] = $userVotes[$currentUserId] ?? null;
+        foreach ($results['options'] ?? [] as $opt) {
+            $myVotes[$opt->id] = $myVotesByOption[$opt->id] ?? null;
         }
         $resultsDebug = null;
         if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
-            $voteRepo = new VoteRepository();
             $ppIds = $participantRepo->getParticipantIds($poll->id);
             $voterIds = $voteRepo->getDistinctVoterIds($poll->id);
             $votesCount = 0;
             foreach ($results['matrix'] ?? [] as $optVotes) {
                 $votesCount += count($optVotes);
             }
+            $curUser = current_user();
             $resultsDebug = [
                 'poll_id' => $poll->id,
                 'user_id' => $currentUserId,
+                'user_email' => $curUser ? ($curUser->email ?? '') : '',
+                'my_votes_count' => count(array_filter($myVotes)),
                 'options_count' => count($options),
                 'votes_count' => $votesCount,
                 'participants_count' => count($ppIds),
