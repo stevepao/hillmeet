@@ -44,8 +44,19 @@ final class GoogleIdToken
             if (isset($payload['exp']) && (int) $payload['exp'] < time()) {
                 return null;
             }
-            $aud = $payload['aud'] ?? $payload['azp'] ?? '';
-            if ($aud !== $clientId) {
+            $clientId = trim($clientId);
+            $aud = $payload['aud'] ?? null;
+            $azp = $payload['azp'] ?? null;
+            $audOk = false;
+            if (is_string($aud) && $aud !== '') {
+                $audOk = ($aud === $clientId);
+            } elseif (is_array($aud)) {
+                $audOk = in_array($clientId, $aud, true);
+            }
+            if (!$audOk && is_string($azp) && $azp !== '') {
+                $audOk = ($azp === $clientId);
+            }
+            if (!$audOk) {
                 return null;
             }
             $iss = $payload['iss'] ?? '';
