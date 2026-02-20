@@ -10,10 +10,12 @@ use PDO;
 final class PollInviteRepository
 {
     /**
-     * Create or update an invite (unique on poll_id + email). Returns the row id.
+     * Create or update an invite (unique on poll_id + normalized email). Returns the row id.
+     * Email is stored normalized (lowercase, trimmed) for uniqueness.
      */
     public function createInvite(int $pollId, string $email, string $tokenHash, ?int $invitedByUserId): int
     {
+        $email = strtolower(trim($email));
         $stmt = Database::get()->prepare("
             INSERT INTO poll_invites (poll_id, email, token_hash, invited_by_user_id)
             VALUES (?, ?, ?, ?)
@@ -31,12 +33,34 @@ final class PollInviteRepository
         return $id;
     }
 
-    /** @return array<object{id, email, sent_at}> */
+    /** @return array<object{id, email, sent_at, accepted_at}> */
     public function listInvites(int $pollId): array
     {
-        $stmt = Database::get()->prepare("SELECT id, email, sent_at FROM poll_invites WHERE poll_id = ? ORDER BY sent_at DESC, email");
+        $stmt = Database::get()->prepare("SELECT id, email, sent_at, accepted_at FROM poll_invites WHERE poll_id = ? ORDER BY sent_at DESC, email");
         $stmt->execute([$pollId]);
         return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    public function getByIdAndPoll(int $id, int $pollId): ?object
+    {
+        $stmt = Database::get()->prepare("SELECT id, poll_id, email FROM poll_invites WHERE id = ? AND poll_id = ?");
+        $stmt->execute([$id, $pollId]);
+        $row = $stmt->fetch(PDO::FETCH_OBJ);
+        return $row ?: null;
+    }
+
+    public function deleteInvite(int $id, int $pollId): void
+    {
+        $stmt = Database::get()->prepare("DELETE FROM poll_invites WHERE id = ? AND poll_id = ?");
+        $stmt->execute([$id, $pollId]);
+    }
+
+    /** @return array<string> normalized emails already invited for this poll */
+    public function getInvitedEmails(int $pollId): array
+    {
+        $stmt = Database::get()->prepare("SELECT LOWER(TRIM(email)) AS email FROM poll_invites WHERE poll_id = ?");
+        $stmt->execute([$pollId]);
+        return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'email');
     }
 
     public function markSent(int $id): void

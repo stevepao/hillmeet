@@ -1,7 +1,9 @@
 <?php
 $pageTitle = 'Invite people';
 $content = ob_start();
-$pollUrl = \Hillmeet\Support\url('/poll/' . $poll->slug . '?secret=' . urlencode($secret));
+$shareUrlQuery = $secret !== '' ? ['secret' => $secret] : [];
+$pollUrl = \Hillmeet\Support\url('/poll/' . $poll->slug, $shareUrlQuery);
+$shareFormAction = \Hillmeet\Support\url('/poll/' . $poll->slug . '/share', $secret !== '' ? ['secret' => $secret] : []);
 ?>
 <h1>Invite people</h1>
 <div class="steps">
@@ -9,6 +11,15 @@ $pollUrl = \Hillmeet\Support\url('/poll/' . $poll->slug . '?secret=' . urlencode
   <a href="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/options') ?>">Add times</a>
   <span class="active">Share</span>
 </div>
+
+<?php if (!empty($_SESSION['invite_error'])): ?>
+  <div class="card card-2" style="margin-top:var(--space-4);color:var(--danger);"><?= \Hillmeet\Support\e($_SESSION['invite_error']) ?></div>
+  <?php unset($_SESSION['invite_error']); ?>
+<?php endif; ?>
+
+<?php if (!empty($_SESSION['invitations_sent'])): unset($_SESSION['invitations_sent']); ?>
+  <p class="success-message" role="alert" style="margin-top:var(--space-4);">Invitations sent.</p>
+<?php endif; ?>
 
 <div class="card" style="margin-top:var(--space-5);">
   <h2>Poll link</h2>
@@ -20,16 +31,50 @@ $pollUrl = \Hillmeet\Support\url('/poll/' . $poll->slug . '?secret=' . urlencode
 </div>
 
 <div class="card" style="margin-top:var(--space-4);">
-  <h2>Invite by email</h2>
-  <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/share') ?>">
+  <h2>Invite new people</h2>
+  <p class="helper">We'll send each person the private link. Existing invitees won't be re-sent automatically.</p>
+  <form method="post" action="<?= \Hillmeet\Support\e($shareFormAction) ?>">
     <?= \Hillmeet\Support\Csrf::field() ?>
     <input type="hidden" name="secret" value="<?= \Hillmeet\Support\e($secret) ?>">
     <div class="form-group">
       <label for="emails">Email addresses (one per line)</label>
-      <textarea id="emails" name="emails" class="textarea" rows="4" placeholder="friend@example.com"><?= \Hillmeet\Support\e(implode("\n", array_column($invites, 'email'))) ?></textarea>
+      <textarea id="emails" name="emails" class="textarea" rows="4" placeholder="friend@example.com"></textarea>
     </div>
-    <button type="submit" class="btn btn-primary">Send invites</button>
+    <button type="submit" class="btn btn-primary">Send invitations</button>
   </form>
+</div>
+
+<div class="card" style="margin-top:var(--space-4);">
+  <h2>Already invited</h2>
+  <?php if (empty($invites)): ?>
+    <p class="muted">No invitations yet. Add emails above to send invitations.</p>
+  <?php else: ?>
+    <ul class="invite-list" style="list-style:none;margin:0;padding:0;">
+      <?php foreach ($invites as $inv): ?>
+        <?php
+          $status = !empty($inv->accepted_at) ? 'Accepted' : 'Sent';
+          $sentLabel = $inv->sent_at ? (new DateTime($inv->sent_at))->format('M j, Y g:i A') : '—';
+        ?>
+        <li class="invite-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);padding:var(--space-2) 0;border-bottom:1px solid var(--border);">
+          <span style="flex:1;min-width:0;"><?= \Hillmeet\Support\e($inv->email) ?></span>
+          <span class="badge <?= $status === 'Accepted' ? 'badge-success' : 'badge-muted' ?>"><?= \Hillmeet\Support\e($status) ?></span>
+          <span class="muted" style="font-size:var(--text-sm);"><?= \Hillmeet\Support\e($sentLabel) ?></span>
+          <form method="post" action="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/poll/' . $poll->slug . '/invite-resend', $shareUrlQuery)) ?>" style="display:inline;">
+            <?= \Hillmeet\Support\Csrf::field() ?>
+            <input type="hidden" name="secret" value="<?= \Hillmeet\Support\e($secret) ?>">
+            <input type="hidden" name="invite_id" value="<?= (int)$inv->id ?>">
+            <button type="submit" class="btn btn-secondary btn-sm">Resend</button>
+          </form>
+          <form method="post" action="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/poll/' . $poll->slug . '/invite-remove', $shareUrlQuery)) ?>" style="display:inline;" onsubmit="return confirm('Remove this invitation?');">
+            <?= \Hillmeet\Support\Csrf::field() ?>
+            <input type="hidden" name="secret" value="<?= \Hillmeet\Support\e($secret) ?>">
+            <input type="hidden" name="invite_id" value="<?= (int)$inv->id ?>">
+            <button type="submit" class="btn btn-secondary btn-sm" style="color:var(--danger);">Remove</button>
+          </form>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  <?php endif; ?>
 </div>
 
 <p style="margin-top:var(--space-5);">

@@ -162,6 +162,10 @@ final class PollService
         return null;
     }
 
+    /**
+     * Send invitations only to emails not already invited (normalize: trim + lowercase).
+     * Returns null on success or an error message.
+     */
     public function sendInvites(int $pollId, array $emails, int $organizerId, string $pollUrl, string $ip): ?string
     {
         $poll = $this->pollRepo->findById($pollId);
@@ -178,7 +182,9 @@ final class PollService
                 $valid[] = $email;
             }
         }
-        foreach ($valid as $email) {
+        $alreadyInvited = $this->inviteRepo->getInvitedEmails($pollId);
+        $toSend = array_values(array_diff($valid, $alreadyInvited));
+        foreach ($toSend as $email) {
             $rawToken = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $rawToken);
             $id = $this->inviteRepo->createInvite($pollId, $email, $tokenHash, $organizerId);
@@ -186,6 +192,45 @@ final class PollService
             $this->emailService->sendPollInvite($email, $poll->title, $inviteUrl);
             $this->inviteRepo->markSent($id);
         }
+        return null;
+    }
+
+    /** Resend one invitation by invite id. Returns null on success or error message. */
+    public function resendInvite(int $pollId, int $inviteId, int $organizerId, string $ip): ?string
+    {
+        $poll = $this->pollRepo->findById($pollId);
+        if ($poll === null || !$poll->isOrganizer($organizerId)) {
+            return 'Poll not found.';
+        }
+        if (!RateLimit::check('invite:' . $ip, (int) config('rate.invite'))) {
+            return 'Too many invite sends. Wait a minute.';
+        }
+        $invite = $this->inviteRepo->getByIdAndPoll($inviteId, $pollId);
+        if ($invite === null) {
+            return 'Invite not found.';
+        }
+        $email = $invite->email;
+        $rawToken = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $rawToken);
+        $this->inviteRepo->createInvite($pollId, $email, $tokenHash, $organizerId);
+        $inviteUrl = \Hillmeet\Support\url('/poll/' . $poll->slug, ['invite' => $rawToken]);
+        $this->emailService->sendPollInvite($email, $poll->title, $inviteUrl);
+        $this->inviteRepo->markSent($inviteId);
+        return null;
+    }
+
+    /** Remove one invitation by invite id. Returns null on success or error message. */
+    public function removeInvite(int $pollId, int $inviteId, int $organizerId): ?string
+    {
+        $poll = $this->pollRepo->findById($pollId);
+        if ($poll === null || !$poll->isOrganizer($organizerId)) {
+            return 'Poll not found.';
+        }
+        $invite = $this->inviteRepo->getByIdAndPoll($inviteId, $pollId);
+        if ($invite === null) {
+            return 'Invite not found.';
+        }
+        $this->inviteRepo->deleteInvite($inviteId, $pollId);
         return null;
     }
 

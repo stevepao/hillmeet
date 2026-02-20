@@ -142,7 +142,7 @@ final class PollController
             require dirname(__DIR__, 2) . '/views/errors/404.php';
             exit;
         }
-        $secret = $_SESSION['new_poll_secret'] ?? '';
+        $secret = $_GET['secret'] ?? $_SESSION['new_poll_secret'] ?? '';
         $inviteRepo = new PollInviteRepository();
         $invites = $inviteRepo->getByPoll($poll->id);
         require dirname(__DIR__, 2) . '/views/polls/share.php';
@@ -159,9 +159,61 @@ final class PollController
         $secret = $_POST['secret'] ?? $_SESSION['new_poll_secret'] ?? '';
         $pollUrl = url('/poll/' . $slug . '?secret=' . urlencode($secret));
         $emails = array_filter(array_map('trim', explode("\n", $_POST['emails'] ?? '')));
-        $this->pollService->sendInvites($poll->id, $emails, (int) current_user()->id, $pollUrl, $_SERVER['REMOTE_ADDR'] ?? '');
-        $_SESSION['invitations_sent'] = true;
-        header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+        $err = $this->pollService->sendInvites($poll->id, $emails, (int) current_user()->id, $pollUrl, $_SERVER['REMOTE_ADDR'] ?? '');
+        if ($err !== null) {
+            $_SESSION['invite_error'] = $err;
+        } else {
+            $_SESSION['invitations_sent'] = true;
+        }
+        header('Location: ' . url('/poll/' . $slug . '/share', $secret !== '' ? ['secret' => $secret] : []));
+        exit;
+    }
+
+    public function inviteResend(string $slug): void
+    {
+        $this->auth();
+        $poll = $this->pollRepo->findBySlug($slug);
+        if ($poll === null || !$poll->isOrganizer((int) current_user()->id)) {
+            http_response_code(404);
+            exit;
+        }
+        $inviteId = (int) ($_POST['invite_id'] ?? 0);
+        if ($inviteId <= 0) {
+            $_SESSION['invite_error'] = 'Invalid invite.';
+            header('Location: ' . url('/poll/' . $slug . '/share'));
+            exit;
+        }
+        $err = $this->pollService->resendInvite($poll->id, $inviteId, (int) current_user()->id, $_SERVER['REMOTE_ADDR'] ?? '');
+        if ($err !== null) {
+            $_SESSION['invite_error'] = $err;
+        } else {
+            $_SESSION['invitations_sent'] = true;
+        }
+        $secret = $_POST['secret'] ?? $_GET['secret'] ?? $_SESSION['new_poll_secret'] ?? '';
+        header('Location: ' . url('/poll/' . $slug . '/share', $secret !== '' ? ['secret' => $secret] : []));
+        exit;
+    }
+
+    public function inviteRemove(string $slug): void
+    {
+        $this->auth();
+        $poll = $this->pollRepo->findBySlug($slug);
+        if ($poll === null || !$poll->isOrganizer((int) current_user()->id)) {
+            http_response_code(404);
+            exit;
+        }
+        $inviteId = (int) ($_POST['invite_id'] ?? 0);
+        if ($inviteId <= 0) {
+            $_SESSION['invite_error'] = 'Invalid invite.';
+            header('Location: ' . url('/poll/' . $slug . '/share'));
+            exit;
+        }
+        $err = $this->pollService->removeInvite($poll->id, $inviteId, (int) current_user()->id);
+        if ($err !== null) {
+            $_SESSION['invite_error'] = $err;
+        }
+        $secret = $_POST['secret'] ?? $_GET['secret'] ?? $_SESSION['new_poll_secret'] ?? '';
+        header('Location: ' . url('/poll/' . $slug . '/share', $secret !== '' ? ['secret' => $secret] : []));
         exit;
     }
 
