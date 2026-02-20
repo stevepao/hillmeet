@@ -9,6 +9,7 @@
     "ext-mbstring": "*",
     "ext-openssl": "*",
     "ext-pdo": "*",
+    "league/oauth2-google": "^4.1",
     "phpmailer/phpmailer": "^7.0"
   },
   "require-dev": {

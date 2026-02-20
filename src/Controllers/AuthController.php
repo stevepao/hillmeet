@@ -42,19 +42,20 @@ final class AuthController
             exit;
         }
         $clientId = config('google.client_id', '');
-        if ($clientId === '') {
+        $clientSecret = config('google.client_secret', '');
+        if ($clientId === '' || $clientSecret === '') {
             header('Location: ' . url('/auth/login'));
             exit;
         }
         $redirectUri = config('google.redirect_uri') ?: (rtrim((string) config('app.url', ''), '/') . '/auth/google/callback');
-        $params = [
-            'response_type' => 'code',
-            'client_id' => $clientId,
-            'redirect_uri' => $redirectUri,
-            'scope' => 'openid email profile',
-            'state' => 'login',
-        ];
-        header('Location: https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($params));
+        $provider = new \League\OAuth2\Client\Provider\Google([
+            'clientId'     => $clientId,
+            'clientSecret' => $clientSecret,
+            'redirectUri'  => $redirectUri,
+        ]);
+        $authUrl = $provider->getAuthorizationUrl();
+        $_SESSION['oauth2state'] = $provider->getState();
+        header('Location: ' . $authUrl);
         exit;
     }
 
@@ -134,56 +135,70 @@ final class AuthController
 
     public function googleCallback(): void
     {
+        if (isset($_GET['error'])) {
+            $_SESSION['auth_error'] = 'Google sign-in was cancelled or failed.';
+            header('Location: ' . url('/auth/login'));
+            exit;
+        }
         $code = $_GET['code'] ?? '';
+        $state = $_GET['state'] ?? '';
         if ($code === '') {
             header('Location: ' . url('/auth/login'));
             exit;
         }
-        $userRepo = new UserRepository();
-        $oauth = new \Hillmeet\Services\GoogleCalendarService(
-            new \Hillmeet\Repositories\OAuthConnectionRepository(),
-            new \Hillmeet\Repositories\GoogleCalendarSelectionRepository(),
-            new \Hillmeet\Repositories\FreebusyCacheRepository()
-        );
-        $state = $_GET['state'] ?? '';
         if ($state === 'calendar') {
             require_auth();
+            $oauth = new \Hillmeet\Services\GoogleCalendarService(
+                new \Hillmeet\Repositories\OAuthConnectionRepository(),
+                new \Hillmeet\Repositories\GoogleCalendarSelectionRepository(),
+                new \Hillmeet\Repositories\FreebusyCacheRepository()
+            );
             $oauth->exchangeCodeForTokens($code, (int) $_SESSION['user']->id);
             header('Location: ' . url('/calendar'));
             exit;
         }
+        if (empty($_SESSION['oauth2state']) || $state !== $_SESSION['oauth2state']) {
+            unset($_SESSION['oauth2state']);
+            $_SESSION['auth_error'] = 'Invalid state. Please try signing in again.';
+            header('Location: ' . url('/auth/login'));
+            exit;
+        }
+        unset($_SESSION['oauth2state']);
         $clientId = config('google.client_id');
         $clientSecret = config('google.client_secret');
         $redirectUri = config('google.redirect_uri') ?: (rtrim((string) config('app.url', ''), '/') . '/auth/google/callback');
-        $res = @file_get_contents('https://oauth2.googleapis.com/token', false, stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => 'Content-Type: application/x-www-form-urlencoded',
-                'content' => http_build_query([
-                    'code' => $code,
-                    'client_id' => $clientId,
-                    'client_secret' => $clientSecret,
-                    'redirect_uri' => $redirectUri,
-                    'grant_type' => 'authorization_code',
-                ]),
-            ],
-        ]));
-        if ($res === false) {
+        $provider = new \League\OAuth2\Client\Provider\Google([
+            'clientId'     => $clientId,
+            'clientSecret' => $clientSecret,
+            'redirectUri'  => $redirectUri,
+        ]);
+        try {
+            $token = $provider->getAccessToken('authorization_code', ['code' => $code]);
+            $owner = $provider->getResourceOwner($token);
+        } catch (\Throwable $e) {
+            $_SESSION['auth_error'] = 'Google sign-in failed. Try again or use email.';
             header('Location: ' . url('/auth/login'));
             exit;
         }
-        $data = json_decode($res, true);
-        $idToken = $data['id_token'] ?? '';
-        if ($idToken === '') {
+        $email = $owner->getEmail();
+        if ($email === null || $email === '') {
+            $_SESSION['auth_error'] = 'Google did not provide an email. Try again or use email.';
             header('Location: ' . url('/auth/login'));
             exit;
         }
-        $user = $this->auth->verifyGoogleIdToken($idToken);
+        $user = $this->auth->findOrCreateUserFromGoogleProfile(
+            (string) $owner->getId(),
+            $email,
+            $owner->getName() ?? $email,
+            $owner->getAvatar()
+        );
         if ($user === null) {
+            $_SESSION['auth_error'] = 'Could not sign you in. Try again or use email.';
             header('Location: ' . url('/auth/login'));
             exit;
         }
         $_SESSION['user'] = $user;
+        session_write_close();
         header('Location: ' . url('/'));
         exit;
     }

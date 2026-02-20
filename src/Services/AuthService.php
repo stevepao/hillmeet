@@ -54,6 +54,29 @@ final class AuthService
         return $user;
     }
 
+    /** Find or create user from Google profile (sub, email, name, picture). Used by OAuth redirect flow. */
+    public function findOrCreateUserFromGoogleProfile(string $googleId, string $email, string $name, ?string $avatarUrl = null): ?object
+    {
+        $email = strtolower(trim($email));
+        if ($email === '') {
+            return null;
+        }
+        $user = $this->userRepo->findByGoogleId($googleId);
+        if ($user === null) {
+            $user = $this->userRepo->findByEmail($email);
+            if ($user !== null) {
+                $pdo = \Hillmeet\Support\Database::get();
+                $stmt = $pdo->prepare("UPDATE users SET google_id = ?, name = ?, avatar_url = ? WHERE id = ?");
+                $stmt->execute([$googleId, $name, $avatarUrl, $user->id]);
+                $user = $this->userRepo->findById($user->id);
+            } else {
+                $user = $this->userRepo->createFromGoogle($email, $name, $googleId, $avatarUrl);
+            }
+        }
+        AuditLog::log('auth.google_login', 'user', (string) $user->id);
+        return $user;
+    }
+
     /** Send PIN to email. Returns error message or null on success. */
     public function sendPin(string $email, string $ip): ?string
     {
