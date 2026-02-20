@@ -150,9 +150,11 @@ final class PollService
             }
         }
         foreach ($valid as $email) {
-            $tokenHash = hash('sha256', random_bytes(32));
+            $rawToken = bin2hex(random_bytes(32));
+            $tokenHash = hash('sha256', $rawToken);
             $id = $this->inviteRepo->createInvite($pollId, $email, $tokenHash, $organizerId);
-            $this->emailService->sendPollInvite($email, $poll->title, $pollUrl);
+            $inviteUrl = \Hillmeet\Support\url('/poll/' . $poll->slug, ['invite' => $rawToken]);
+            $this->emailService->sendPollInvite($email, $poll->title, $inviteUrl);
             $this->inviteRepo->markSent($id);
         }
         return null;

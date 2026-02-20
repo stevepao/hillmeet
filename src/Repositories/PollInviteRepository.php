@@ -50,4 +50,32 @@ final class PollInviteRepository
     {
         return $this->listInvites($pollId);
     }
+
+    /**
+     * Find invite by poll slug and token hash (constant-time comparison).
+     * @return object{id, poll_id, email, token_hash}|null
+     */
+    public function findByPollSlugAndTokenHash(string $slug, string $tokenHash): ?object
+    {
+        $stmt = Database::get()->prepare("
+            SELECT pi.id, pi.poll_id, pi.email, pi.token_hash
+            FROM poll_invites pi
+            JOIN polls p ON p.id = pi.poll_id
+            WHERE p.slug = ?
+        ");
+        $stmt->execute([$slug]);
+        $rows = $stmt->fetchAll(PDO::FETCH_OBJ);
+        foreach ($rows as $row) {
+            if (hash_equals($row->token_hash, $tokenHash)) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
+    public function markAccepted(int $id, int $userId): void
+    {
+        $stmt = Database::get()->prepare("UPDATE poll_invites SET accepted_at = NOW(), accepted_by_user_id = ? WHERE id = ?");
+        $stmt->execute([$userId, $id]);
+    }
 }

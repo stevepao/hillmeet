@@ -9,6 +9,7 @@ use Hillmeet\Repositories\UserRepository;
 use Hillmeet\Services\AuthService;
 use Hillmeet\Services\EmailService;
 use function Hillmeet\Support\config;
+use function Hillmeet\Support\redirect_to_return_or;
 use function Hillmeet\Support\url;
 
 final class AuthController
@@ -106,8 +107,7 @@ final class AuthController
             exit;
         }
         unset($_SESSION['pin_sent_to'], $_SESSION['auth_error'], $_SESSION['auth_email']);
-        header('Location: ' . url('/'));
-        exit;
+        redirect_to_return_or('/');
     }
 
     public function googleCallback(): void
@@ -176,8 +176,7 @@ final class AuthController
         }
         $_SESSION['user'] = $user;
         session_write_close();
-        header('Location: ' . url('/'));
-        exit;
+        redirect_to_return_or('/');
     }
 
     public function signOut(): void

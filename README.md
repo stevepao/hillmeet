@@ -77,6 +77,10 @@ If Google OAuth is not configured, the app shows **Use email instead** and uses 
 | `RATE_*` | Rate limit counts per window (see `.env.example`) |
 | `FREEBUSY_CACHE_TTL` | Free/busy cache TTL in seconds |
 
+## Manual testing (invite deep link)
+
+- **Invite link after login:** Open an invite link (from email) in an incognito/private window while logged out. You should be redirected to login. Sign in (Google or email PIN). After successful login you must land back on the poll view for that invite. If you are sent to the home page instead, the return_to / invite deep-link flow is broken.
+
 ## License
 
 MIT. See [LICENSE.md](LICENSE.md).

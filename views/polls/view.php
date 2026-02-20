@@ -1,7 +1,9 @@
 <?php
 $pageTitle = \Hillmeet\Support\e($poll->title);
 $content = ob_start();
-$pollUrlWithSecret = \Hillmeet\Support\url('/poll/' . $poll->slug . '?secret=' . urlencode($_GET['secret'] ?? ''));
+$pollUrlWithSecret = !empty($accessByInvite) && $inviteToken !== ''
+  ? \Hillmeet\Support\url('/poll/' . $poll->slug, ['invite' => $inviteToken])
+  : \Hillmeet\Support\url('/poll/' . $poll->slug . '?secret=' . urlencode($_GET['secret'] ?? ''));
 $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 ?>
 <h1><?= \Hillmeet\Support\e($poll->title) ?></h1>
@@ -47,7 +49,11 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
         <div class="vote-controls">
           <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/vote') ?>" style="display:inline;" class="vote-form">
             <?= \Hillmeet\Support\Csrf::field() ?>
+            <?php if (!empty($accessByInvite) && $inviteToken !== ''): ?>
+            <input type="hidden" name="invite" value="<?= \Hillmeet\Support\e($inviteToken) ?>">
+            <?php else: ?>
             <input type="hidden" name="secret" value="<?= \Hillmeet\Support\e($_GET['secret'] ?? '') ?>">
+            <?php endif; ?>
             <input type="hidden" name="option_id" value="<?= (int)$opt->id ?>">
             <input type="hidden" name="back" value="<?= \Hillmeet\Support\e($pollUrlWithSecret) ?>">
             <button type="submit" name="vote" value="yes" class="vote-chip <?= $vote === 'yes' ? 'active' : '' ?>" data-vote="yes" title="Works">✅ Works</button>
@@ -129,7 +135,7 @@ $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 window.HILLMEET_POLL = {
   slug: <?= json_encode($poll->slug) ?>,
   secret: <?= json_encode($_GET['secret'] ?? '') ?>,
-  resultsUrl: <?= json_encode(\Hillmeet\Support\url('/poll/' . $poll->slug . '/results?secret=' . urlencode($_GET['secret'] ?? ''))) ?>
+  resultsUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/results', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/results?secret=' . urlencode($_GET['secret'] ?? ''))) ?>
 };
 </script>
 <?php

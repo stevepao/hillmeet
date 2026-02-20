@@ -169,17 +169,40 @@ final class PollController
     {
         $this->auth();
         $secret = $_GET['secret'] ?? '';
-        if ($secret === '') {
-            http_response_code(404);
-            require dirname(__DIR__, 2) . '/views/errors/404.php';
-            exit;
+        $inviteToken = $_GET['invite'] ?? '';
+        $poll = null;
+        $accessByInvite = false;
+
+        if ($secret !== '') {
+            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
+            $accessByInvite = false;
+        } elseif ($inviteToken !== '') {
+            $inviteRepo = new PollInviteRepository();
+            $tokenHash = hash('sha256', $inviteToken);
+            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
+            if ($invite === null) {
+                http_response_code(404);
+                require dirname(__DIR__, 2) . '/views/errors/404.php';
+                exit;
+            }
+            $userId = (int) current_user()->id;
+            $inviteRepo->markAccepted((int) $invite->id, $userId);
+            (new PollParticipantRepository())->add((int) $invite->poll_id, $userId);
+            $poll = $this->pollRepo->findById((int) $invite->poll_id);
+            if ($poll === null || $poll->slug !== $slug) {
+                http_response_code(404);
+                require dirname(__DIR__, 2) . '/views/errors/404.php';
+                exit;
+            }
+            $accessByInvite = true;
         }
-        $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
+
         if ($poll === null) {
             http_response_code(404);
             require dirname(__DIR__, 2) . '/views/errors/404.php';
             exit;
         }
+
         $options = $this->pollRepo->getOptions($poll->id);
         $voteRepo = new VoteRepository();
         $userVotes = [];
@@ -208,7 +231,23 @@ final class PollController
     {
         $this->auth();
         $secret = $_POST['secret'] ?? $_GET['secret'] ?? '';
-        $poll = $secret ? $this->pollRepo->findBySlugAndVerifySecret($slug, $secret) : null;
+        $inviteToken = $_POST['invite'] ?? $_GET['invite'] ?? '';
+        $poll = null;
+        $backPath = '';
+
+        if ($secret !== '') {
+            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
+            $backPath = $poll ? url('/poll/' . $slug . '?secret=' . urlencode($secret)) : '';
+        } elseif ($inviteToken !== '') {
+            $inviteRepo = new PollInviteRepository();
+            $tokenHash = hash('sha256', $inviteToken);
+            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
+            if ($invite !== null) {
+                $poll = $this->pollRepo->findById((int) $invite->poll_id);
+                $backPath = $poll && $poll->slug === $slug ? url('/poll/' . $slug . '?invite=' . urlencode($inviteToken)) : '';
+            }
+        }
+
         if ($poll === null) {
             http_response_code(404);
             exit;
@@ -219,7 +258,7 @@ final class PollController
         if ($err !== null) {
             $_SESSION['vote_error'] = $err;
         }
-        $back = $_POST['back'] ?? url('/poll/' . $slug . '?secret=' . urlencode($secret));
+        $back = $_POST['back'] ?? $backPath;
         header('Location: ' . $back);
         exit;
     }
@@ -228,7 +267,21 @@ final class PollController
     {
         $this->auth();
         $secret = $_GET['secret'] ?? '';
-        $poll = $secret ? $this->pollRepo->findBySlugAndVerifySecret($slug, $secret) : null;
+        $inviteToken = $_GET['invite'] ?? '';
+        $poll = null;
+        if ($secret !== '') {
+            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
+        } elseif ($inviteToken !== '') {
+            $inviteRepo = new PollInviteRepository();
+            $tokenHash = hash('sha256', $inviteToken);
+            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
+            if ($invite !== null) {
+                $poll = $this->pollRepo->findById((int) $invite->poll_id);
+                if ($poll === null || $poll->slug !== $slug) {
+                    $poll = null;
+                }
+            }
+        }
         if ($poll === null) {
             http_response_code(404);
             exit;

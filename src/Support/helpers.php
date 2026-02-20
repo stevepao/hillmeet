@@ -66,3 +66,35 @@ function require_auth(): void
         exit;
     }
 }
+
+/**
+ * Validate return_to to prevent open redirect: only relative path starting with /, no //, no http.
+ */
+function validate_return_to(?string $returnTo): bool
+{
+    if ($returnTo === null || $returnTo === '' || $returnTo[0] !== '/') {
+        return false;
+    }
+    if (strpos($returnTo, '//') !== false) {
+        return false;
+    }
+    if (stripos($returnTo, 'http') !== false) {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Redirect to return_to if valid (and clear it), otherwise redirect to default path.
+ */
+function redirect_to_return_or(string $defaultPath = '/'): void
+{
+    $rt = $_SESSION['return_to'] ?? null;
+    unset($_SESSION['return_to']);
+    if (validate_return_to($rt)) {
+        header('Location: ' . rtrim((string) config('app.url', ''), '/') . $rt);
+        exit;
+    }
+    header('Location: ' . url($defaultPath));
+    exit;
+}
