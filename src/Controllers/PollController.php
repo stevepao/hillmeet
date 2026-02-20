@@ -480,13 +480,15 @@ final class PollController
         if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
             $user = current_user();
             $userEmail = $user && (int) $user->id === $userId ? ($user->email ?? '') : '';
+            $sessionUserId = isset($_SESSION['user']->id) ? (int) $_SESSION['user']->id : null;
             error_log(sprintf(
-                '[Hillmeet vote-batch] poll_id=%d user_id=%d email=%s options=%d saved_count=%d',
-                $poll->id,
+                '[Hillmeet vote-batch] session_id=%s session_user_id=%s auth_user_id=%d poll_id=%d votes_written=%d email=%s',
+                session_id(),
+                $sessionUserId !== null ? (string) $sessionUserId : 'null',
                 $userId,
-                $userEmail,
-                count($options),
-                count(array_filter($savedVotes))
+                $poll->id,
+                count(array_filter($savedVotes)),
+                $userEmail
             ));
         }
         echo json_encode(['success' => true, 'savedVotes' => $savedVotes]);
@@ -541,6 +543,7 @@ final class PollController
             $myVotes[$opt->id] = $myVotesByOption[$opt->id] ?? null;
         }
         $resultsDebug = null;
+        $myVotesCount = count(array_filter($myVotes));
         if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
             $ppIds = $participantRepo->getParticipantIds($poll->id);
             $voterIds = $voteRepo->getDistinctVoterIds($poll->id);
@@ -549,11 +552,20 @@ final class PollController
                 $votesCount += count($optVotes);
             }
             $curUser = current_user();
+            $sessionUserId = isset($_SESSION['user']->id) ? (int) $_SESSION['user']->id : null;
+            error_log(sprintf(
+                '[Hillmeet results-fragment] session_id=%s session_user_id=%s auth_user_id=%d poll_id=%d vote_rows_for_user=%d',
+                session_id(),
+                $sessionUserId !== null ? (string) $sessionUserId : 'null',
+                $currentUserId,
+                $poll->id,
+                $myVotesCount
+            ));
             $resultsDebug = [
                 'poll_id' => $poll->id,
                 'user_id' => $currentUserId,
                 'user_email' => $curUser ? ($curUser->email ?? '') : '',
-                'my_votes_count' => count(array_filter($myVotes)),
+                'my_votes_count' => $myVotesCount,
                 'options_count' => count($options),
                 'votes_count' => $votesCount,
                 'participants_count' => count($ppIds),

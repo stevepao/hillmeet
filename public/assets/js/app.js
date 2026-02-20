@@ -227,12 +227,15 @@
               var resultsSection = document.getElementById('results-section');
               var resultsContent = document.getElementById('results-content');
               if (resultsContent && resultsSection && resultsSection.hasAttribute('open') && poll.resultsUrl) {
-                fetch(poll.resultsUrl).then(function(r) {
-                  if (!r.ok) return '';
-                  return r.text();
-                }).then(function(html) {
-                  if (html && html.trim().length > 0) resultsContent.innerHTML = html;
-                }).catch(function() { /* keep existing content on fetch failure */ });
+                fetch(poll.resultsUrl, { cache: 'no-store', credentials: 'same-origin' })
+                  .then(function(r) {
+                    if (!r.ok) return '';
+                    return r.text();
+                  })
+                  .then(function(html) {
+                    if (html && html.trim().length > 0) resultsContent.innerHTML = html;
+                  })
+                  .catch(function() { /* keep existing content on fetch failure */ });
               }
             } else {
               var msg = result.body && result.body.error ? result.body.error : 'Could not save votes.';
@@ -252,9 +255,10 @@
     updateInlineControls(false);
   })();
 
-  // Toggle results (expand/collapse); results are server-rendered, no fetch
+  // Toggle results (expand/collapse); when opening, fetch fresh results to avoid stale first-view
   var toggleResults = document.getElementById('toggle-results');
   var resultsSection = document.getElementById('results-section');
+  var resultsContent = document.getElementById('results-content');
   if (toggleResults && resultsSection) {
     toggleResults.addEventListener('click', function(e) {
       e.preventDefault();
@@ -267,6 +271,17 @@
         resultsSection.setAttribute('open', 'open');
         toggleResults.textContent = 'Hide results';
         toggleResults.setAttribute('aria-expanded', 'true');
+        if (resultsContent && window.HILLMEET_POLL && window.HILLMEET_POLL.resultsUrl) {
+          fetch(window.HILLMEET_POLL.resultsUrl, { cache: 'no-store', credentials: 'same-origin' })
+            .then(function(r) {
+              if (!r.ok) return '';
+              return r.text();
+            })
+            .then(function(html) {
+              if (html && html.trim().length > 0) resultsContent.innerHTML = html;
+            })
+            .catch(function() { /* keep existing content on fetch failure */ });
+        }
       }
     });
   }
