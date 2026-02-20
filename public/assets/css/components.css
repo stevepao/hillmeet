@@ -102,7 +102,9 @@
 /* Date/time/datetime inputs: always light background so the field and native picker are readable in dark or light theme */
 .input[type="date"],
 .input[type="time"],
-.input[type="datetime-local"] {
+.input[type="datetime-local"],
+.input.flatpickr-date,
+.input.flatpickr-datetime {
   background: #fff;
   color: #1a1a1a;
   border-color: #ccc;
@@ -110,7 +112,9 @@
 }
 .input[type="date"]:hover:not(:disabled),
 .input[type="time"]:hover:not(:disabled),
-.input[type="datetime-local"]:hover:not(:disabled) {
+.input[type="datetime-local"]:hover:not(:disabled),
+.input.flatpickr-date:hover,
+.input.flatpickr-datetime:hover {
   border-color: #999;
 }
 

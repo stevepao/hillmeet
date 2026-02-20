@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/base.css') ?>">
   <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/components.css') ?>">
   <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/app.css') ?>">
+  <?= $extraHead ?? '' ?>
 </head>
 <body>
   <header class="app-header">
@@ -33,5 +34,6 @@
   </main>
   <script src="<?= \Hillmeet\Support\url('/assets/js/app.js') ?>"></script>
   <script src="<?= \Hillmeet\Support\url('/assets/js/progressive.js') ?>"></script>
+  <?= $extraScripts ?? '' ?>
 </body>
 </html>
