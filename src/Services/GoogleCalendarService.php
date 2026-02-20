@@ -286,3 +286,4 @@ final class GoogleCalendarService
         $r = $this->apiPostWithStatus($accessToken, $url, $body);
         return $r['body'];
     }
+}
