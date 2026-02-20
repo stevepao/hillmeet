@@ -207,9 +207,12 @@
               var resultsSection = document.getElementById('results-section');
               var resultsContent = document.getElementById('results-content');
               if (resultsContent && resultsSection && resultsSection.hasAttribute('open') && poll.resultsUrl) {
-                fetch(poll.resultsUrl).then(function(r) { return r.text(); }).then(function(html) {
-                  resultsContent.innerHTML = html;
-                });
+                fetch(poll.resultsUrl).then(function(r) {
+                  if (!r.ok) return '';
+                  return r.text();
+                }).then(function(html) {
+                  if (html && html.trim().length > 0) resultsContent.innerHTML = html;
+                }).catch(function() { /* keep existing content on fetch failure */ });
               }
             } else {
               var msg = result.body && result.body.error ? result.body.error : 'Could not save votes.';

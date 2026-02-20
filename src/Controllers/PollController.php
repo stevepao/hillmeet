@@ -244,20 +244,35 @@ final class PollController
             $myVotes[$optId] = $userVotes[$userId] ?? null;
         }
         $resultsDebug = null;
+        $resultsError = null;
         if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
+            $voteRepo = new VoteRepository();
             $ppIds = $participantRepo->getParticipantIds($poll->id);
-            $voterIds = (new VoteRepository())->getDistinctVoterIds($poll->id);
+            $voterIds = $voteRepo->getDistinctVoterIds($poll->id);
             $resultsDebug = [
+                'poll_id' => $poll->id,
+                'user_id' => $userId,
+                'options_count' => count($options),
+                'votes_count' => array_sum(array_map('count', $results['matrix'] ?? [])),
                 'participants_count' => count($ppIds),
                 'voters_count' => count($voterIds),
                 'mismatch' => array_values(array_diff($voterIds, $ppIds)),
                 'participants' => $participants,
-                'voters' => (new VoteRepository())->getVotersWithUsers($poll->id),
+                'voters' => $voteRepo->getVotersWithUsers($poll->id),
             ];
         }
         ob_start();
-        require dirname(__DIR__, 2) . '/views/polls/results_fragment.php';
-        $resultsFragmentHtml = ob_get_clean();
+        try {
+            require dirname(__DIR__, 2) . '/views/polls/results_fragment.php';
+            $resultsFragmentHtml = ob_get_clean();
+        } catch (Throwable $e) {
+            ob_end_clean();
+            $resultsFragmentHtml = '<p class="muted">Couldn\'t load results.</p>';
+            if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {
+                $resultsFragmentHtml .= ' <span style="font-size:var(--text-xs);">' . \Hillmeet\Support\e($e->getMessage()) . '</span>';
+                error_log('[Hillmeet results fragment] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            }
+        }
         require dirname(__DIR__, 2) . '/views/polls/view.php';
     }
 
@@ -421,9 +436,22 @@ final class PollController
                     $poll = null;
                 }
             }
+        } else {
+            $userId = (int) current_user()->id;
+            $candidate = $this->pollRepo->findBySlug($slug);
+            if ($candidate !== null) {
+                $participantRepo = new PollParticipantRepository();
+                $voteRepo = new VoteRepository();
+                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
+                if ($candidate->isOrganizer($userId) || $isParticipant) {
+                    $poll = $candidate;
+                }
+            }
         }
         if ($poll === null) {
-            http_response_code(404);
+            http_response_code(403);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '<p class="muted">You don\'t have permission to view results.</p>';
             exit;
         }
         $results = $this->pollService->getResults($poll);
@@ -440,7 +468,15 @@ final class PollController
             $voteRepo = new VoteRepository();
             $ppIds = $participantRepo->getParticipantIds($poll->id);
             $voterIds = $voteRepo->getDistinctVoterIds($poll->id);
+            $votesCount = 0;
+            foreach ($results['matrix'] ?? [] as $optVotes) {
+                $votesCount += count($optVotes);
+            }
             $resultsDebug = [
+                'poll_id' => $poll->id,
+                'user_id' => $currentUserId,
+                'options_count' => count($options),
+                'votes_count' => $votesCount,
                 'participants_count' => count($ppIds),
                 'voters_count' => count($voterIds),
                 'mismatch' => array_values(array_diff($voterIds, $ppIds)),

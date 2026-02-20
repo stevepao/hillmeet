@@ -1,13 +1,21 @@
 <?php
 $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 $resultsDebug = $resultsDebug ?? null;
+$resultsError = $resultsError ?? null;
+$options = $options ?? [];
+$results = $results ?? ['totals' => [], 'matrix' => [], 'best_option_id' => null];
+$participants = $participants ?? [];
+$myVotes = $myVotes ?? [];
 ?>
+<?php if (!empty($resultsError)): ?>
+  <p class="muted" style="color:var(--danger);"><?= \Hillmeet\Support\e($resultsError) ?></p>
+<?php endif; ?>
 <?php if (!empty($resultsDebug)): ?>
 <div class="results-debug muted" style="font-size:var(--text-xs); margin-bottom:var(--space-4); padding:var(--space-3); background:var(--card-2); border-radius:var(--radius-md); border:1px solid var(--border);">
   <strong>Results debug</strong>
-  <p style="margin:var(--space-1) 0 0;">poll_participants: <?= (int) ($resultsDebug['participants_count'] ?? 0) ?> · distinct voters: <?= (int) ($resultsDebug['voters_count'] ?? 0) ?></p>
+  <p style="margin:var(--space-1) 0 0;">poll_id: <?= (int) ($resultsDebug['poll_id'] ?? 0) ?> · user_id: <?= (int) ($resultsDebug['user_id'] ?? 0) ?> · options: <?= (int) ($resultsDebug['options_count'] ?? 0) ?> · votes: <?= (int) ($resultsDebug['votes_count'] ?? 0) ?> · participants: <?= (int) ($resultsDebug['participants_count'] ?? 0) ?> · voters: <?= (int) ($resultsDebug['voters_count'] ?? 0) ?></p>
   <?php if (!empty($resultsDebug['mismatch'])): ?>
-    <p style="margin:var(--space-1) 0 0;">Mismatch (user_ids with votes but not in poll_participants): <?= implode(', ', array_map('intval', $resultsDebug['mismatch'])) ?></p>
+    <p style="margin:var(--space-1) 0 0;">Mismatch: <?= implode(', ', array_map('intval', $resultsDebug['mismatch'])) ?></p>
   <?php endif; ?>
   <p style="margin:var(--space-2) 0 0;"><strong>Participants (id, email):</strong></p>
   <ul style="margin:0; padding-left:1.25rem;">
@@ -23,6 +31,9 @@ $resultsDebug = $resultsDebug ?? null;
   </ul>
 </div>
 <?php endif; ?>
+<?php if (empty($options)): ?>
+  <p class="muted">No time slots yet.</p>
+<?php else: ?>
 <div class="your-saved-votes" style="margin-bottom:var(--space-4);">
   <h4 style="font-size:var(--text-base); margin:0 0 var(--space-2);">Your saved votes</h4>
   <ul class="your-votes-list" style="list-style:none; padding:0; margin:0; font-size:var(--text-sm);">
@@ -38,6 +49,15 @@ $resultsDebug = $resultsDebug ?? null;
     <?php endforeach; ?>
   </ul>
 </div>
+<?php
+$hasAnyVotes = false;
+foreach ($results['totals'] ?? [] as $t) {
+  if (($t['yes'] ?? 0) + ($t['maybe'] ?? 0) + ($t['no'] ?? 0) > 0) { $hasAnyVotes = true; break; }
+}
+?>
+<?php if (empty($participants) && !$hasAnyVotes): ?>
+  <p class="muted">No votes yet.</p>
+<?php else: ?>
 <div class="results-table-wrap">
   <table class="results-table">
     <thead>
@@ -68,3 +88,5 @@ $resultsDebug = $resultsDebug ?? null;
     </tbody>
   </table>
 </div>
+<?php endif; ?>
+<?php endif; ?>

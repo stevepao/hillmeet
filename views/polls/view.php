@@ -89,7 +89,7 @@ $canEdit = !$poll->isLocked();
 <details class="results-section" id="results-section" <?= !empty($resultsExpandOpen) ? 'open' : '' ?>>
   <summary>Results</summary>
   <div id="results-content">
-    <?= $resultsFragmentHtml ?>
+    <?= !empty($resultsFragmentHtml) ? $resultsFragmentHtml : '<p class="muted">Couldn\'t load results.</p>' ?>
   </div>
 </details>
 
