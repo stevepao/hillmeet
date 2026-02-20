@@ -34,6 +34,7 @@ final class PollService
             return ['error' => 'Please enter a title.'];
         }
         $timezone = trim($input['timezone'] ?? 'UTC') ?: 'UTC';
+        $durationMinutes = max(5, min(1440, (int) ($input['duration_minutes'] ?? 60)));
         $slug = $this->pollRepo->generateSlug();
         $secret = bin2hex(random_bytes(16));
         $secretHash = password_hash($secret, PASSWORD_DEFAULT);
@@ -44,7 +45,8 @@ final class PollService
             $title,
             trim($input['description'] ?? '') ?: null,
             trim($input['location'] ?? '') ?: null,
-            $timezone
+            $timezone,
+            $durationMinutes
         );
         AuditLog::log('poll.create', 'poll', (string) $poll->id, ['slug' => $slug], $organizerId, $ip);
         return ['poll' => $poll, 'secret' => $secret];

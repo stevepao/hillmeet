@@ -39,10 +39,25 @@ $timezones = timezone_identifiers_list();
         <option value="<?= \Hillmeet\Support\e($tz) ?>" <?= ($input['timezone'] ?? 'UTC') === $tz ? 'selected' : '' ?>><?= \Hillmeet\Support\e($tz) ?></option>
       <?php endforeach; ?>
     </select>
-    <p class="helper">We'll show times in each person's local timezone.</p>
+    <p class="helper">Times are stored in UTC and shown in each person's local timezone. Defaults to your current timezone.</p>
+  </div>
+  <div class="form-group">
+    <label for="duration_minutes">Event duration (minutes)</label>
+    <input type="number" id="duration_minutes" name="duration_minutes" class="input" value="<?= \Hillmeet\Support\e($input['duration_minutes'] ?? '60') ?>" min="5" max="1440" step="5" style="width:6rem;">
+    <p class="helper">Each time slot will be this long. You'll only choose start times when adding options.</p>
   </div>
   <button type="submit" class="btn btn-primary">Save & continue</button>
 </form>
+<script>
+(function() {
+  var select = document.getElementById('timezone');
+  if (!select || select.value !== 'UTC') return;
+  try {
+    var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (browserTz && select.querySelector('option[value="' + browserTz + '"]')) select.value = browserTz;
+  } catch (e) {}
+})();
+</script>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';

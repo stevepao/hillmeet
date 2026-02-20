@@ -111,11 +111,11 @@ final class PollRepository
         return array_map(fn($r) => Poll::fromRow($r), $rows);
     }
 
-    public function create(int $organizerId, string $slug, string $secretHash, string $title, ?string $description, ?string $location, string $timezone): Poll
+    public function create(int $organizerId, string $slug, string $secretHash, string $title, ?string $description, ?string $location, string $timezone, int $durationMinutes = 60): Poll
     {
         $pdo = Database::get();
-        $stmt = $pdo->prepare("INSERT INTO polls (organizer_id, slug, secret_hash, title, description, location, timezone) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$organizerId, $slug, $secretHash, $title, $description, $location, $timezone]);
+        $stmt = $pdo->prepare("INSERT INTO polls (organizer_id, slug, secret_hash, title, description, location, timezone, duration_minutes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$organizerId, $slug, $secretHash, $title, $description, $location, $timezone, $durationMinutes]);
         return $this->findById((int) $pdo->lastInsertId());
     }
 
