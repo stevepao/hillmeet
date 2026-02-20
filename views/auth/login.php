@@ -42,8 +42,9 @@ $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
            data-text="continue_with"
            data-shape="rectangular">
       </div>
-      <p id="gis-fallback-msg" class="helper" style="margin:var(--space-2) 0 0; display:none; color:var(--danger);">Google sign-in button could not load. Add this site’s URL to Authorized JavaScript origins in Google Cloud Console, or use the link below.</p>
-      <p class="helper" style="margin:var(--space-2) 0 0;"><a href="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/auth/google')) ?>">Continue with Google</a> (use if the button doesn’t appear)</p>
+      <p id="gis-fallback-msg" class="helper" style="margin:var(--space-2) 0 0; display:none; color:var(--danger);">Google sign-in button could not load. Add this site’s URL to Authorized JavaScript origins in Google Cloud Console.</p>
+      <p id="gis-error-msg" class="helper" style="margin:var(--space-2) 0 0; display:none; color:var(--danger);"></p>
+      <p class="helper" style="margin:var(--space-2) 0 0;"><a href="<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/auth/google')) ?>">Sign in with Google in a new page</a> (if the button didn’t work)</p>
     <?php endif; ?>
     <div class="auth-divider">or</div>
     <a href="<?= \Hillmeet\Support\url('/auth/email') ?>" class="btn btn-secondary" style="width:100%;">Use email instead</a>
@@ -54,12 +55,34 @@ $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
 <script>
 function hillmeetHandleCredential(response) {
   if (!response || !response.credential) return;
-  fetch('<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/auth/google/token')) ?>', {
+  var tokenUrl = '<?= \Hillmeet\Support\e(\Hillmeet\Support\url('/auth/google/token')) ?>';
+  var errEl = document.getElementById('gis-error-msg');
+  function showErr(msg) {
+    if (errEl) { errEl.textContent = msg || 'Sign-in failed. Try the link below.'; errEl.style.display = 'block'; }
+  }
+  fetch(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     body: JSON.stringify({ credential: response.credential })
-  }).then(function(r) { return r.json(); }).then(function(d) {
-    if (d.redirect) window.location = d.redirect;
+  }).then(function(r) {
+    var ct = r.headers.get('Content-Type') || '';
+    var isJson = ct.indexOf('application/json') !== -1;
+    if (r.ok && isJson) {
+      return r.json().then(function(d) {
+        if (d && d.redirect) {
+          window.location = d.redirect;
+          return;
+        }
+        showErr(d && d.error ? d.error : 'Unexpected response.');
+      });
+    }
+    if (r.ok) return;
+    if (isJson) {
+      return r.json().then(function(d) { showErr(d && d.error ? d.error : 'Sign-in failed.'); });
+    }
+    showErr('Sign-in failed (' + r.status + '). Try the link below.');
+  }).catch(function() {
+    showErr('Network error. Try the link below.');
   });
 }
 </script>
