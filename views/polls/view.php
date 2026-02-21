@@ -207,11 +207,24 @@ window.HILLMEET_POLL = {
   csrfToken: <?= json_encode(\Hillmeet\Support\Csrf::token()) ?>,
   resultsUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/results', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/results?secret=' . urlencode($_GET['secret'] ?? ''))) ?>,
   checkAvailabilityUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability?secret=' . urlencode($_GET['secret'] ?? ''))) ?>,
+  timezoneUpdateUrl: <?= json_encode(\Hillmeet\Support\url('/settings/timezone')) ?>,
   savedVotes: <?= json_encode(array_map(function ($v) { return $v ?? ''; }, $userVotes)) ?>,
   debug: <?= (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') ? 'true' : 'false' ?>
 };
 
 (function() {
+  var poll = window.HILLMEET_POLL;
+  if (poll && poll.timezoneUpdateUrl && poll.csrfToken) {
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) {
+        var fd = new FormData();
+        fd.append('csrf_token', poll.csrfToken);
+        fd.append('timezone', tz);
+        fetch(poll.timezoneUpdateUrl, { method: 'POST', body: fd, credentials: 'same-origin' });
+      }
+    } catch (e) { /* ignore */ }
+  }
   var lockForm = document.getElementById('lock-form');
   var lockSubmit = document.getElementById('lock-submit');
   var lockRadios = lockForm ? lockForm.querySelectorAll('input[name="option_id"]') : [];

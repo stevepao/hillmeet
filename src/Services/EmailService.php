@@ -35,11 +35,13 @@ final class EmailService
 
     /**
      * Send "poll locked" notification. If $icsContent is non-empty, attach as .ics file.
+     * $timezoneCallout e.g. "Times in your timezone (America/Los_Angeles)." or "Times in organizer's timezone (UTC)."
      */
     public function sendPollLocked(
         string $to,
         string $pollTitle,
         string $finalTimeLocalized,
+        string $timezoneCallout,
         string $organizerName,
         string $organizerEmail,
         string $pollUrl = '',
@@ -49,12 +51,13 @@ final class EmailService
         $html = $this->renderTemplate('poll_locked', [
             'pollTitle' => $pollTitle,
             'finalTimeLocalized' => $finalTimeLocalized,
+            'timezoneCallout' => $timezoneCallout,
             'organizerName' => $organizerName,
             'organizerEmail' => $organizerEmail,
             'pollUrl' => $pollUrl,
             'hasIcs' => $icsContent !== '',
         ]);
-        $text = "Meeting time finalized: {$pollTitle}\n\nFinal time: {$finalTimeLocalized}\nOrganizer: {$organizerName} ({$organizerEmail})\n";
+        $text = "Meeting time finalized: {$pollTitle}\n\nFinal time: {$finalTimeLocalized}\n{$timezoneCallout}\n\nOrganizer: {$organizerName} ({$organizerEmail})\n";
         if ($pollUrl !== '') {
             $text .= "\nView poll: {$pollUrl}";
         }

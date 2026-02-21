@@ -9,7 +9,10 @@
   <div style="max-width:400px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
     <h1 style="margin:0 0 16px;font-size:1.25rem;">Meeting time finalized</h1>
     <p style="margin:0 0 8px;color:#334155;"><strong><?= \Hillmeet\Support\e($pollTitle ?? '') ?></strong></p>
-    <p style="margin:0 0 16px;color:#334155;">Final time: <?= \Hillmeet\Support\e($finalTimeLocalized ?? '') ?></p>
+    <p style="margin:0 0 4px;color:#334155;">Final time: <?= \Hillmeet\Support\e($finalTimeLocalized ?? '') ?></p>
+    <?php if (!empty($timezoneCallout)): ?>
+    <p style="margin:0 0 16px;color:#64748b;font-size:0.875rem;"><?= \Hillmeet\Support\e($timezoneCallout) ?></p>
+    <?php endif; ?>
     <p style="margin:0 0 16px;color:#64748b;font-size:0.875rem;">Organizer: <?= \Hillmeet\Support\e($organizerName ?? '') ?> (<?= \Hillmeet\Support\e($organizerEmail ?? '') ?>)</p>
     <?php if (!empty($pollUrl)): ?>
     <p style="margin:0 0 24px;">

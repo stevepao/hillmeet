@@ -680,8 +680,7 @@ final class PollController
             header('Location: ' . $backUrl);
             exit;
         }
-        $tz = new \DateTimeZone($poll->timezone);
-        $finalTimeLocalized = (new \DateTime($lockedOption->start_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('D M j, g:i A') . ' – ' . (new \DateTime($lockedOption->end_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('g:i A');
+        $organizerTz = $poll->timezone;
         $userRepo = new UserRepository();
         $organizer = $userRepo->findById($poll->organizer_id);
         $organizerName = $organizer ? ($organizer->name ?? $organizer->email ?? '') : '';
@@ -694,18 +693,46 @@ final class PollController
         $participantRepo = new PollParticipantRepository();
         $inviteRepo = new PollInviteRepository();
         $emailsSent = [];
+        $emailService = new EmailService();
+        $formatLockedTime = function (string $tzId) use ($lockedOption, $organizerTz): string {
+            try {
+                $tz = new \DateTimeZone($tzId);
+            } catch (\Exception $e) {
+                $tz = new \DateTimeZone($organizerTz);
+            }
+            return (new \DateTime($lockedOption->start_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('D M j, g:i A') . ' – ' . (new \DateTime($lockedOption->end_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('g:i A');
+        };
+        $pickRecipientTz = function (?object $recipientUser) use ($organizerTz): array {
+            $recipientTz = ($recipientUser !== null && isset($recipientUser->timezone) && $recipientUser->timezone !== null && $recipientUser->timezone !== '') ? $recipientUser->timezone : null;
+            $tzId = $recipientTz ?? $organizerTz;
+            try {
+                new \DateTimeZone($tzId);
+            } catch (\Exception $e) {
+                $tzId = $organizerTz;
+            }
+            $isRecipientTz = $recipientTz !== null && $tzId === $recipientTz;
+            return [$tzId, $isRecipientTz];
+        };
         foreach ($participantRepo->getResultsParticipants($poll->id) as $p) {
             $email = isset($p->email) ? trim((string) $p->email) : '';
             if ($email !== '' && !isset($emailsSent[$email])) {
                 $emailsSent[$email] = true;
-                (new EmailService())->sendPollLocked($email, $poll->title, $finalTimeLocalized, $organizerName, $organizerEmail, $pollUrl, $icsContent);
+                $recipientUser = $userRepo->findByEmail($email);
+                [$tzId, $isRecipientTz] = $pickRecipientTz($recipientUser);
+                $finalTimeLocalized = $formatLockedTime($tzId);
+                $timezoneCallout = $isRecipientTz ? 'Times in your timezone (' . $tzId . ').' : 'Times in organizer\'s timezone (' . $organizerTz . ').';
+                $emailService->sendPollLocked($email, $poll->title, $finalTimeLocalized, $timezoneCallout, $organizerName, $organizerEmail, $pollUrl, $icsContent);
             }
         }
         foreach ($inviteRepo->listInvites($poll->id) as $inv) {
             $email = strtolower(trim((string) $inv->email));
             if ($email !== '' && !isset($emailsSent[$email])) {
                 $emailsSent[$email] = true;
-                (new EmailService())->sendPollLocked($email, $poll->title, $finalTimeLocalized, $organizerName, $organizerEmail, $pollUrl, $icsContent);
+                $recipientUser = $userRepo->findByEmail($email);
+                [$tzId, $isRecipientTz] = $pickRecipientTz($recipientUser);
+                $finalTimeLocalized = $formatLockedTime($tzId);
+                $timezoneCallout = $isRecipientTz ? 'Times in your timezone (' . $tzId . ').' : 'Times in organizer\'s timezone (' . $organizerTz . ').';
+                $emailService->sendPollLocked($email, $poll->title, $finalTimeLocalized, $timezoneCallout, $organizerName, $organizerEmail, $pollUrl, $icsContent);
             }
         }
         $calendarService = new GoogleCalendarService(

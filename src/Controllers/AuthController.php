@@ -185,6 +185,34 @@ final class AuthController
         header('Location: ' . url('/auth/login'));
         exit;
     }
+
+    /** POST /settings/timezone — set current user's timezone from browser (e.g. when answering a poll). */
+    public function setTimezone(): void
+    {
+        if (empty($_SESSION['user'])) {
+            http_response_code(401);
+            exit;
+        }
+        if (!\Hillmeet\Support\Csrf::validate()) {
+            http_response_code(403);
+            exit;
+        }
+        $timezone = trim((string) ($_POST['timezone'] ?? ''));
+        if ($timezone === '') {
+            http_response_code(204);
+            exit;
+        }
+        try {
+            new \DateTimeZone($timezone);
+        } catch (\Exception $e) {
+            http_response_code(400);
+            exit;
+        }
+        $userRepo = new UserRepository();
+        $userRepo->setTimezone((int) $_SESSION['user']->id, $timezone);
+        http_response_code(204);
+        exit;
+    }
 }
 
 function require_auth(): void

@@ -97,6 +97,22 @@ final class UserRepository
         return $this->createFromEmail($email, $name);
     }
 
+    /** Set the user's timezone (IANA name, e.g. America/New_York). No-op if invalid. */
+    public function setTimezone(int $userId, string $timezone): void
+    {
+        $timezone = trim($timezone);
+        if ($timezone === '') {
+            return;
+        }
+        try {
+            new \DateTimeZone($timezone);
+        } catch (\Exception $e) {
+            return;
+        }
+        $stmt = Database::get()->prepare("UPDATE users SET timezone = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$timezone, $userId]);
+    }
+
     /** Update existing user with Google id and normalized email (attach Google to existing email account). */
     public function attachGoogleId(int $userId, string $normalizedEmail, string $googleId, string $name, ?string $avatarUrl = null): void
     {
