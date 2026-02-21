@@ -6,9 +6,14 @@ namespace Hillmeet\Services;
 
 use Hillmeet\Models\Poll;
 use Hillmeet\Models\PollOption;
+use Hillmeet\Repositories\CalendarEventRepository;
+use Hillmeet\Repositories\FreebusyCacheRepository;
+use Hillmeet\Repositories\GoogleCalendarSelectionRepository;
+use Hillmeet\Repositories\OAuthConnectionRepository;
 use Hillmeet\Repositories\PollInviteRepository;
 use Hillmeet\Repositories\PollParticipantRepository;
 use Hillmeet\Repositories\PollRepository;
+use Hillmeet\Repositories\UserRepository;
 use Hillmeet\Repositories\VoteRepository;
 use Hillmeet\Support\AuditLog;
 use Hillmeet\Support\RateLimit;
@@ -160,6 +165,88 @@ final class PollService
         $this->pollRepo->lockPoll($pollId, $optionId);
         AuditLog::log('poll.lock', 'poll', (string) $pollId, ['option_id' => $optionId], $organizerId);
         return null;
+    }
+
+    /**
+     * After a poll is locked: email all participants and invitees with final time (and timezone callout),
+     * attach .ics when organizer has email; create Google Calendar event for current user when connected.
+     */
+    public function afterLockNotifyAndCalendar(Poll $poll, PollOption $lockedOption, string $pollUrl, int $currentUserId): void
+    {
+        $organizerTz = $poll->timezone;
+        $userRepo = new UserRepository();
+        $organizer = $userRepo->findById($poll->organizer_id);
+        $organizerName = $organizer ? ($organizer->name ?? $organizer->email ?? '') : '';
+        $organizerEmail = $organizer ? $organizer->email : '';
+        $icsContent = '';
+        if ($organizerEmail !== '') {
+            $icsContent = IcsGenerator::singleEvent($poll->title, $lockedOption->start_utc, $lockedOption->end_utc, $organizerEmail);
+        }
+        $emailsSent = [];
+        $formatLockedTime = function (string $tzId) use ($lockedOption, $organizerTz): string {
+            try {
+                $tz = new \DateTimeZone($tzId);
+            } catch (\Exception $e) {
+                $tz = new \DateTimeZone($organizerTz);
+            }
+            return (new \DateTime($lockedOption->start_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('D M j, g:i A') . ' – ' . (new \DateTime($lockedOption->end_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('g:i A');
+        };
+        $pickRecipientTz = function (?object $recipientUser) use ($organizerTz): array {
+            $recipientTz = ($recipientUser !== null && isset($recipientUser->timezone) && $recipientUser->timezone !== null && $recipientUser->timezone !== '') ? $recipientUser->timezone : null;
+            $tzId = $recipientTz ?? $organizerTz;
+            try {
+                new \DateTimeZone($tzId);
+            } catch (\Exception $e) {
+                $tzId = $organizerTz;
+            }
+            $isRecipientTz = $recipientTz !== null && $tzId === $recipientTz;
+            return [$tzId, $isRecipientTz];
+        };
+        foreach ($this->participantRepo->getResultsParticipants($poll->id) as $p) {
+            $email = isset($p->email) ? trim((string) $p->email) : '';
+            if ($email !== '' && !isset($emailsSent[$email])) {
+                $emailsSent[$email] = true;
+                $recipientUser = $userRepo->findByEmail($email);
+                [$tzId, $isRecipientTz] = $pickRecipientTz($recipientUser);
+                $finalTimeLocalized = $formatLockedTime($tzId);
+                $timezoneCallout = $isRecipientTz ? 'Times in your timezone (' . $tzId . ').' : 'Times in organizer\'s timezone (' . $organizerTz . ').';
+                $this->emailService->sendPollLocked($email, $poll->title, $finalTimeLocalized, $timezoneCallout, $organizerName, $organizerEmail, $pollUrl, $icsContent);
+            }
+        }
+        foreach ($this->inviteRepo->listInvites($poll->id) as $inv) {
+            $email = strtolower(trim((string) $inv->email));
+            if ($email !== '' && !isset($emailsSent[$email])) {
+                $emailsSent[$email] = true;
+                $recipientUser = $userRepo->findByEmail($email);
+                [$tzId, $isRecipientTz] = $pickRecipientTz($recipientUser);
+                $finalTimeLocalized = $formatLockedTime($tzId);
+                $timezoneCallout = $isRecipientTz ? 'Times in your timezone (' . $tzId . ').' : 'Times in organizer\'s timezone (' . $organizerTz . ').';
+                $this->emailService->sendPollLocked($email, $poll->title, $finalTimeLocalized, $timezoneCallout, $organizerName, $organizerEmail, $pollUrl, $icsContent);
+            }
+        }
+        $calendarService = new GoogleCalendarService(
+            new OAuthConnectionRepository(),
+            new GoogleCalendarSelectionRepository(),
+            new FreebusyCacheRepository()
+        );
+        $eventRepo = new CalendarEventRepository();
+        $hasCalendar = $calendarService->getAuthUrl('x') !== '' && (new OAuthConnectionRepository())->hasConnection($currentUserId);
+        if ($hasCalendar && !$eventRepo->existsForPollAndOption($poll->id, $lockedOption->id)) {
+            $attendeeEmails = array_keys($emailsSent);
+            $eventId = $calendarService->createEvent(
+                $currentUserId,
+                'primary',
+                $poll->title,
+                $poll->description ?? '',
+                $poll->location ?? '',
+                $lockedOption->start_utc,
+                $lockedOption->end_utc,
+                $attendeeEmails
+            );
+            if ($eventId !== null) {
+                $eventRepo->create($poll->id, $lockedOption->id, $currentUserId, 'primary', $eventId);
+            }
+        }
     }
 
     /**
