@@ -20,6 +20,7 @@ use Hillmeet\Support\Csrf;
 use function Hillmeet\Support\current_user;
 use function Hillmeet\Support\e;
 use function Hillmeet\Support\poll_back_url;
+use function Hillmeet\Support\post_int;
 use function Hillmeet\Support\url;
 
 final class PollController
@@ -251,7 +252,7 @@ final class PollController
             http_response_code(404);
             exit;
         }
-        $inviteId = (int) ($_POST['invite_id'] ?? 0);
+        $inviteId = post_int('invite_id');
         if ($inviteId <= 0) {
             $_SESSION['invite_error'] = 'Invalid invite.';
             header('Location: ' . url('/poll/' . $slug . '/share'));
@@ -276,7 +277,7 @@ final class PollController
             http_response_code(404);
             exit;
         }
-        $inviteId = (int) ($_POST['invite_id'] ?? 0);
+        $inviteId = post_int('invite_id');
         if ($inviteId <= 0) {
             $_SESSION['invite_error'] = 'Invalid invite.';
             header('Location: ' . url('/poll/' . $slug . '/share'));
@@ -330,7 +331,7 @@ final class PollController
             echo json_encode(['error' => 'Poll not found or access denied.']);
             exit;
         }
-        $optionId = (int) ($_POST['option_id'] ?? 0);
+        $optionId = post_int('option_id');
         if ($optionId <= 0) {
             http_response_code(400);
             echo json_encode(['error' => 'Invalid option.']);
@@ -458,7 +459,7 @@ final class PollController
             header('Location: ' . ($_POST['back'] ?? $backPath));
             exit;
         }
-        $optionId = (int) ($_POST['option_id'] ?? 0);
+        $optionId = post_int('option_id');
         $vote = $_POST['vote'] ?? '';
         $err = $this->pollService->vote($poll->id, $optionId, (int) current_user()->id, $vote, $_SERVER['REMOTE_ADDR'] ?? '');
         if ($err !== null) {
@@ -593,7 +594,7 @@ final class PollController
         }
         $poll = $resolved['poll'];
         $backUrl = $resolved['back_url'];
-        $optionId = (int) ($_POST['option_id'] ?? 0);
+        $optionId = post_int('option_id');
         if ($optionId <= 0) {
             $_SESSION['lock_error'] = 'Please select a time to lock.';
             header('Location: ' . $backUrl);

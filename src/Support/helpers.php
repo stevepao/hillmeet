@@ -43,6 +43,15 @@ function poll_back_url(string $slug, string $secret, string $inviteToken): strin
 }
 
 /**
+ * Get an integer from $_POST (for form validation). Returns 0 when key is missing or not numeric.
+ */
+function post_int(string $key): int
+{
+    $v = $_POST[$key] ?? 0;
+    return (int) $v;
+}
+
+/**
  * Get config value by dot key.
  */
 function config(string $key, $default = null)
