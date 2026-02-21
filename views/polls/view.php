@@ -5,17 +5,7 @@ $pollUrlWithSecret = !empty($accessByInvite) && $inviteToken !== ''
   ? \Hillmeet\Support\url('/poll/' . $poll->slug, ['invite' => $inviteToken])
   : \Hillmeet\Support\url('/poll/' . $poll->slug . '?secret=' . urlencode($_GET['secret'] ?? ''));
 $resultsExpandUrl = $pollUrlWithSecret . (strpos($pollUrlWithSecret, '?') !== false ? '&' : '?') . 'expand=results';
-$voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 $canEdit = !$poll->isLocked();
-$finalTimeLabel = null;
-if ($poll->isLocked() && $poll->locked_option_id !== null) {
-    foreach ($options as $o) {
-        if ((int)$o->id === (int)$poll->locked_option_id) {
-            $finalTimeLabel = (new DateTime($o->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('D M j, g:i A') . ' – ' . (new DateTime($o->end_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('g:i A');
-            break;
-        }
-    }
-}
 ?>
 <h1><?= \Hillmeet\Support\e($poll->title) ?></h1>
 <?php if ($poll->isLocked() && $finalTimeLabel !== null): ?>
@@ -77,9 +67,7 @@ if ($poll->isLocked() && $poll->locked_option_id !== null) {
           ?>
         </p>
       <?php endif; ?>
-      <?php
-        $selectedLabel = $vote === 'yes' ? 'Works' : ($vote === 'maybe' ? 'If needed' : ($vote === 'no' ? "Can't" : '—'));
-      ?>
+      <?php $selectedLabel = isset($voteLabels[$vote]) ? $voteLabels[$vote] : '—'; ?>
       <?php if (!$poll->isLocked()): ?>
         <div class="vote-controls" role="radiogroup" aria-label="Vote for this time slot">
           <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/vote') ?>" style="display:inline;" class="vote-form">

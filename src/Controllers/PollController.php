@@ -397,6 +397,17 @@ final class PollController
         foreach ($options as $opt) {
             $myVotes[$opt->id] = $myVotesByOption[$opt->id] ?? null;
         }
+        $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
+        $finalTimeLabel = null;
+        if ($poll->isLocked() && $poll->locked_option_id !== null) {
+            $tz = new \DateTimeZone($poll->timezone);
+            foreach ($options as $o) {
+                if ((int) $o->id === (int) $poll->locked_option_id) {
+                    $finalTimeLabel = (new \DateTime($o->start_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('D M j, g:i A') . ' – ' . (new \DateTime($o->end_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('g:i A');
+                    break;
+                }
+            }
+        }
         $resultsDebug = null;
         $resultsError = null;
         if (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') {

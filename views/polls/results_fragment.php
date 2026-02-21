@@ -1,5 +1,5 @@
 <?php
-$voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
+$voteLabels = $voteLabels ?? ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 $resultsDebug = $resultsDebug ?? null;
 $resultsError = $resultsError ?? null;
 $options = $options ?? [];
