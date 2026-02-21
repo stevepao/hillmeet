@@ -29,6 +29,20 @@ function url(string $path, array $query = []): string
 }
 
 /**
+ * Build the poll page URL for redirects, using secret or invite param when present.
+ */
+function poll_back_url(string $slug, string $secret, string $inviteToken): string
+{
+    if ($secret !== '') {
+        return url('/poll/' . $slug . '?secret=' . urlencode($secret));
+    }
+    if ($inviteToken !== '') {
+        return url('/poll/' . $slug . '?invite=' . urlencode($inviteToken));
+    }
+    return url('/poll/' . $slug);
+}
+
+/**
  * Get config value by dot key.
  */
 function config(string $key, $default = null)

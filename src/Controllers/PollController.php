@@ -20,6 +20,7 @@ use Hillmeet\Services\PollService;
 use Hillmeet\Support\Csrf;
 use function Hillmeet\Support\current_user;
 use function Hillmeet\Support\e;
+use function Hillmeet\Support\poll_back_url;
 use function Hillmeet\Support\url;
 
 final class PollController
@@ -40,6 +41,7 @@ final class PollController
      */
     private function resolvePollForAccess(string $slug, string $secret, string $inviteToken, bool $organizerOnly = false, bool $markInviteAccepted = false): ?array
     {
+        $backUrl = poll_back_url($slug, $secret, $inviteToken);
         if ($secret !== '') {
             $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
             if ($poll === null) {
@@ -47,7 +49,7 @@ final class PollController
             }
             return [
                 'poll' => $poll,
-                'back_url' => url('/poll/' . $slug . '?secret=' . urlencode($secret)),
+                'back_url' => $backUrl,
                 'access_by_invite' => false,
             ];
         }
@@ -69,7 +71,7 @@ final class PollController
             }
             return [
                 'poll' => $poll,
-                'back_url' => url('/poll/' . $slug . '?invite=' . urlencode($inviteToken)),
+                'back_url' => $backUrl,
                 'access_by_invite' => true,
             ];
         }
@@ -84,7 +86,7 @@ final class PollController
             }
             return [
                 'poll' => $candidate,
-                'back_url' => url('/poll/' . $slug),
+                'back_url' => $backUrl,
                 'access_by_invite' => false,
             ];
         }
@@ -94,7 +96,7 @@ final class PollController
         if ($candidate->isOrganizer($userId) || $isParticipant) {
             return [
                 'poll' => $candidate,
-                'back_url' => url('/poll/' . $slug),
+                'back_url' => $backUrl,
                 'access_by_invite' => false,
             ];
         }
