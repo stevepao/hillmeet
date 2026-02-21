@@ -623,26 +623,49 @@ final class PollController
     {
         $this->auth();
         $secret = $_POST['secret'] ?? '';
-        $poll = $secret ? $this->pollRepo->findBySlugAndVerifySecret($slug, $secret) : null;
+        $inviteToken = $_POST['invite'] ?? '';
+        $poll = null;
+
+        if ($secret !== '') {
+            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
+        } elseif ($inviteToken !== '') {
+            $inviteRepo = new PollInviteRepository();
+            $tokenHash = hash('sha256', $inviteToken);
+            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
+            if ($invite !== null) {
+                $poll = $this->pollRepo->findById((int) $invite->poll_id);
+                if ($poll !== null && $poll->slug !== $slug) {
+                    $poll = null;
+                }
+            }
+        } else {
+            $userId = (int) current_user()->id;
+            $candidate = $this->pollRepo->findBySlug($slug);
+            if ($candidate !== null && $candidate->isOrganizer($userId)) {
+                $poll = $candidate;
+            }
+        }
+
         if ($poll === null || !$poll->isOrganizer((int) current_user()->id)) {
             http_response_code(403);
             exit;
         }
+        $backUrl = $secret !== '' ? url('/poll/' . $slug . '?secret=' . urlencode($secret)) : ($inviteToken !== '' ? url('/poll/' . $slug . '?invite=' . urlencode($inviteToken)) : url('/poll/' . $slug));
         $optionId = (int) ($_POST['option_id'] ?? 0);
         if ($optionId <= 0) {
             $_SESSION['lock_error'] = 'Please select a time to lock.';
-            header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+            header('Location: ' . $backUrl);
             exit;
         }
         $err = $this->pollService->lockPoll($poll->id, $optionId, (int) current_user()->id);
         if ($err !== null) {
             $_SESSION['lock_error'] = $err;
-            header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+            header('Location: ' . $backUrl);
             exit;
         }
         $poll = $this->pollRepo->findById($poll->id);
         if ($poll === null || !$poll->isLocked() || $poll->locked_option_id === null) {
-            header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+            header('Location: ' . $backUrl);
             exit;
         }
         $options = $this->pollRepo->getOptions($poll->id);
@@ -654,7 +677,7 @@ final class PollController
             }
         }
         if ($lockedOption === null) {
-            header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+            header('Location: ' . $backUrl);
             exit;
         }
         $tz = new \DateTimeZone($poll->timezone);
@@ -709,7 +732,7 @@ final class PollController
             }
         }
         $_SESSION['lock_success'] = true;
-        header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+        header('Location: ' . $backUrl);
         exit;
     }
 
