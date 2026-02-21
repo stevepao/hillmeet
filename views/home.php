@@ -119,11 +119,12 @@ $csrfToken = \Hillmeet\Support\Csrf::token();
           } else {
             alert('Could not delete poll.');
           }
+          window.location.reload();
         })
         .catch(function() {
           confirmBtn.disabled = false;
           hideModal();
-          alert('Could not delete poll.');
+          window.location.reload();
         });
     });
   }
