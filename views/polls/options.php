@@ -248,18 +248,31 @@ window.addEventListener('load', function() {
       var confirmBtn = document.getElementById('confirm-delete-option-confirm');
       confirmBtn.disabled = true;
       fetch(optionDeleteUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-        .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
+        .then(function(r) { return r.text().then(function(text) { return { ok: r.ok, status: r.status, text: text }; }); })
         .then(function(result) {
           confirmBtn.disabled = false;
           hideOptionModal();
-          if (result.ok && result.body && result.body.success) {
+          var body = null;
+          try { body = result.text ? JSON.parse(result.text) : null; } catch (e) { body = null; }
+          if (result.ok && result.status === 200 && body && body.success) {
             optionRowToRemove.remove();
             showToast('Time option removed.');
-          } else {
-            showToast(result.body && result.body.error ? result.body.error : 'Could not delete option.');
+            return;
           }
+          if (result.ok && result.status === 200 && !body) {
+            optionRowToRemove.remove();
+            window.location.reload();
+            return;
+          }
+          if (body && body.error) showToast(body.error);
+          else showToast('Could not delete option.');
+          window.location.reload();
         })
-        .catch(function() { confirmBtn.disabled = false; hideOptionModal(); showToast('Could not delete option.'); });
+        .catch(function() {
+          confirmBtn.disabled = false;
+          hideOptionModal();
+          window.location.reload();
+        });
     });
     optionModal.addEventListener('click', function(e) { if (e.target === optionModal) hideOptionModal(); });
   }
