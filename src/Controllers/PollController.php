@@ -13,7 +13,9 @@ use Hillmeet\Repositories\PollParticipantRepository;
 use Hillmeet\Repositories\PollRepository;
 use Hillmeet\Repositories\UserRepository;
 use Hillmeet\Repositories\VoteRepository;
+use Hillmeet\Services\EmailService;
 use Hillmeet\Services\GoogleCalendarService;
+use Hillmeet\Services\IcsGenerator;
 use Hillmeet\Services\PollService;
 use Hillmeet\Support\Csrf;
 use function Hillmeet\Support\current_user;
@@ -510,8 +512,8 @@ final class PollController
             exit;
         }
         if ($poll->isLocked()) {
-            http_response_code(403);
-            echo json_encode(['error' => 'This poll has been finalized.']);
+            http_response_code(409);
+            echo json_encode(['error' => 'This poll is finalized.']);
             exit;
         }
         $votes = $_POST['votes'] ?? [];
@@ -627,7 +629,86 @@ final class PollController
             exit;
         }
         $optionId = (int) ($_POST['option_id'] ?? 0);
-        $this->pollService->lockPoll($poll->id, $optionId, (int) current_user()->id);
+        if ($optionId <= 0) {
+            $_SESSION['lock_error'] = 'Please select a time to lock.';
+            header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+            exit;
+        }
+        $err = $this->pollService->lockPoll($poll->id, $optionId, (int) current_user()->id);
+        if ($err !== null) {
+            $_SESSION['lock_error'] = $err;
+            header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+            exit;
+        }
+        $poll = $this->pollRepo->findById($poll->id);
+        if ($poll === null || !$poll->isLocked() || $poll->locked_option_id === null) {
+            header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+            exit;
+        }
+        $options = $this->pollRepo->getOptions($poll->id);
+        $lockedOption = null;
+        foreach ($options as $o) {
+            if ($o->id === $poll->locked_option_id) {
+                $lockedOption = $o;
+                break;
+            }
+        }
+        if ($lockedOption === null) {
+            header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+            exit;
+        }
+        $tz = new \DateTimeZone($poll->timezone);
+        $finalTimeLocalized = (new \DateTime($lockedOption->start_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('D M j, g:i A') . ' – ' . (new \DateTime($lockedOption->end_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('g:i A');
+        $userRepo = new UserRepository();
+        $organizer = $userRepo->findById($poll->organizer_id);
+        $organizerName = $organizer ? ($organizer->name ?? $organizer->email ?? '') : '';
+        $organizerEmail = $organizer ? $organizer->email : '';
+        $pollUrl = url('/poll/' . $slug);
+        $icsContent = '';
+        if ($organizerEmail !== '') {
+            $icsContent = IcsGenerator::singleEvent($poll->title, $lockedOption->start_utc, $lockedOption->end_utc, $organizerEmail);
+        }
+        $participantRepo = new PollParticipantRepository();
+        $inviteRepo = new PollInviteRepository();
+        $emailsSent = [];
+        foreach ($participantRepo->getResultsParticipants($poll->id) as $p) {
+            $email = isset($p->email) ? trim((string) $p->email) : '';
+            if ($email !== '' && !isset($emailsSent[$email])) {
+                $emailsSent[$email] = true;
+                (new EmailService())->sendPollLocked($email, $poll->title, $finalTimeLocalized, $organizerName, $organizerEmail, $pollUrl, $icsContent);
+            }
+        }
+        foreach ($inviteRepo->listInvites($poll->id) as $inv) {
+            $email = strtolower(trim((string) $inv->email));
+            if ($email !== '' && !isset($emailsSent[$email])) {
+                $emailsSent[$email] = true;
+                (new EmailService())->sendPollLocked($email, $poll->title, $finalTimeLocalized, $organizerName, $organizerEmail, $pollUrl, $icsContent);
+            }
+        }
+        $calendarService = new GoogleCalendarService(
+            new OAuthConnectionRepository(),
+            new GoogleCalendarSelectionRepository(),
+            new \Hillmeet\Repositories\FreebusyCacheRepository()
+        );
+        $eventRepo = new CalendarEventRepository();
+        $hasCalendar = $calendarService->getAuthUrl('x') !== '' && (new OAuthConnectionRepository())->hasConnection((int) current_user()->id);
+        if ($hasCalendar && !$eventRepo->existsForPollAndOption($poll->id, $lockedOption->id)) {
+            $attendeeEmails = array_keys($emailsSent);
+            $eventId = $calendarService->createEvent(
+                (int) current_user()->id,
+                'primary',
+                $poll->title,
+                $poll->description ?? '',
+                $poll->location ?? '',
+                $lockedOption->start_utc,
+                $lockedOption->end_utc,
+                $attendeeEmails
+            );
+            if ($eventId !== null) {
+                $eventRepo->create($poll->id, $lockedOption->id, (int) current_user()->id, 'primary', $eventId);
+            }
+        }
+        $_SESSION['lock_success'] = true;
         header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
         exit;
     }

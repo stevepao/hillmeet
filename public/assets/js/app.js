@@ -227,6 +227,8 @@
               showToast(msg);
               if (result.body && result.body.error_code === 'stale_options') {
                 window.location.reload();
+              } else if (result.status === 409 || (msg && msg.toLowerCase().indexOf('finalized') !== -1)) {
+                window.location.reload();
               }
             }
           })

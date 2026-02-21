@@ -33,6 +33,37 @@ final class EmailService
         return $this->send($to, $subject, $html, $text);
     }
 
+    /**
+     * Send "poll locked" notification. If $icsContent is non-empty, attach as .ics file.
+     */
+    public function sendPollLocked(
+        string $to,
+        string $pollTitle,
+        string $finalTimeLocalized,
+        string $organizerName,
+        string $organizerEmail,
+        string $pollUrl = '',
+        string $icsContent = ''
+    ): bool {
+        $subject = 'Meeting time finalized: ' . $pollTitle;
+        $html = $this->renderTemplate('poll_locked', [
+            'pollTitle' => $pollTitle,
+            'finalTimeLocalized' => $finalTimeLocalized,
+            'organizerName' => $organizerName,
+            'organizerEmail' => $organizerEmail,
+            'pollUrl' => $pollUrl,
+            'hasIcs' => $icsContent !== '',
+        ]);
+        $text = "Meeting time finalized: {$pollTitle}\n\nFinal time: {$finalTimeLocalized}\nOrganizer: {$organizerName} ({$organizerEmail})\n";
+        if ($pollUrl !== '') {
+            $text .= "\nView poll: {$pollUrl}";
+        }
+        if ($icsContent !== '') {
+            $text .= "\n\nA calendar file is attached. Add it to your calendar to save the event.";
+        }
+        return $this->sendWithAttachment($to, $subject, $html, $text, $icsContent, 'invite.ics');
+    }
+
     private function renderTemplate(string $name, array $vars): string
     {
         $path = dirname(__DIR__, 2) . "/views/emails/{$name}.php";
@@ -45,8 +76,17 @@ final class EmailService
         return ob_get_clean();
     }
 
-    private function send(string $to, string $subject, string $htmlBody, string $textBody): bool
-    {
+    /**
+     * Send email with optional attachment. Pass empty string for attachmentContent to send without attachment.
+     */
+    public function sendWithAttachment(
+        string $to,
+        string $subject,
+        string $htmlBody,
+        string $textBody,
+        string $attachmentContent,
+        string $attachmentFilename = 'attachment.ics'
+    ): bool {
         $this->lastError = '';
         $host = config('smtp.host', '');
         if ($host === '') {
@@ -66,7 +106,6 @@ final class EmailService
             $mail->SMTPSecure = $mail->Port === 465 ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
             $mail->CharSet = PHPMailer::CHARSET_UTF8;
 
-            // IONOS and many SMTP servers return 503 if EHLO hostname is wrong; use app domain
             $appUrl = config('app.url', '');
             if ($appUrl !== '') {
                 $ehloHost = parse_url($appUrl, PHP_URL_HOST);
@@ -81,6 +120,10 @@ final class EmailService
             $mail->Body = $htmlBody;
             $mail->AltBody = $textBody;
 
+            if ($attachmentContent !== '') {
+                $mail->addStringAttachment($attachmentContent, $attachmentFilename, PHPMailer::ENCODING_BASE64, 'text/calendar');
+            }
+
             $ok = $mail->send();
             if (!$ok) {
                 $this->lastError = $mail->ErrorInfo ?: 'SMTP send failed.';
@@ -90,5 +133,10 @@ final class EmailService
             $this->lastError = $e->getMessage();
             return false;
         }
+    }
+
+    private function send(string $to, string $subject, string $htmlBody, string $textBody): bool
+    {
+        return $this->sendWithAttachment($to, $subject, $htmlBody, $textBody, '', '');
     }
 }

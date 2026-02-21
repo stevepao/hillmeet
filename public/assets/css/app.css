@@ -235,6 +235,30 @@
   margin-bottom: var(--space-3);
 }
 
+.final-time-banner {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.lock-options-list {
+  margin: var(--space-3) 0;
+  padding: 0;
+  border: 0;
+}
+
+.lock-option-row {
+  display: block;
+  margin-bottom: var(--space-2);
+  cursor: pointer;
+}
+
+.lock-option-row input[type="radio"] {
+  margin-right: var(--space-2);
+}
+
 /* Calendar settings */
 .calendar-list {
   list-style: none;

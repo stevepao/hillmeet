@@ -7,13 +7,29 @@ $pollUrlWithSecret = !empty($accessByInvite) && $inviteToken !== ''
 $resultsExpandUrl = $pollUrlWithSecret . (strpos($pollUrlWithSecret, '?') !== false ? '&' : '?') . 'expand=results';
 $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 $canEdit = !$poll->isLocked();
+$finalTimeLabel = null;
+if ($poll->isLocked() && $poll->locked_option_id !== null) {
+    foreach ($options as $o) {
+        if ((int)$o->id === (int)$poll->locked_option_id) {
+            $finalTimeLabel = (new DateTime($o->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('D M j, g:i A') . ' – ' . (new DateTime($o->end_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('g:i A');
+            break;
+        }
+    }
+}
 ?>
 <h1><?= \Hillmeet\Support\e($poll->title) ?></h1>
+<?php if ($poll->isLocked() && $finalTimeLabel !== null): ?>
+  <p class="final-time-banner" role="alert"><strong>Final time selected:</strong> <?= \Hillmeet\Support\e($finalTimeLabel) ?></p>
+<?php endif; ?>
 <?php if ($poll->description): ?>
   <p class="muted"><?= \Hillmeet\Support\e($poll->description) ?></p>
 <?php endif; ?>
 <p class="badge badge-muted"><?= \Hillmeet\Support\e($poll->timezone) ?></p>
 
+<?php if (!empty($_SESSION['lock_error'])): ?>
+  <div class="card card-2" style="margin:var(--space-4) 0;color:var(--danger);"><?= \Hillmeet\Support\e($_SESSION['lock_error']) ?></div>
+  <?php unset($_SESSION['lock_error']); ?>
+<?php endif; ?>
 <?php if (!empty($_SESSION['vote_error'])): ?>
   <div class="card card-2" style="margin:var(--space-4) 0;color:var(--danger);"><?= \Hillmeet\Support\e($_SESSION['vote_error']) ?></div>
   <?php unset($_SESSION['vote_error']); ?>
@@ -21,6 +37,9 @@ $canEdit = !$poll->isLocked();
 
 <?php if (!empty($_SESSION['invitations_sent'])): unset($_SESSION['invitations_sent']); ?>
   <p class="success-message" role="alert">Invitations sent.</p>
+<?php endif; ?>
+<?php if (!empty($_SESSION['lock_success'])): unset($_SESSION['lock_success']); ?>
+  <p class="success-message" role="alert">Poll finalized. Participants have been notified.</p>
 <?php endif; ?>
 
 <div class="poll-options-bar">
@@ -155,14 +174,25 @@ $canEdit = !$poll->isLocked();
 <?php endif; ?>
 
 <?php if ($poll->isOrganizer((int)\Hillmeet\Support\current_user()->id) && !$poll->isLocked() && count($options) > 0): ?>
-  <div class="finalize-panel">
+  <div class="finalize-panel" id="lock-panel">
     <h3>Lock this time</h3>
-    <p class="helper">Locking freezes the schedule so everyone sees the final time.</p>
-    <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/lock') ?>">
+    <p class="helper">Locking a time finalizes the meeting, stops voting, and notifies participants.</p>
+    <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/lock') ?>" id="lock-form">
       <?= \Hillmeet\Support\Csrf::field() ?>
       <input type="hidden" name="secret" value="<?= \Hillmeet\Support\e($_GET['secret'] ?? '') ?>">
-      <input type="hidden" name="option_id" value="<?= (int)($results['best_option_id'] ?? $options[0]->id) ?>">
-      <button type="submit" class="btn btn-primary">Lock this time</button>
+      <fieldset class="lock-options-list" aria-label="Select final time">
+        <legend class="sr-only">Choose which time to lock</legend>
+        <?php foreach ($options as $opt):
+          $startLocalLock = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('D M j, g:i A');
+          $endLocalLock = (new DateTime($opt->end_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('g:i A');
+        ?>
+          <label class="lock-option-row">
+            <input type="radio" name="option_id" value="<?= (int)$opt->id ?>" data-start-local="<?= \Hillmeet\Support\e($startLocalLock) ?>" data-end-local="<?= \Hillmeet\Support\e($endLocalLock) ?>">
+            <span><?= \Hillmeet\Support\e($startLocalLock) ?> – <?= \Hillmeet\Support\e($endLocalLock) ?></span>
+          </label>
+        <?php endforeach; ?>
+      </fieldset>
+      <button type="submit" class="btn btn-primary" id="lock-submit" disabled>Lock this time</button>
     </form>
   </div>
 <?php endif; ?>
@@ -180,6 +210,28 @@ window.HILLMEET_POLL = {
   savedVotes: <?= json_encode(array_map(function ($v) { return $v ?? ''; }, $userVotes)) ?>,
   debug: <?= (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') ? 'true' : 'false' ?>
 };
+
+(function() {
+  var lockForm = document.getElementById('lock-form');
+  var lockSubmit = document.getElementById('lock-submit');
+  var lockRadios = lockForm ? lockForm.querySelectorAll('input[name="option_id"]') : [];
+  function updateLockSubmit() {
+    if (!lockSubmit) return;
+    var checked = lockForm && Array.prototype.find.call(lockRadios, function(r) { return r.checked; });
+    lockSubmit.disabled = !checked;
+  }
+  if (lockForm && lockRadios.length) {
+    lockRadios.forEach(function(r) { r.addEventListener('change', updateLockSubmit); });
+    updateLockSubmit();
+    lockForm.addEventListener('submit', function(e) {
+      var checked = Array.prototype.find.call(lockRadios, function(radio) { return radio.checked; });
+      if (!checked) { e.preventDefault(); return; }
+      var startLocal = checked.getAttribute('data-start-local') || '';
+      var msg = 'Lock this time on ' + startLocal + '?\n\nThis will close the poll and notify participants.';
+      if (!confirm(msg)) e.preventDefault();
+    });
+  }
+})();
 </script>
 <?php
 $content = ob_get_clean();
