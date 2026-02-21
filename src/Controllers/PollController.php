@@ -32,6 +32,75 @@ final class PollController
         \Hillmeet\Middleware\RequireAuth::check();
     }
 
+    /**
+     * Resolve poll for current user by slug + secret / invite token / direct (organizer or participant).
+     * When $markInviteAccepted is true and access is via invite, marks invite accepted and adds participant.
+     * When $organizerOnly is true, direct access requires organizer (e.g. for lock).
+     * Returns null when poll cannot be resolved; otherwise ['poll' => Poll, 'back_url' => string, 'access_by_invite' => bool].
+     */
+    private function resolvePollForAccess(string $slug, string $secret, string $inviteToken, bool $organizerOnly = false, bool $markInviteAccepted = false): ?array
+    {
+        if ($secret !== '') {
+            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
+            if ($poll === null) {
+                return null;
+            }
+            return [
+                'poll' => $poll,
+                'back_url' => url('/poll/' . $slug . '?secret=' . urlencode($secret)),
+                'access_by_invite' => false,
+            ];
+        }
+        if ($inviteToken !== '') {
+            $inviteRepo = new PollInviteRepository();
+            $tokenHash = hash('sha256', $inviteToken);
+            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
+            if ($invite === null) {
+                return null;
+            }
+            if ($markInviteAccepted) {
+                $userId = (int) current_user()->id;
+                $inviteRepo->markAccepted((int) $invite->id, $userId);
+                (new PollParticipantRepository())->add((int) $invite->poll_id, $userId);
+            }
+            $poll = $this->pollRepo->findById((int) $invite->poll_id);
+            if ($poll === null || $poll->slug !== $slug) {
+                return null;
+            }
+            return [
+                'poll' => $poll,
+                'back_url' => url('/poll/' . $slug . '?invite=' . urlencode($inviteToken)),
+                'access_by_invite' => true,
+            ];
+        }
+        $userId = (int) current_user()->id;
+        $candidate = $this->pollRepo->findBySlug($slug);
+        if ($candidate === null) {
+            return null;
+        }
+        if ($organizerOnly) {
+            if (!$candidate->isOrganizer($userId)) {
+                return null;
+            }
+            return [
+                'poll' => $candidate,
+                'back_url' => url('/poll/' . $slug),
+                'access_by_invite' => false,
+            ];
+        }
+        $participantRepo = new PollParticipantRepository();
+        $voteRepo = new VoteRepository();
+        $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
+        if ($candidate->isOrganizer($userId) || $isParticipant) {
+            return [
+                'poll' => $candidate,
+                'back_url' => url('/poll/' . $slug),
+                'access_by_invite' => false,
+            ];
+        }
+        return null;
+    }
+
     public function __construct()
     {
         $this->pollRepo = new PollRepository();
@@ -281,52 +350,15 @@ final class PollController
         $this->auth();
         $secret = $_GET['secret'] ?? '';
         $inviteToken = $_GET['invite'] ?? '';
-        $poll = null;
-        $accessByInvite = false;
-
-        if ($secret !== '') {
-            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
-            $accessByInvite = false;
-        } elseif ($inviteToken !== '') {
-            $inviteRepo = new PollInviteRepository();
-            $tokenHash = hash('sha256', $inviteToken);
-            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
-            if ($invite === null) {
-                http_response_code(404);
-                require dirname(__DIR__, 2) . '/views/errors/404.php';
-                exit;
-            }
-            $userId = (int) current_user()->id;
-            $inviteRepo->markAccepted((int) $invite->id, $userId);
-            (new PollParticipantRepository())->add((int) $invite->poll_id, $userId);
-            $poll = $this->pollRepo->findById((int) $invite->poll_id);
-            if ($poll === null || $poll->slug !== $slug) {
-                http_response_code(404);
-                require dirname(__DIR__, 2) . '/views/errors/404.php';
-                exit;
-            }
-            $accessByInvite = true;
-        } else {
-            $userId = (int) current_user()->id;
-            $candidate = $this->pollRepo->findBySlug($slug);
-            if ($candidate !== null) {
-                $isOrganizer = $candidate->isOrganizer($userId);
-                $participantRepo = new PollParticipantRepository();
-                $voteRepo = new VoteRepository();
-                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
-                if ($isOrganizer || $isParticipant) {
-                    $poll = $candidate;
-                    $accessByInvite = false;
-                }
-            }
-        }
-
-        if ($poll === null) {
+        $resolved = $this->resolvePollForAccess($slug, $secret, $inviteToken, false, true);
+        if ($resolved === null) {
             http_response_code(404);
             $pageMessage = 'This poll no longer exists.';
             require dirname(__DIR__, 2) . '/views/errors/404.php';
             exit;
         }
+        $poll = $resolved['poll'];
+        $accessByInvite = $resolved['access_by_invite'];
 
         $options = $this->pollRepo->getOptions($poll->id);
         $voteRepo = new VoteRepository();
@@ -405,35 +437,8 @@ final class PollController
         $this->auth();
         $secret = $_POST['secret'] ?? $_GET['secret'] ?? '';
         $inviteToken = $_POST['invite'] ?? $_GET['invite'] ?? '';
-        $poll = null;
-        $backPath = '';
-
-        if ($secret !== '') {
-            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
-            $backPath = $poll ? url('/poll/' . $slug . '?secret=' . urlencode($secret)) : '';
-        } elseif ($inviteToken !== '') {
-            $inviteRepo = new PollInviteRepository();
-            $tokenHash = hash('sha256', $inviteToken);
-            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
-            if ($invite !== null) {
-                $poll = $this->pollRepo->findById((int) $invite->poll_id);
-                $backPath = $poll && $poll->slug === $slug ? url('/poll/' . $slug . '?invite=' . urlencode($inviteToken)) : '';
-            }
-        } else {
-            $userId = (int) current_user()->id;
-            $candidate = $this->pollRepo->findBySlug($slug);
-            if ($candidate !== null) {
-                $participantRepo = new PollParticipantRepository();
-                $voteRepo = new VoteRepository();
-                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
-                if ($candidate->isOrganizer($userId) || $isParticipant) {
-                    $poll = $candidate;
-                    $backPath = url('/poll/' . $slug);
-                }
-            }
-        }
-
-        if ($poll === null) {
+        $resolved = $this->resolvePollForAccess($slug, $secret, $inviteToken, false, false);
+        if ($resolved === null) {
             $bySlug = $this->pollRepo->findBySlug($slug);
             if ($bySlug === null) {
                 http_response_code(404);
@@ -445,9 +450,11 @@ final class PollController
             require dirname(__DIR__, 2) . '/views/errors/403.php';
             exit;
         }
+        $poll = $resolved['poll'];
+        $backPath = $resolved['back_url'];
         if ($poll->isLocked()) {
             $_SESSION['vote_error'] = 'This poll has been finalized.';
-            header('Location: ' . ($_POST['back'] ?? url('/poll/' . $slug)));
+            header('Location: ' . ($_POST['back'] ?? $backPath));
             exit;
         }
         $optionId = (int) ($_POST['option_id'] ?? 0);
@@ -463,7 +470,7 @@ final class PollController
         }
         $back = $_POST['back'] ?? $backPath;
         if ($back === '') {
-            $back = $secret !== '' ? url('/poll/' . $slug . '?secret=' . urlencode($secret)) : url('/poll/' . $slug . '?invite=' . urlencode($inviteToken));
+            $back = $backPath;
         }
         header('Location: ' . $back);
         exit;
@@ -475,32 +482,8 @@ final class PollController
         header('Content-Type: application/json; charset=utf-8');
         $secret = $_POST['secret'] ?? '';
         $inviteToken = $_POST['invite'] ?? '';
-        $poll = null;
-        if ($secret !== '') {
-            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
-        } elseif ($inviteToken !== '') {
-            $inviteRepo = new PollInviteRepository();
-            $tokenHash = hash('sha256', $inviteToken);
-            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
-            if ($invite !== null) {
-                $poll = $this->pollRepo->findById((int) $invite->poll_id);
-                if ($poll === null || $poll->slug !== $slug) {
-                    $poll = null;
-                }
-            }
-        } else {
-            $userId = (int) current_user()->id;
-            $candidate = $this->pollRepo->findBySlug($slug);
-            if ($candidate !== null) {
-                $participantRepo = new PollParticipantRepository();
-                $voteRepo = new VoteRepository();
-                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
-                if ($candidate->isOrganizer($userId) || $isParticipant) {
-                    $poll = $candidate;
-                }
-            }
-        }
-        if ($poll === null) {
+        $resolved = $this->resolvePollForAccess($slug, $secret, $inviteToken, false, false);
+        if ($resolved === null) {
             $bySlug = $this->pollRepo->findBySlug($slug);
             if ($bySlug === null) {
                 http_response_code(404);
@@ -511,6 +494,7 @@ final class PollController
             echo json_encode(['error' => 'This poll link is missing or invalid. Use the link from your invitation or from the organizer.']);
             exit;
         }
+        $poll = $resolved['poll'];
         if ($poll->isLocked()) {
             http_response_code(409);
             echo json_encode(['error' => 'This poll is finalized.']);
@@ -550,37 +534,14 @@ final class PollController
         $this->auth();
         $secret = $_GET['secret'] ?? '';
         $inviteToken = $_GET['invite'] ?? '';
-        $poll = null;
-        if ($secret !== '') {
-            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
-        } elseif ($inviteToken !== '') {
-            $inviteRepo = new PollInviteRepository();
-            $tokenHash = hash('sha256', $inviteToken);
-            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
-            if ($invite !== null) {
-                $poll = $this->pollRepo->findById((int) $invite->poll_id);
-                if ($poll === null || $poll->slug !== $slug) {
-                    $poll = null;
-                }
-            }
-        } else {
-            $userId = (int) current_user()->id;
-            $candidate = $this->pollRepo->findBySlug($slug);
-            if ($candidate !== null) {
-                $participantRepo = new PollParticipantRepository();
-                $voteRepo = new VoteRepository();
-                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
-                if ($candidate->isOrganizer($userId) || $isParticipant) {
-                    $poll = $candidate;
-                }
-            }
-        }
-        if ($poll === null) {
+        $resolved = $this->resolvePollForAccess($slug, $secret, $inviteToken, false, false);
+        if ($resolved === null) {
             http_response_code(403);
             header('Content-Type: text/html; charset=utf-8');
             echo '<p class="muted">You don\'t have permission to view results.</p>';
             exit;
         }
+        $poll = $resolved['poll'];
         $results = $this->pollService->getResults($poll);
         $options = $results['options'];
         $participantRepo = new PollParticipantRepository();
@@ -624,33 +585,13 @@ final class PollController
         $this->auth();
         $secret = $_POST['secret'] ?? '';
         $inviteToken = $_POST['invite'] ?? '';
-        $poll = null;
-
-        if ($secret !== '') {
-            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
-        } elseif ($inviteToken !== '') {
-            $inviteRepo = new PollInviteRepository();
-            $tokenHash = hash('sha256', $inviteToken);
-            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
-            if ($invite !== null) {
-                $poll = $this->pollRepo->findById((int) $invite->poll_id);
-                if ($poll !== null && $poll->slug !== $slug) {
-                    $poll = null;
-                }
-            }
-        } else {
-            $userId = (int) current_user()->id;
-            $candidate = $this->pollRepo->findBySlug($slug);
-            if ($candidate !== null && $candidate->isOrganizer($userId)) {
-                $poll = $candidate;
-            }
-        }
-
-        if ($poll === null || !$poll->isOrganizer((int) current_user()->id)) {
+        $resolved = $this->resolvePollForAccess($slug, $secret, $inviteToken, true, false);
+        if ($resolved === null || !$resolved['poll']->isOrganizer((int) current_user()->id)) {
             http_response_code(403);
             exit;
         }
-        $backUrl = $secret !== '' ? url('/poll/' . $slug . '?secret=' . urlencode($secret)) : ($inviteToken !== '' ? url('/poll/' . $slug . '?invite=' . urlencode($inviteToken)) : url('/poll/' . $slug));
+        $poll = $resolved['poll'];
+        $backUrl = $resolved['back_url'];
         $optionId = (int) ($_POST['option_id'] ?? 0);
         if ($optionId <= 0) {
             $_SESSION['lock_error'] = 'Please select a time to lock.';
@@ -825,36 +766,13 @@ final class PollController
         header('Content-Type: application/json; charset=utf-8');
         $secret = $_GET['secret'] ?? $_POST['secret'] ?? '';
         $inviteToken = $_GET['invite'] ?? $_POST['invite'] ?? '';
-        $poll = null;
-        if ($secret !== '') {
-            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
-        } elseif ($inviteToken !== '') {
-            $inviteRepo = new PollInviteRepository();
-            $tokenHash = hash('sha256', $inviteToken);
-            $invite = $inviteRepo->findByPollSlugAndTokenHash($slug, $tokenHash);
-            if ($invite !== null) {
-                $poll = $this->pollRepo->findById((int) $invite->poll_id);
-                if ($poll === null || $poll->slug !== $slug) {
-                    $poll = null;
-                }
-            }
-        } else {
-            $userId = (int) current_user()->id;
-            $candidate = $this->pollRepo->findBySlug($slug);
-            if ($candidate !== null) {
-                $participantRepo = new PollParticipantRepository();
-                $voteRepo = new VoteRepository();
-                $isParticipant = $participantRepo->isParticipant($candidate->id, $userId) || $voteRepo->hasVoteInPoll($candidate->id, $userId);
-                if ($candidate->isOrganizer($userId) || $isParticipant) {
-                    $poll = $candidate;
-                }
-            }
-        }
-        if ($poll === null) {
+        $resolved = $this->resolvePollForAccess($slug, $secret, $inviteToken, false, false);
+        if ($resolved === null) {
             http_response_code(404);
             echo json_encode(['ok' => false, 'error_code' => 'not_found', 'error_message' => 'Poll not found.', 'action_hint' => 'Use the correct poll link.']);
             exit;
         }
+        $poll = $resolved['poll'];
         $userId = (int) current_user()->id;
         $oauthRepo = new OAuthConnectionRepository();
         $selectionRepo = new GoogleCalendarSelectionRepository();
@@ -936,8 +854,7 @@ final class PollController
         $wantsJson = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
             || (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
         if (!$wantsJson) {
-            $back = $inviteToken !== '' ? url('/poll/' . $slug . '?invite=' . urlencode($inviteToken)) : url('/poll/' . $slug . '?secret=' . urlencode($secret));
-            header('Location: ' . $back);
+            header('Location: ' . $resolved['back_url']);
             exit;
         }
         echo json_encode(['ok' => true, 'busy' => $out['busy'], 'checked_at' => $out['checked_at']]);
