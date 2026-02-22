@@ -142,6 +142,8 @@ $content = ob_start();
     <?php $supportEmail = \Hillmeet\Support\config('legal.support_email', 'support@example.com'); ?>
     <p>If you have questions about this Privacy Policy or your data, contact us at: <a href="mailto:<?= \Hillmeet\Support\e($supportEmail) ?>"><?= \Hillmeet\Support\e($supportEmail) ?></a></p>
   </section>
+
+  <p class="muted" style="margin-top:var(--space-6); font-size:var(--text-sm);">© 2026 Hillwork, LLC. All rights reserved.</p>
 </div>
 <?php
 $content = ob_get_clean();

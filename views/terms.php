@@ -172,6 +172,8 @@ $content = ob_start();
     <h2 style="font-size:1.125rem; margin-bottom:var(--space-2);">18. Contact</h2>
     <p>Questions about these Terms? Contact us at: <a href="mailto:<?= \Hillmeet\Support\e($supportEmail) ?>"><?= \Hillmeet\Support\e($supportEmail) ?></a></p>
   </section>
+
+  <p class="muted" style="margin-top:var(--space-6); font-size:var(--text-sm);">© 2026 Hillwork, LLC. All rights reserved.</p>
 </div>
 <?php
 $content = ob_get_clean();
