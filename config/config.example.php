@@ -46,4 +46,10 @@ return [
         'calendar_check' => (int) $e('RATE_CALENDAR_CHECK', 10),
     ],
     'freebusy_cache_ttl' => (int) $e('FREEBUSY_CACHE_TTL', 600),
+    'legal' => [
+        'company_name'       => $e('LEGAL_COMPANY_NAME', 'Your Company, LLC'),
+        'company_type'       => $e('LEGAL_COMPANY_TYPE', 'a [State] limited liability company'),
+        'support_email'      => $e('LEGAL_SUPPORT_EMAIL', 'support@example.com'),
+        'governing_state'    => $e('LEGAL_GOVERNING_STATE', 'Oregon'),
+    ],
 ];

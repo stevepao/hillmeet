@@ -22,4 +22,16 @@ final class HomeController
         }
         require dirname(__DIR__, 2) . '/views/home.php';
     }
+
+    /** Privacy Policy page (no auth required). */
+    public function privacy(): void
+    {
+        require dirname(__DIR__, 2) . '/views/privacy.php';
+    }
+
+    /** Terms of Service page (no auth required). */
+    public function terms(): void
+    {
+        require dirname(__DIR__, 2) . '/views/terms.php';
+    }
 }

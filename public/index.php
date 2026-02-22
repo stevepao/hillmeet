@@ -23,6 +23,8 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $routes = [
     'GET' => [
         '/' => [\Hillmeet\Controllers\HomeController::class, 'index'],
+        '/privacy' => [\Hillmeet\Controllers\HomeController::class, 'privacy'],
+        '/terms' => [\Hillmeet\Controllers\HomeController::class, 'terms'],
         '/auth/login' => [\Hillmeet\Controllers\AuthController::class, 'loginPage'],
         '/auth/google' => [\Hillmeet\Controllers\AuthController::class, 'googleRedirect'],
         '/auth/email' => [\Hillmeet\Controllers\AuthController::class, 'emailPage'],
@@ -41,6 +43,7 @@ $routes = [
         '/calendar/callback' => [\Hillmeet\Controllers\CalendarController::class, 'callback'],
     ],
     'POST' => [
+        '/calendar/disconnect' => [\Hillmeet\Controllers\CalendarController::class, 'disconnect'],
         '/auth/send-pin' => [\Hillmeet\Controllers\AuthController::class, 'sendPin'],
         '/auth/verify-pin' => [\Hillmeet\Controllers\AuthController::class, 'verifyPin'],
         '/poll/create' => [\Hillmeet\Controllers\PollController::class, 'createPost'],

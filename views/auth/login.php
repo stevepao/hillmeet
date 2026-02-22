@@ -6,7 +6,7 @@ $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
 ?>
 <div class="auth-page">
   <h1>Sign in</h1>
-  <p class="muted">Sign in to create and vote on polls.</p>
+  <p class="muted">Sign in to create and vote on polls. See our <a href="<?= \Hillmeet\Support\url('/privacy') ?>">Privacy Policy</a> and <a href="<?= \Hillmeet\Support\url('/terms') ?>">Terms of Service</a>.</p>
 
   <?php if (!empty($_SESSION['auth_error'])): ?>
     <div class="card card-2" style="margin-top:var(--space-4);color:var(--danger);">

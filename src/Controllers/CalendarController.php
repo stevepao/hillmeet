@@ -101,4 +101,17 @@ final class CalendarController
         header('Location: ' . url('/calendar'));
         exit;
     }
+
+    public function disconnect(): void
+    {
+        \Hillmeet\Middleware\RequireAuth::check();
+        $userId = (int) current_user()->id;
+        $oauthRepo = new OAuthConnectionRepository();
+        $oauthRepo->deleteForUser($userId, 'google');
+        (new GoogleCalendarSelectionRepository())->deleteForUser($userId);
+        (new FreebusyCacheRepository())->invalidateForUser($userId);
+        $_SESSION['calendar_disconnected'] = true;
+        header('Location: ' . url('/calendar'));
+        exit;
+    }
 }

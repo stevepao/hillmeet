@@ -61,4 +61,10 @@ final class GoogleCalendarSelectionRepository
         $stmt = Database::get()->prepare("UPDATE google_calendar_selections SET tentative_as_busy = ? WHERE user_id = ?");
         $stmt->execute([$value ? 1 : 0, $userId]);
     }
+
+    public function deleteForUser(int $userId): void
+    {
+        $stmt = Database::get()->prepare("DELETE FROM google_calendar_selections WHERE user_id = ?");
+        $stmt->execute([$userId]);
+    }
 }

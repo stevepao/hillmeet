@@ -47,4 +47,10 @@ final class OAuthConnectionRepository
         $stmt->execute([$userId, $provider]);
         return $stmt->fetchColumn() !== false;
     }
+
+    public function deleteForUser(int $userId, string $provider = 'google'): void
+    {
+        $stmt = Database::get()->prepare("DELETE FROM oauth_connections WHERE user_id = ? AND provider = ?");
+        $stmt->execute([$userId, $provider]);
+    }
 }
