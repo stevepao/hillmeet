@@ -13,10 +13,10 @@ $content = ob_start();
   <h1>Terms of Service</h1>
   <p class="muted"><strong>Effective date:</strong> February 19, 2026</p>
   <?php
-  $companyName = \Hillmeet\Support\config('legal.company_name', 'Your Company, LLC');
-  $companyType = \Hillmeet\Support\config('legal.company_type', 'a limited liability company');
-  $supportEmail = \Hillmeet\Support\config('legal.support_email', 'support@example.com');
-  $governingState = \Hillmeet\Support\config('legal.governing_state', 'Oregon');
+  $companyName = \env('LEGAL_COMPANY_NAME', \Hillmeet\Support\config('legal.company_name', 'Your Company, LLC'));
+  $companyType = \env('LEGAL_COMPANY_TYPE', \Hillmeet\Support\config('legal.company_type', 'a limited liability company'));
+  $supportEmail = \env('LEGAL_SUPPORT_EMAIL', \Hillmeet\Support\config('legal.support_email', 'support@example.com'));
+  $governingState = \env('LEGAL_GOVERNING_STATE', \Hillmeet\Support\config('legal.governing_state', 'Oregon'));
   $privacyUrl = \Hillmeet\Support\url('/privacy');
   ?>
   <p>Hillmeet is operated by <strong><?= \Hillmeet\Support\e($companyName) ?></strong>, <?= \Hillmeet\Support\e($companyType) ?> (“we,” “us,” or “our”).</p>

@@ -41,7 +41,8 @@ function loadEnv(string $path): void
         }
         [$name, $value] = explode('=', $line, 2);
         $name = trim($name);
-        $value = trim($value, " \t\"'");
+        $value = trim($value);
+        $value = trim($value, "\"'");
         if ($name !== '') {
             $existing = getenv($name);
             if ($existing === false && !isset($_ENV[$name])) {

@@ -143,7 +143,7 @@ $content = ob_start();
 
   <section style="margin-top:var(--space-5);">
     <h2 style="font-size:1.125rem; margin-bottom:var(--space-2);">11. Contact Us</h2>
-    <?php $supportEmail = \Hillmeet\Support\config('legal.support_email', 'support@example.com'); ?>
+    <?php $supportEmail = \env('LEGAL_SUPPORT_EMAIL', \Hillmeet\Support\config('legal.support_email', 'support@example.com')); ?>
     <p>If you have questions about this Privacy Policy or your data, contact us at: <a href="mailto:<?= \Hillmeet\Support\e($supportEmail) ?>"><?= \Hillmeet\Support\e($supportEmail) ?></a></p>
   </section>
 
