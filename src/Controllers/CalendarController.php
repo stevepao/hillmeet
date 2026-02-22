@@ -49,7 +49,7 @@ final class CalendarController
                 ];
             }
         }
-        $authUrl = $connected ? '' : (new GoogleCalendarService($oauthRepo, $selectionRepo, new FreebusyCacheRepository()))->getAuthUrl('calendar');
+        $authUrl = $connected ? '' : url('/calendar/connect');
         $cacheTtl = config('freebusy_cache_ttl', 600);
         require dirname(__DIR__, 2) . '/views/calendar/settings.php';
     }
@@ -57,12 +57,14 @@ final class CalendarController
     public function connect(): void
     {
         \Hillmeet\Middleware\RequireAuth::check();
+        $state = bin2hex(random_bytes(16));
+        $_SESSION['oauth2state_calendar'] = $state;
         $calendarService = new GoogleCalendarService(
             new OAuthConnectionRepository(),
             new GoogleCalendarSelectionRepository(),
             new FreebusyCacheRepository()
         );
-        $url = $calendarService->getAuthUrl('calendar');
+        $url = $calendarService->getAuthUrl($state);
         header('Location: ' . $url);
         exit;
     }

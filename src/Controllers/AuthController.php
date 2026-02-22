@@ -131,7 +131,8 @@ final class AuthController
             header('Location: ' . url('/auth/login'));
             exit;
         }
-        if ($state === 'calendar') {
+        if (!empty($_SESSION['oauth2state_calendar']) && $state !== '' && hash_equals($_SESSION['oauth2state_calendar'], $state)) {
+            unset($_SESSION['oauth2state_calendar']);
             require_auth();
             $oauth = new \Hillmeet\Services\GoogleCalendarService(
                 new \Hillmeet\Repositories\OAuthConnectionRepository(),
@@ -142,7 +143,7 @@ final class AuthController
             header('Location: ' . url('/calendar'));
             exit;
         }
-        if (empty($_SESSION['oauth2state']) || $state !== $_SESSION['oauth2state']) {
+        if (empty($_SESSION['oauth2state']) || $state === '' || !hash_equals($_SESSION['oauth2state'], $state)) {
             unset($_SESSION['oauth2state']);
             $_SESSION['auth_error'] = 'Invalid state. Please try signing in again.';
             header('Location: ' . url('/auth/login'));
