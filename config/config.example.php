@@ -3,6 +3,14 @@
 declare(strict_types=1);
 
 /**
+ * config.example.php
+ * Purpose: Example config (copy to config.php); env-based for .env/IONOS.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
+/**
  * Copy to config.php and fill in values.
  * config.php is gitignored.
  * Uses env() so .env and server vars work on IONOS.

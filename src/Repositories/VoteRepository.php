@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * VoteRepository.php
+ * Purpose: Vote storage and queries (per option, per poll, batch).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Repositories;
 
 use Hillmeet\Support\Database;

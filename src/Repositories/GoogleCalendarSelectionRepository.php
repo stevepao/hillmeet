@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * GoogleCalendarSelectionRepository.php
+ * Purpose: User calendar selections (which calendars for free/busy).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Repositories;
 
 use Hillmeet\Support\Database;

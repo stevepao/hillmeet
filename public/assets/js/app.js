@@ -1,5 +1,9 @@
 /**
- * Hillmeet – minimal app JS (copy link, view toggle, etc.)
+ * app.js
+ * Purpose: Hillmeet app JS (copy link, view toggle, vote batch, results, lock, etc.).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 (function() {
   'use strict';

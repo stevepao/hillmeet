@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * EmailService.php
+ * Purpose: Send transactional email (PIN, poll invite, poll locked, .ics).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Services;
 
 use PHPMailer\PHPMailer\Exception as PHPMailerException;

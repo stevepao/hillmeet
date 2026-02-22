@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * Encryption.php
+ * Purpose: AES-256-GCM encrypt/decrypt for tokens and sensitive data.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Support;
 
 use RuntimeException;

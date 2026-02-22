@@ -1,4 +1,11 @@
 <?php
+/**
+ * new.php
+ * Purpose: Create poll landing (step 0).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Create poll';
 $content = ob_start();
 ?>

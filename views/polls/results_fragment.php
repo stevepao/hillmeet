@@ -1,4 +1,11 @@
 <?php
+/**
+ * results_fragment.php
+ * Purpose: Poll results partial (totals, matrix, debug).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $voteLabels = $voteLabels ?? ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 $resultsDebug = $resultsDebug ?? null;
 $resultsError = $resultsError ?? null;

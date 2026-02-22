@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * AuthController.php
+ * Purpose: Login, Google OAuth, email PIN, signout, timezone.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Controllers;
 
 use Hillmeet\Repositories\EmailLoginPinRepository;

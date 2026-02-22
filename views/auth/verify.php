@@ -1,4 +1,11 @@
 <?php
+/**
+ * verify.php
+ * Purpose: PIN verification form.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Verify PIN';
 $content = ob_start();
 $email = $_GET['email'] ?? $_SESSION['pin_sent_to'] ?? '';

@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * CalendarController.php
+ * Purpose: Google Calendar settings, connect, callback, save, disconnect.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Controllers;
 
 use Hillmeet\Repositories\FreebusyCacheRepository;

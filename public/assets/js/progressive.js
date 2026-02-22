@@ -1,5 +1,9 @@
 /**
- * Progressive enhancement: Check availability (calendar) with loading state and visible feedback
+ * progressive.js
+ * Purpose: Progressive enhancement (check availability, loading state, toasts).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 (function() {
   'use strict';

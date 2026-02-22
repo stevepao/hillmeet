@@ -1,7 +1,12 @@
 <?php
 /**
- * Step-by-step diagnostic. Visit https://meet.hillwork.net/diagnose.php
- * Copy the FULL output and paste it for debugging. Delete this file when done.
+ * diagnose.php
+ * Purpose: Step-by-step diagnostic for deployment debugging.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ *
+ * Visit /diagnose.php and copy the full output for debugging. Delete when done.
  */
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');

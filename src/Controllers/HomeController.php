@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * HomeController.php
+ * Purpose: Home and static pages (index, privacy, terms).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Controllers;
 
 use Hillmeet\Repositories\PollRepository;

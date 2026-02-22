@@ -1,4 +1,11 @@
 <?php
+/**
+ * options.php
+ * Purpose: Add time options (date range, generate, manual).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Add time options';
 $extraHead = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/light.css"><script src="https://cdn.jsdelivr.net/npm/flatpickr" defer></script>';
 $content = ob_start();

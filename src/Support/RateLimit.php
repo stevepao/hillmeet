@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * RateLimit.php
+ * Purpose: In-memory rate limiting by key with configurable limits.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Support;
 
 use PDO;

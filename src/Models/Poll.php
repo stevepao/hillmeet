@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * Poll.php
+ * Purpose: Poll model (fromRow, isLocked, isOrganizer).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Models;
 
 use stdClass;

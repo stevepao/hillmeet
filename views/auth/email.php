@@ -1,4 +1,11 @@
 <?php
+/**
+ * email.php
+ * Purpose: Email sign-in form (request PIN).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Sign in with email';
 $content = ob_start();
 $email = $_SESSION['auth_email'] ?? '';

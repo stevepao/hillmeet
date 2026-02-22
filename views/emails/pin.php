@@ -1,3 +1,12 @@
+<?php
+/**
+ * pin.php
+ * Purpose: Email template for one-time sign-in PIN.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+?>
 <!DOCTYPE html>
 <html>
 <head>

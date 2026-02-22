@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * IcsGenerator.php
+ * Purpose: Build iCalendar VEVENT (RFC 5545) for meeting times.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Services;
 
 /**

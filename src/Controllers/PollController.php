@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * PollController.php
+ * Purpose: Poll CRUD, options, share, vote, lock, results, create event, check availability.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Controllers;
 
 use Hillmeet\Models\Poll;

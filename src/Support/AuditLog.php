@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * AuditLog.php
+ * Purpose: Append-only audit log (action, entity, user, IP).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Support;
 
 use PDO;

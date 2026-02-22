@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * OAuthConnectionRepository.php
+ * Purpose: Google OAuth token storage (encrypted), get/upsert/delete.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Repositories;
 
 use Hillmeet\Support\Database;

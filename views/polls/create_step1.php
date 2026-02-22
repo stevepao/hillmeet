@@ -1,4 +1,11 @@
 <?php
+/**
+ * create_step1.php
+ * Purpose: Create poll form (title, timezone, duration).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Create poll';
 $content = ob_start();
 $input = $_SESSION['poll_input'] ?? [];

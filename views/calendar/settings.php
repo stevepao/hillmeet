@@ -1,4 +1,11 @@
 <?php
+/**
+ * settings.php
+ * Purpose: Calendar settings (connect, select calendars, disconnect).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Calendar settings';
 $content = ob_start();
 ?>

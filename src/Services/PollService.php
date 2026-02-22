@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * PollService.php
+ * Purpose: Poll CRUD, options, votes, lock, invites, results, notifications.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Services;
 
 use Hillmeet\Models\Poll;

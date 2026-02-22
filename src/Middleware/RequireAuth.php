@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * RequireAuth.php
+ * Purpose: Redirect unauthenticated users to login; store return_to.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Middleware;
 
 use function Hillmeet\Support\url;

@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * EmailLoginPinRepository.php
+ * Purpose: One-time PIN storage and validation for email login.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Repositories;
 
 use Hillmeet\Support\Database;

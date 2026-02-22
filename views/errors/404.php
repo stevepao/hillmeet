@@ -1,3 +1,12 @@
+<?php
+/**
+ * 404.php
+ * Purpose: Not found error page.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

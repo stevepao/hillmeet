@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * index.php
+ * Purpose: Front controller; routing, CSRF, dispatch to controllers.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 // Temporary: add ?debug=1 to any URL to see the actual PHP error (remove in production)
 if (isset($_GET['debug']) && $_GET['debug'] === '1') {
     ini_set('display_errors', '1');

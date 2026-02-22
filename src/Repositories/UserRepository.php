@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * UserRepository.php
+ * Purpose: User CRUD, findByEmail, Google/email create, attach Google.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Repositories;
 
 use Hillmeet\Models\User;

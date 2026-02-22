@@ -1,8 +1,11 @@
 <?php
 
 /**
- * Deployment check for IONOS. Visit https://meet.hillwork.net/deploy-check.php
- * Delete this file after fixing issues (or restrict by IP).
+ * deploy-check.php
+ * Purpose: Deployment check (PHP, config, DB, env). Restrict or delete in production.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 
 header('Content-Type: text/plain; charset=utf-8');

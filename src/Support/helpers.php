@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * helpers.php
+ * Purpose: Global helpers (e, url, config, current_user, poll_back_url, etc.).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Support;
 
 /**

@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * PollRepository.php
+ * Purpose: Poll CRUD, options, slug/secret lookup, list owned/participated.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Repositories;
 
 use Hillmeet\Models\Poll;

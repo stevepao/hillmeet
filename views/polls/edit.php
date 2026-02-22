@@ -1,4 +1,11 @@
 <?php
+/**
+ * edit.php
+ * Purpose: Edit poll details (title, description, location).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Edit poll';
 $content = ob_start();
 ?>

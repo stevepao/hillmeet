@@ -3,6 +3,14 @@
 declare(strict_types=1);
 
 /**
+ * env.php
+ * Purpose: Load .env and provide env() helper for config.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
+/**
  * Get env var (works on IONOS/shared hosts where getenv() can be unreliable).
  */
 function env(string $key, $default = null)

@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * bootstrap.php
+ * Purpose: Application bootstrap (env, config, session, timezone).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');

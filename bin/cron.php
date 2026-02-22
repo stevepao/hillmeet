@@ -4,8 +4,13 @@
 declare(strict_types=1);
 
 /**
- * Run from cron (e.g. every 5–15 min) to clean expired data.
- * IONOS: use "Scheduled Tasks" to call: php /path/to/hillmeet/bin/cron.php
+ * cron.php
+ * Purpose: Cron job to clean expired PINs and optional session prune.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ *
+ * Run from cron (e.g. every 5–15 min). IONOS: Scheduled Tasks → php /path/to/hillmeet/bin/cron.php
  */
 
 require_once dirname(__DIR__) . '/config/env.php';

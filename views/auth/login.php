@@ -1,4 +1,11 @@
 <?php
+/**
+ * login.php
+ * Purpose: Sign-in page (Google and email PIN).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Sign in';
 $content = ob_start();
 $googleClientId = $googleClientId ?? '';

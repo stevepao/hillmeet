@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * User.php
+ * Purpose: User model (fromRow).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Models;
 
 use stdClass;

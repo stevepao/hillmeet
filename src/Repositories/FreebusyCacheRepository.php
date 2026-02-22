@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * FreebusyCacheRepository.php
+ * Purpose: Cache free/busy results per user/poll/option with TTL.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Repositories;
 
 use Hillmeet\Support\Database;

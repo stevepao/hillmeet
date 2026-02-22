@@ -1,3 +1,12 @@
+<?php
+/**
+ * poll_locked.php
+ * Purpose: Email template for poll locked / final time notification.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+?>
 <!DOCTYPE html>
 <html>
 <head>

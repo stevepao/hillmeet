@@ -1,4 +1,11 @@
 <?php
+/**
+ * share.php
+ * Purpose: Share poll (invite emails, copy link).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Invite people';
 $content = ob_start();
 $shareUrlQuery = $secret !== '' ? ['secret' => $secret] : [];

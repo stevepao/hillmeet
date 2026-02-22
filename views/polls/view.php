@@ -1,4 +1,11 @@
 <?php
+/**
+ * view.php
+ * Purpose: Poll view (vote, results, lock, create event).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = \Hillmeet\Support\e($poll->title);
 $content = ob_start();
 $pollUrlWithSecret = !empty($accessByInvite) && $inviteToken !== ''

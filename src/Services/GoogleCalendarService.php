@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * GoogleCalendarService.php
+ * Purpose: Google Calendar OAuth, free/busy, create event, calendar list.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Services;
 
 use Hillmeet\Repositories\FreebusyCacheRepository;

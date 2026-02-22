@@ -1,6 +1,10 @@
 <?php
 /**
- * Privacy Policy — refined for Hillmeet.
+ * privacy.php
+ * Purpose: Privacy Policy page (legal).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 $pageTitle = 'Privacy Policy';
 $content = ob_start();

@@ -1,6 +1,10 @@
 <?php
 /**
- * Terms of Service — Hillmeet.
+ * terms.php
+ * Purpose: Terms of Service page (legal).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 $pageTitle = 'Terms of Service';
 $content = ob_start();

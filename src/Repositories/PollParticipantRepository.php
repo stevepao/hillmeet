@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * PollParticipantRepository.php
+ * Purpose: Poll participants (add, list, check participation).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Repositories;
 
 use Hillmeet\Support\Database;

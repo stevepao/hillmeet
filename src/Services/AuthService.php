@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * AuthService.php
+ * Purpose: Google and email PIN auth, find/create user, send/verify PIN.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Services;
 
 use Hillmeet\Repositories\EmailLoginPinRepository;

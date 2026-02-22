@@ -1,4 +1,11 @@
 <?php
+/**
+ * home.php
+ * Purpose: Home page view (owned and participated polls).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
 $pageTitle = 'Home';
 $content = ob_start();
 

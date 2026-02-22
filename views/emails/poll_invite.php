@@ -1,3 +1,12 @@
+<?php
+/**
+ * poll_invite.php
+ * Purpose: Email template for poll invitation.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+?>
 <!DOCTYPE html>
 <html>
 <head>

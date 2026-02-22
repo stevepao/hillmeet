@@ -1,3 +1,12 @@
+<?php
+/**
+ * main.php
+ * Purpose: Main layout (header, nav, content, scripts).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

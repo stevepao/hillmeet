@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * SessionHandler.php
+ * Purpose: Configure and register custom session handler (DB-backed).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Support;
 
 use SessionHandlerInterface;

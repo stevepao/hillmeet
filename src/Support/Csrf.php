@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * Csrf.php
+ * Purpose: CSRF token generation and validation.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Support;
 
 final class Csrf
