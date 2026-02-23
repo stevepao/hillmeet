@@ -26,12 +26,50 @@ final class GoogleCalendarService
         private FreebusyCacheRepository $freebusyCache
     ) {}
 
+    /** Scopes for connecting Calendar: list calendars and free/busy only. */
+    private const SCOPES_CONNECT = [
+        'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
+        'https://www.googleapis.com/auth/calendar.events.freebusy',
+    ];
+
+    /** Scope for creating events (requested only when user creates an event). */
+    private const SCOPE_EVENTS = 'https://www.googleapis.com/auth/calendar.events';
+
     public function getAuthUrl(string $state): string
+    {
+        return $this->buildAuthUrl($state, self::SCOPES_CONNECT);
+    }
+
+    /** Auth URL for incremental authorization: request existing scopes + calendar.events so the new token has full access. */
+    public function getAuthUrlForEventsScope(string $state): string
+    {
+        return $this->buildAuthUrl($state, array_merge(self::SCOPES_CONNECT, [self::SCOPE_EVENTS]));
+    }
+
+    private function buildAuthUrl(string $state, array $scopes): string
     {
         $clientId = config('google.client_id');
         $redirectUri = config('google.redirect_uri') ?: (rtrim((string) config('app.url', ''), '/') . '/auth/google/callback');
-        $scope = urlencode('https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events');
+        $scope = urlencode(implode(' ', $scopes));
         return "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={$clientId}&redirect_uri=" . urlencode($redirectUri) . "&scope={$scope}&access_type=offline&prompt=consent&state=" . urlencode($state);
+    }
+
+    /**
+     * Revoke a refresh token on Google's side so all Calendar access (list, free/busy, events) is removed.
+     * If the token was already revoked or is invalid, we do nothing and do not throw (graceful).
+     */
+    public static function revokeRefreshToken(string $refreshToken): void
+    {
+        $ctx = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => 'Content-Type: application/x-www-form-urlencoded',
+                'content' => http_build_query(['token' => $refreshToken]),
+                'ignore_errors' => true,
+            ],
+        ]);
+        @file_get_contents('https://oauth2.googleapis.com/revoke', false, $ctx);
+        // 400 = already revoked or invalid; 200 = revoked. We always proceed gracefully.
     }
 
     public function exchangeCodeForTokens(string $code, int $userId): ?string
@@ -190,12 +228,16 @@ final class GoogleCalendarService
         return ['busy' => $result, 'checked_at' => date('c')];
     }
 
-    public function createEvent(int $userId, string $calendarId, string $title, string $description, string $location, string $startUtc, string $endUtc, array $attendeeEmails = []): ?string
+    /**
+     * Create a calendar event. Returns result shape for callers to detect scope errors.
+     * @return array{event_id?: string, error?: string} event_id on success, error one of no_token, insufficient_scope
+     */
+    public function createEvent(int $userId, string $calendarId, string $title, string $description, string $location, string $startUtc, string $endUtc, array $attendeeEmails = []): array
     {
         $tokenResult = $this->getAccessToken($userId);
         $accessToken = $tokenResult['access_token'] ?? null;
         if ($accessToken === null) {
-            return null;
+            return ['error' => 'no_token'];
         }
         $event = [
             'summary' => $title,
@@ -208,8 +250,14 @@ final class GoogleCalendarService
             $event['attendees'] = array_map(fn($e) => ['email' => $e], $attendeeEmails);
         }
         $url = 'https://www.googleapis.com/calendar/v3/calendars/' . urlencode($calendarId) . '/events';
-        $res = $this->apiPost($accessToken, $url, $event);
-        return $res['id'] ?? null;
+        $apiResult = $this->apiPostWithStatus($accessToken, $url, $event);
+        $res = $apiResult['body'];
+        $status = $apiResult['status'];
+        if ($status === 403 && $res !== null && isset($res['error']['message']) && (stripos($res['error']['message'], 'insufficient') !== false || stripos($res['error']['message'], 'scope') !== false)) {
+            return ['error' => 'insufficient_scope'];
+        }
+        $eventId = $res['id'] ?? null;
+        return $eventId !== null ? ['event_id' => $eventId] : ['error' => 'no_token'];
     }
 
     /**

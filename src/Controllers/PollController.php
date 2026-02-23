@@ -688,7 +688,7 @@ final class PollController
             new GoogleCalendarSelectionRepository(),
             new \Hillmeet\Repositories\FreebusyCacheRepository()
         );
-        $eventId = $calendarService->createEvent(
+        $result = $calendarService->createEvent(
             (int) current_user()->id,
             $calendarId,
             $poll->title,
@@ -698,8 +698,20 @@ final class PollController
             $lockedOption->end_utc,
             $emails
         );
-        if ($eventId !== null) {
-            (new CalendarEventRepository())->create($poll->id, $lockedOption->id, (int) current_user()->id, $calendarId, $eventId);
+        if (isset($result['error']) && $result['error'] === 'insufficient_scope') {
+            $state = bin2hex(random_bytes(16));
+            $_SESSION['oauth2state_calendar_events'] = $state;
+            $_SESSION['pending_create_event'] = [
+                'slug' => $slug,
+                'secret' => $secret,
+                'calendar_id' => $calendarId,
+                'invite_participants' => $inviteParticipants,
+            ];
+            header('Location: ' . $calendarService->getAuthUrlForEventsScope($state));
+            exit;
+        }
+        if (isset($result['event_id'])) {
+            (new CalendarEventRepository())->create($poll->id, $lockedOption->id, (int) current_user()->id, $calendarId, $result['event_id']);
         }
         header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
         exit;

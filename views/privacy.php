@@ -98,7 +98,7 @@ $content = ob_start();
     </ul>
 
     <h3 style="font-size:1rem; margin-top:var(--space-4); margin-bottom:var(--space-2);">Disconnecting Google Calendar</h3>
-    <p>You can disconnect Google Calendar at any time from <strong>Calendar settings</strong> in the app (Disconnect button). When you disconnect, we immediately delete our stored copies: OAuth tokens, your calendar selections (IDs and names), and cached free/busy data. If you revoke Hillmeet’s access in <strong>Google Account → Security → Third-party access</strong> instead, we can no longer access your Google data; you may then use the Disconnect button in the app to remove our stored copies, or request removal by contacting us.</p>
+    <p>You can disconnect Google Calendar at any time from <strong>Calendar settings</strong> in the app (Disconnect button). When you disconnect, we revoke the connection with Google so that all access (calendar list, free/busy, and events) is removed on Google’s side, and we immediately delete our stored copies: OAuth tokens, your calendar selections (IDs and names), and cached free/busy data. If you had already revoked Hillmeet’s access in <strong>Google Account → Security → Third-party access</strong>, we still remove our stored copies when you use Disconnect.</p>
 
     <h3 style="font-size:1rem; margin-top:var(--space-4); margin-bottom:var(--space-2);">Account deletion</h3>
     <p>When you request account deletion and we delete your account, we delete all data associated with it, including: your profile (email, name), polls you created, your votes and participation, OAuth tokens, stored calendar selections, and cached free/busy data. Events we created on your Google Calendar are not removed by us (they remain in your calendar); you can delete those in Google Calendar if you wish.</p>
@@ -120,7 +120,7 @@ $content = ob_start();
     <ul style="margin:var(--space-2) 0; padding-left:1.25rem;">
       <li>Use the app without a Google account (sign in with email and PIN)</li>
       <li>Use the app without connecting Google Calendar (receive .ics by email instead)</li>
-      <li>Disconnect Google Calendar in the app (Calendar settings → Disconnect) to remove our stored tokens, calendar selections, and free/busy cache. You can also revoke Hillmeet’s access in <strong>Google Account → Security → Third-party access</strong>; we will then no longer be able to read your availability or create events until you reconnect.</li>
+      <li>Disconnect Google Calendar in the app (Calendar settings → Disconnect) to revoke access with Google and remove our stored tokens, calendar selections, and free/busy cache. You can also revoke Hillmeet’s access in <strong>Google Account → Security → Third-party access</strong>; using Disconnect in the app then removes our stored copies.</li>
       <li>Delete individual polls at any time</li>
       <li>Request deletion of your account and associated data by contacting us</li>
     </ul>

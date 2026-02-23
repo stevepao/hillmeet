@@ -117,6 +117,10 @@ final class CalendarController
         \Hillmeet\Middleware\RequireAuth::check();
         $userId = (int) current_user()->id;
         $oauthRepo = new OAuthConnectionRepository();
+        $refreshToken = $oauthRepo->getRefreshToken($userId, 'google');
+        if ($refreshToken !== null) {
+            GoogleCalendarService::revokeRefreshToken($refreshToken);
+        }
         $oauthRepo->deleteForUser($userId, 'google');
         (new GoogleCalendarSelectionRepository())->deleteForUser($userId);
         (new FreebusyCacheRepository())->invalidateForUser($userId);

@@ -241,7 +241,7 @@ final class PollService
         $hasCalendar = $calendarService->getAuthUrl('x') !== '' && (new OAuthConnectionRepository())->hasConnection($currentUserId);
         if ($hasCalendar && !$eventRepo->existsForPollAndOption($poll->id, $lockedOption->id)) {
             $attendeeEmails = array_keys($emailsSent);
-            $eventId = $calendarService->createEvent(
+            $result = $calendarService->createEvent(
                 $currentUserId,
                 'primary',
                 $poll->title,
@@ -251,6 +251,7 @@ final class PollService
                 $lockedOption->end_utc,
                 $attendeeEmails
             );
+            $eventId = $result['event_id'] ?? null;
             if ($eventId !== null) {
                 $eventRepo->create($poll->id, $lockedOption->id, $currentUserId, 'primary', $eventId);
             }

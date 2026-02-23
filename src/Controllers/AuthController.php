@@ -121,6 +121,26 @@ final class AuthController
     public function googleCallback(): void
     {
         if (isset($_GET['error'])) {
+            $state = $_GET['state'] ?? '';
+            // Calendar events incremental auth cancelled -> back to poll (no event created)
+            if (!empty($_SESSION['oauth2state_calendar_events']) && $state !== '' && hash_equals($_SESSION['oauth2state_calendar_events'], $state)) {
+                unset($_SESSION['oauth2state_calendar_events']);
+                $pending = $_SESSION['pending_create_event'] ?? null;
+                unset($_SESSION['pending_create_event']);
+                if ($pending !== null && isset($pending['slug'], $pending['secret'])) {
+                    $_SESSION['calendar_event_denied_slug'] = $pending['slug'];
+                    header('Location: ' . url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret'])));
+                    exit;
+                }
+            }
+            // Calendar connect cancelled -> back to calendar settings
+            if (!empty($_SESSION['oauth2state_calendar']) && $state !== '' && hash_equals($_SESSION['oauth2state_calendar'], $state)) {
+                unset($_SESSION['oauth2state_calendar']);
+                require_auth();
+                $_SESSION['calendar_connect_cancelled'] = true;
+                header('Location: ' . url('/calendar'));
+                exit;
+            }
             $_SESSION['auth_error'] = 'Google sign-in was cancelled or failed.';
             header('Location: ' . url('/auth/login'));
             exit;
@@ -129,6 +149,67 @@ final class AuthController
         $state = $_GET['state'] ?? '';
         if ($code === '') {
             header('Location: ' . url('/auth/login'));
+            exit;
+        }
+        // Incremental auth: add calendar.events scope then complete event creation
+        if (!empty($_SESSION['oauth2state_calendar_events']) && $state !== '' && hash_equals($_SESSION['oauth2state_calendar_events'], $state)) {
+            unset($_SESSION['oauth2state_calendar_events']);
+            require_auth();
+            $pending = $_SESSION['pending_create_event'] ?? null;
+            unset($_SESSION['pending_create_event']);
+            if ($pending === null || !isset($pending['slug'], $pending['secret'], $pending['calendar_id'])) {
+                header('Location: ' . url('/'));
+                exit;
+            }
+            $oauth = new \Hillmeet\Services\GoogleCalendarService(
+                new \Hillmeet\Repositories\OAuthConnectionRepository(),
+                new \Hillmeet\Repositories\GoogleCalendarSelectionRepository(),
+                new \Hillmeet\Repositories\FreebusyCacheRepository()
+            );
+            $oauth->exchangeCodeForTokens($code, (int) $_SESSION['user']->id);
+            $pollRepo = new \Hillmeet\Repositories\PollRepository();
+            $poll = $pollRepo->findBySlugAndVerifySecret($pending['slug'], $pending['secret']);
+            if ($poll === null || !$poll->isOrganizer((int) $_SESSION['user']->id) || !$poll->isLocked() || $poll->locked_option_id === null) {
+                header('Location: ' . url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret'])));
+                exit;
+            }
+            $options = $pollRepo->getOptions($poll->id);
+            $lockedOption = null;
+            foreach ($options as $o) {
+                if ($o->id === $poll->locked_option_id) {
+                    $lockedOption = $o;
+                    break;
+                }
+            }
+            if ($lockedOption === null) {
+                header('Location: ' . url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret'])));
+                exit;
+            }
+            $emails = [];
+            if (!empty($pending['invite_participants'])) {
+                $participantRepo = new \Hillmeet\Repositories\PollParticipantRepository();
+                $userRepo = new \Hillmeet\Repositories\UserRepository();
+                foreach ($participantRepo->getParticipantIds($poll->id) as $uid) {
+                    $u = $userRepo->findById($uid);
+                    if ($u !== null) {
+                        $emails[] = $u->email;
+                    }
+                }
+            }
+            $result = $oauth->createEvent(
+                (int) $_SESSION['user']->id,
+                $pending['calendar_id'],
+                $poll->title,
+                $poll->description ?? '',
+                $poll->location ?? '',
+                $lockedOption->start_utc,
+                $lockedOption->end_utc,
+                $emails
+            );
+            if (isset($result['event_id'])) {
+                (new \Hillmeet\Repositories\CalendarEventRepository())->create($poll->id, $lockedOption->id, (int) $_SESSION['user']->id, $pending['calendar_id'], $result['event_id']);
+            }
+            header('Location: ' . url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret'])));
             exit;
         }
         if (!empty($_SESSION['oauth2state_calendar']) && $state !== '' && hash_equals($_SESSION['oauth2state_calendar'], $state)) {

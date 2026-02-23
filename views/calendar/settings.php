@@ -13,7 +13,10 @@ $content = ob_start();
 
 <?php if (!$connected): ?>
   <?php if (!empty($_SESSION['calendar_disconnected'])): unset($_SESSION['calendar_disconnected']); ?>
-    <p class="success-message" role="alert" style="margin-bottom:var(--space-4);">Google Calendar disconnected. Your stored connection data has been removed.</p>
+    <p class="success-message" role="alert" style="margin-bottom:var(--space-4);">Google Calendar disconnected. Access has been revoked with Google and your stored connection data has been removed.</p>
+  <?php endif; ?>
+  <?php if (!empty($_SESSION['calendar_connect_cancelled'])): unset($_SESSION['calendar_connect_cancelled']); ?>
+    <p class="muted" role="alert" style="margin-bottom:var(--space-4);">Connection was cancelled. You can connect when you’re ready—we only use access to list your calendars and check free/busy for poll times.</p>
   <?php endif; ?>
   <div class="card">
     <p>Connect your Google Calendar to check free/busy when voting.</p>
@@ -46,7 +49,7 @@ $content = ob_start();
     <button type="submit" class="btn btn-primary">Save</button>
   </form>
   <p class="helper" style="margin-top:var(--space-4);">Free/busy cache TTL: <?= (int)$cacheTtl ?> seconds.</p>
-  <form method="post" action="<?= \Hillmeet\Support\url('/calendar/disconnect') ?>" style="margin-top:var(--space-4);" onsubmit="return confirm('Disconnect Google Calendar? We will remove your stored tokens, calendar selections, and free/busy cache. You can reconnect anytime.');">
+  <form method="post" action="<?= \Hillmeet\Support\url('/calendar/disconnect') ?>" style="margin-top:var(--space-4);" onsubmit="return confirm('Disconnect Google Calendar? We will revoke access with Google and remove your stored tokens, calendar selections, and free/busy cache. You can reconnect anytime.');">
     <?= \Hillmeet\Support\Csrf::field() ?>
     <button type="submit" class="btn btn-secondary">Disconnect Google Calendar</button>
   </form>
