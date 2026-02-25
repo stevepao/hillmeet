@@ -216,7 +216,7 @@ final class PollService
         $organizerEmail = $organizer ? $organizer->email : '';
         $icsContent = '';
         if ($organizerEmail !== '') {
-            $icsContent = IcsGenerator::singleEvent($poll->title, $lockedOption->start_utc, $lockedOption->end_utc, $organizerEmail);
+            $icsContent = IcsGenerator::singleEvent($poll->title, $lockedOption->start_utc, $lockedOption->end_utc, $organizerEmail, null, $poll->location ?? '');
         }
         $calendarService = new GoogleCalendarService(
             new OAuthConnectionRepository(),
@@ -275,7 +275,7 @@ final class PollService
         $organizerTz = $poll->timezone;
         $icsContent = '';
         if ($organizerEmail !== '') {
-            $icsContent = IcsGenerator::singleEvent($poll->title, $lockedOption->start_utc, $lockedOption->end_utc, $organizerEmail);
+            $icsContent = IcsGenerator::singleEvent($poll->title, $lockedOption->start_utc, $lockedOption->end_utc, $organizerEmail, null, $poll->location ?? '');
         }
         $formatLockedTime = function (string $tzId) use ($lockedOption, $organizerTz): string {
             try {

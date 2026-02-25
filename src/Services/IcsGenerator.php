@@ -24,13 +24,15 @@ final class IcsGenerator
      * @param string $endUtc End datetime in UTC, format Y-m-d H:i:s
      * @param string $organizerEmail Organizer mailto
      * @param string|null $uid Optional UID; if null a unique one is generated
+     * @param string|null $location Optional location (included in VEVENT if non-empty)
      */
     public static function singleEvent(
         string $summary,
         string $startUtc,
         string $endUtc,
         string $organizerEmail,
-        ?string $uid = null
+        ?string $uid = null,
+        ?string $location = null
     ): string {
         $dtStart = self::formatUtcIcs($startUtc);
         $dtEnd = self::formatUtcIcs($endUtc);
@@ -52,9 +54,12 @@ final class IcsGenerator
             'DTEND:' . $dtEnd,
             'SUMMARY:' . $summaryEsc,
             'ORGANIZER:' . $organizerEsc,
-            'END:VEVENT',
-            'END:VCALENDAR',
         ];
+        if ($location !== null && $location !== '') {
+            $lines[] = 'LOCATION:' . self::escapeIcs($location);
+        }
+        $lines[] = 'END:VEVENT';
+        $lines[] = 'END:VCALENDAR';
         return implode("\r\n", $lines);
     }
 
