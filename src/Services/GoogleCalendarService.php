@@ -253,7 +253,7 @@ final class GoogleCalendarService
         $apiResult = $this->apiPostWithStatus($accessToken, $url, $event);
         $res = $apiResult['body'];
         $status = $apiResult['status'];
-        if ($status === 403 && $res !== null && isset($res['error']['message']) && (stripos($res['error']['message'], 'insufficient') !== false || stripos($res['error']['message'], 'scope') !== false)) {
+        if ($status === 403) {
             return ['error' => 'insufficient_scope'];
         }
         $eventId = $res['id'] ?? null;

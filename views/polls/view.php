@@ -148,6 +148,20 @@ $canEdit = !$poll->isLocked();
     <?php if (!empty($_SESSION['calendar_event_denied_slug']) && $_SESSION['calendar_event_denied_slug'] === $poll->slug): unset($_SESSION['calendar_event_denied_slug']); ?>
       <p class="card card-2 muted" role="alert" style="margin-top:var(--space-3);">Calendar event wasn’t created because access wasn’t granted. The poll is already locked and participants have been notified (with ICS). You can <strong>try again</strong> below to add the event to Google Calendar, or continue without it.</p>
     <?php endif; ?>
+    <?php if (!empty($_SESSION['calendar_event_error_slug']) && $_SESSION['calendar_event_error_slug'] === $poll->slug): ?>
+      <?php
+      $calendarEventErr = $_SESSION['calendar_event_error'] ?? 'failed';
+      unset($_SESSION['calendar_event_error_slug'], $_SESSION['calendar_event_error']);
+      $calendarUrl = \Hillmeet\Support\url('/calendar');
+      ?>
+      <p class="card card-2 muted" role="alert" style="margin-top:var(--space-3);">
+        <?php if ($calendarEventErr === 'not_connected'): ?>
+          Connect <a href="<?= \Hillmeet\Support\e($calendarUrl) ?>">Google Calendar</a> to create events. Then try again below.
+        <?php else: ?>
+          Couldn’t create the calendar event. Try again below or <a href="<?= \Hillmeet\Support\e($calendarUrl) ?>">check Calendar settings</a>.
+        <?php endif; ?>
+      </p>
+    <?php endif; ?>
     <?php if (!$eventCreated): ?>
       <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/create-event') ?>" style="margin-top:var(--space-3);">
         <?= \Hillmeet\Support\Csrf::field() ?>

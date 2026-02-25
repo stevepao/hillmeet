@@ -712,7 +712,11 @@ final class PollController
         }
         if (isset($result['event_id'])) {
             (new CalendarEventRepository())->create($poll->id, $lockedOption->id, (int) current_user()->id, $calendarId, $result['event_id']);
+            header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+            exit;
         }
+        $_SESSION['calendar_event_error_slug'] = $slug;
+        $_SESSION['calendar_event_error'] = $result['error'] === 'no_token' ? 'not_connected' : 'failed';
         header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
         exit;
     }
