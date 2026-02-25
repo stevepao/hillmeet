@@ -23,7 +23,7 @@
   <header class="app-header">
     <div class="container">
       <a href="<?= \Hillmeet\Support\url('/') ?>" class="app-logo" aria-label="Hillmeet home">
-        <img src="<?= \Hillmeet\Support\url('/assets/hillmeet.png') ?>" alt="" width="140" height="32" class="app-logo-img">
+        <img src="<?= \Hillmeet\Support\url('/assets/hillmeet.png') ?>" alt="" width="280" height="64" class="app-logo-img">
       </a>
       <nav class="app-nav">
         <?php if (!empty($_SESSION['user'])): ?>
