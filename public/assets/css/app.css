@@ -36,6 +36,16 @@
 .app-logo {
   font-size: var(--text-lg);
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+
+.app-logo-img {
+  display: block;
+  height: 32px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
 }
 
 .app-nav {
