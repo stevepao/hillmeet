@@ -706,6 +706,7 @@ final class PollController
                 'secret' => $secret,
                 'calendar_id' => $calendarId,
                 'invite_participants' => $inviteParticipants,
+                'invitee_emails' => $emails,
             ];
             header('Location: ' . $calendarService->getAuthUrlForEventsScope($state));
             exit;

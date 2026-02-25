@@ -193,7 +193,9 @@ final class AuthController
                 exit;
             }
             $emails = [];
-            if (!empty($pending['invite_participants'])) {
+            if (isset($pending['invitee_emails']) && is_array($pending['invitee_emails'])) {
+                $emails = array_values(array_filter(array_map('strval', $pending['invitee_emails'])));
+            } elseif (!empty($pending['invite_participants'])) {
                 $participantRepo = new \Hillmeet\Repositories\PollParticipantRepository();
                 $userRepo = new \Hillmeet\Repositories\UserRepository();
                 foreach ($participantRepo->getParticipantIds($poll->id) as $uid) {
