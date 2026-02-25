@@ -823,4 +823,56 @@ final class PollController
         echo json_encode(['ok' => true, 'busy' => $out['busy'], 'checked_at' => $out['checked_at']]);
         exit;
     }
+
+    /**
+     * POST /poll/{slug}/auto-accept-availability
+     * Set votes from cached freebusy: Works (yes) for free slots, Can't (no) for busy. Then redirect to poll with results open.
+     */
+    public function autoAcceptAvailability(string $slug): void
+    {
+        $this->auth();
+        $secret = $_POST['secret'] ?? '';
+        $inviteToken = $_POST['invite'] ?? '';
+        $resolved = $this->resolvePollForAccess($slug, $secret, $inviteToken, false, false);
+        if ($resolved === null) {
+            $_SESSION['vote_error'] = 'Poll not found or invalid link.';
+            header('Location: ' . url('/poll/' . $slug));
+            exit;
+        }
+        $poll = $resolved['poll'];
+        $backUrl = $resolved['back_url'];
+        if ($poll->isLocked()) {
+            $_SESSION['vote_error'] = 'This poll is finalized.';
+            header('Location: ' . $backUrl);
+            exit;
+        }
+        $userId = (int) current_user()->id;
+        $freebusyCache = new \Hillmeet\Repositories\FreebusyCacheRepository();
+        $ttl = (int) \Hillmeet\Support\config('freebusy_cache_ttl', 600);
+        $options = $this->pollRepo->getOptions($poll->id);
+        $optionIds = array_column($options, 'id');
+        $freebusyByOption = $freebusyCache->getForPoll($userId, $poll->id, $optionIds, $ttl);
+        if ($freebusyByOption === []) {
+            $_SESSION['vote_error'] = 'Check availability first, then use Auto-accept.';
+            header('Location: ' . $backUrl);
+            exit;
+        }
+        $votes = [];
+        foreach ($options as $opt) {
+            if (isset($freebusyByOption[$opt->id])) {
+                $votes[$opt->id] = $freebusyByOption[$opt->id] ? 'no' : 'yes';
+            } else {
+                $votes[$opt->id] = '';
+            }
+        }
+        $err = $this->pollService->voteBatch($poll->id, $userId, $votes, $_SERVER['REMOTE_ADDR'] ?? '');
+        if ($err !== null) {
+            $_SESSION['vote_error'] = str_starts_with($err, 'STALE_OPTIONS:') ? substr($err, strlen('STALE_OPTIONS:')) : $err;
+            header('Location: ' . $backUrl);
+            exit;
+        }
+        $resultsParam = strpos($backUrl, '?') !== false ? '&' : '?';
+        header('Location: ' . $backUrl . $resultsParam . 'expand=results');
+        exit;
+    }
 }

@@ -66,6 +66,7 @@ $routes = [
         '/poll/{slug}/lock' => [\Hillmeet\Controllers\PollController::class, 'lock'],
         '/poll/{slug}/create-event' => [\Hillmeet\Controllers\PollController::class, 'createEvent'],
         '/poll/{slug}/check-availability' => [\Hillmeet\Controllers\PollController::class, 'checkAvailability'],
+        '/poll/{slug}/auto-accept-availability' => [\Hillmeet\Controllers\PollController::class, 'autoAcceptAvailability'],
         '/settings/timezone' => [\Hillmeet\Controllers\AuthController::class, 'setTimezone'],
         '/calendar/save' => [\Hillmeet\Controllers\CalendarController::class, 'save'],
     ],

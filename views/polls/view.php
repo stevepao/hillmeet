@@ -56,7 +56,15 @@ $canEdit = !$poll->isLocked();
     <a href="<?= \Hillmeet\Support\e($calendarUrl) ?>" class="btn btn-secondary btn-sm">Choose calendars</a>
     <button type="button" class="btn btn-secondary btn-sm" id="check-availability">Check my availability</button>
     <?php if ($canEdit && count($freebusyByOption) > 0): ?>
-    <button type="button" class="btn btn-secondary btn-sm" id="auto-accept-availability" title="Set Works for free times and Can't for busy times, then submit votes">Auto-accept by availability</button>
+    <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/auto-accept-availability') ?>" style="display:inline;">
+      <?= \Hillmeet\Support\Csrf::field() ?>
+      <?php if (!empty($accessByInvite) && $inviteToken !== ''): ?>
+      <input type="hidden" name="invite" value="<?= \Hillmeet\Support\e($inviteToken) ?>">
+      <?php else: ?>
+      <input type="hidden" name="secret" value="<?= \Hillmeet\Support\e($_GET['secret'] ?? '') ?>">
+      <?php endif; ?>
+      <button type="submit" class="btn btn-secondary btn-sm" title="Set Works for free times and Can't for busy times, then show results">Auto-accept by availability</button>
+    </form>
     <?php endif; ?>
   <?php else: ?>
     <?php
@@ -240,7 +248,6 @@ window.HILLMEET_POLL = {
   checkAvailabilityUrl: <?= json_encode(!empty($accessByInvite) && $inviteToken !== '' ? \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability', ['invite' => $inviteToken]) : \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability?secret=' . urlencode($_GET['secret'] ?? ''))) ?>,
   timezoneUpdateUrl: <?= json_encode(\Hillmeet\Support\url('/settings/timezone')) ?>,
   savedVotes: <?= json_encode(array_map(function ($v) { return $v ?? ''; }, $userVotes)) ?>,
-  lastBusy: <?= json_encode($freebusyByOption) ?>,
   debug: <?= (\env('APP_ENV', '') === 'local' || \env('APP_DEBUG', '') === 'true') ? 'true' : 'false' ?>
 };
 
