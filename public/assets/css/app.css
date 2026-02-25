@@ -76,13 +76,19 @@
 }
 
 .auth-tagline {
-  font-size: var(--text-lg);
-  line-height: var(--leading-normal);
+  font-size: var(--text-xl);
+  line-height: 1.4;
   color: var(--text);
-  margin: 0 0 var(--space-6);
+  margin: 0 0 var(--space-8);
   font-weight: 500;
   letter-spacing: 0.01em;
   max-width: 22rem;
+}
+
+@media (min-width: 30rem) {
+  .auth-tagline {
+    font-size: var(--text-2xl);
+  }
 }
 
 .auth-tagline-wrap {
