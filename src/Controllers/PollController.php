@@ -370,7 +370,8 @@ final class PollController
         $poll = $resolved['poll'];
         $accessByInvite = $resolved['access_by_invite'];
 
-        $options = $this->pollRepo->getOptions($poll->id);
+        $results = $this->pollService->getResults($poll);
+        $options = $results['options'];
         $voteRepo = new VoteRepository();
         $userVotes = [];
         $userId = (int) current_user()->id;
@@ -379,7 +380,6 @@ final class PollController
         }
         $participantRepo = new PollParticipantRepository();
         $participantRepo->add($poll->id, $userId);
-        $results = $this->pollService->getResults($poll);
         $calendarService = new GoogleCalendarService(
             new OAuthConnectionRepository(),
             new GoogleCalendarSelectionRepository(),

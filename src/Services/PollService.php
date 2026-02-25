@@ -365,6 +365,18 @@ final class PollService
         $totals = $this->voteRepo->getTotalsByPoll($poll->id);
         $matrix = $this->voteRepo->getMatrix($poll->id);
         $bestOptionId = $this->voteRepo->getBestOptionId($poll->id, $options);
+
+        usort($options, function (PollOption $a, PollOption $b) use ($totals): int {
+            $tA = $totals[$a->id] ?? ['yes' => 0, 'maybe' => 0, 'no' => 0];
+            $tB = $totals[$b->id] ?? ['yes' => 0, 'maybe' => 0, 'no' => 0];
+            $scoreA = $tA['yes'] * 2 + $tA['maybe'];
+            $scoreB = $tB['yes'] * 2 + $tB['maybe'];
+            if ($scoreA !== $scoreB) {
+                return $scoreB <=> $scoreA;
+            }
+            return strcmp($a->start_utc, $b->start_utc);
+        });
+
         return [
             'totals' => $totals,
             'matrix' => $matrix,

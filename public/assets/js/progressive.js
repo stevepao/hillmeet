@@ -73,6 +73,11 @@
           });
         }
         if (window.HILLMEET_POLL) window.HILLMEET_POLL.lastBusy = busy;
+        var autoAcceptBtn = document.getElementById('auto-accept-availability');
+        if (autoAcceptBtn) {
+          autoAcceptBtn.style.display = '';
+          autoAcceptBtn.removeAttribute('aria-hidden');
+        }
         showToast('Availability updated.');
       })
       .catch(function() {
@@ -92,8 +97,8 @@
     if (voteBatchUrl) {
       autoAcceptBtn.addEventListener('click', function() {
         var lastBusy = poll.lastBusy;
-        if (!lastBusy || typeof lastBusy !== 'object') {
-          showToast('Check availability first.', null, null);
+        if (!lastBusy || typeof lastBusy !== 'object' || Object.keys(lastBusy).length === 0) {
+          showToast('Check availability first.');
           return;
         }
         var list = document.getElementById('poll-options-list');
@@ -126,8 +131,10 @@
           .then(function(result) {
             var data = result.data;
             if (result.ok && data.success) {
-              showToast('Votes set from your availability.');
-              window.location.reload();
+              showToast('Votes saved. Showing results.');
+              var base = window.location.pathname + window.location.search;
+              var sep = window.location.search ? '&' : '?';
+              window.location.href = base + sep + 'expand=results';
             } else {
               autoAcceptBtn.disabled = false;
               autoAcceptBtn.textContent = label;

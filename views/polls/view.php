@@ -56,7 +56,7 @@ $canEdit = !$poll->isLocked();
     <a href="<?= \Hillmeet\Support\e($calendarUrl) ?>" class="btn btn-secondary btn-sm">Choose calendars</a>
     <button type="button" class="btn btn-secondary btn-sm" id="check-availability">Check my availability</button>
     <?php if ($canEdit): ?>
-    <button type="button" class="btn btn-secondary btn-sm" id="auto-accept-availability" title="Set Works for free times and Can't for busy times based on last availability check">Auto-accept by availability</button>
+    <button type="button" class="btn btn-secondary btn-sm" id="auto-accept-availability" style="display:none;" title="Set Works for free times and Can't for busy times, then submit votes">Auto-accept by availability</button>
     <?php endif; ?>
   <?php else: ?>
     <?php
