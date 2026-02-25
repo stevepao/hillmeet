@@ -20,7 +20,8 @@ $content = ob_start();
   <?php endif; ?>
   <div class="card">
     <p>Connect your Google Calendar to check free/busy when voting.</p>
-    <a href="<?= \Hillmeet\Support\e($authUrl) ?>" class="btn btn-primary">Connect Google Calendar</a>
+    <?php $connectUrl = !empty($returnTo) ? \Hillmeet\Support\url('/calendar/connect', ['return_to' => $returnTo]) : $authUrl; ?>
+    <a href="<?= \Hillmeet\Support\e($connectUrl) ?>" class="btn btn-primary">Connect Google Calendar</a>
   </div>
 <?php else: ?>
   <?php if (!empty($returnTo)): ?>
