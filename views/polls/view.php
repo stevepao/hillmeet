@@ -38,6 +38,9 @@ $canEdit = !$poll->isLocked();
 <?php if (!empty($_SESSION['lock_success'])): unset($_SESSION['lock_success']); ?>
   <p class="success-message" role="alert">Poll finalized. Participants have been notified.</p>
 <?php endif; ?>
+<?php if (!empty($_SESSION['lock_success_pending'])): unset($_SESSION['lock_success_pending']); ?>
+  <p class="success-message" role="alert">Poll is locked. Participants have not yet been notified—create the calendar event below to notify them.</p>
+<?php endif; ?>
 
 <div class="poll-options-bar">
   <div class="segmented" role="group" aria-label="View">
@@ -165,7 +168,7 @@ $canEdit = !$poll->isLocked();
     <h3>Finalize</h3>
     <p class="helper">Locking freezes the schedule so everyone sees the final time.</p>
     <?php if (!empty($_SESSION['calendar_event_denied_slug']) && $_SESSION['calendar_event_denied_slug'] === $poll->slug): unset($_SESSION['calendar_event_denied_slug']); ?>
-      <p class="card card-2 muted" role="alert" style="margin-top:var(--space-3);">Calendar event wasn’t created because access wasn’t granted. The poll is already locked and participants have been notified (with ICS). You can <strong>try again</strong> below to add the event to Google Calendar, or continue without it.</p>
+      <p class="card card-2 muted" role="alert" style="margin-top:var(--space-3);">Calendar access wasn’t granted. Participants have not yet been notified. You can <strong>try again</strong> below to grant access, create the event, and notify participants.</p>
     <?php endif; ?>
     <?php if (!empty($_SESSION['calendar_event_error_slug']) && $_SESSION['calendar_event_error_slug'] === $poll->slug): ?>
       <?php
@@ -195,6 +198,12 @@ $canEdit = !$poll->isLocked();
           <input type="checkbox" name="invite_participants" value="1"> Invite participants by email
         </label>
         <button type="submit" class="btn btn-primary" style="margin-top:var(--space-3);">Create calendar event</button>
+      </form>
+      <p class="helper" style="margin-top:var(--space-3);">Or notify participants by email only (with ICS attachment), without adding to Google Calendar:</p>
+      <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/notify-lock') ?>" style="margin-top:var(--space-1);">
+        <?= \Hillmeet\Support\Csrf::field() ?>
+        <input type="hidden" name="secret" value="<?= \Hillmeet\Support\e($_GET['secret'] ?? '') ?>">
+        <button type="submit" class="btn btn-secondary btn-sm">Notify by email only (with ICS)</button>
       </form>
     <?php else: ?>
       <p class="badge badge-success">Calendar event created</p>

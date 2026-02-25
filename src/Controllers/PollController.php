@@ -111,6 +111,19 @@ final class PollController
         return null;
     }
 
+    /** Build relative poll URL for redirects (path + query) so redirect stays on current host. */
+    private function pollRedirectPath(string $slug, string $secret, string $inviteToken): string
+    {
+        $path = '/poll/' . $slug;
+        if ($secret !== '') {
+            return $path . '?secret=' . urlencode($secret);
+        }
+        if ($inviteToken !== '') {
+            return $path . '?invite=' . urlencode($inviteToken);
+        }
+        return $path;
+    }
+
     public function __construct()
     {
         $this->pollRepo = new PollRepository();
@@ -643,8 +656,12 @@ final class PollController
             exit;
         }
         $pollUrl = url('/poll/' . $slug);
-        $this->pollService->afterLockNotifyAndCalendar($poll, $lockedOption, $pollUrl, (int) current_user()->id);
-        $_SESSION['lock_success'] = true;
+        $result = $this->pollService->afterLockNotifyAndCalendar($poll, $lockedOption, $pollUrl, (int) current_user()->id);
+        if ($result['notified']) {
+            $_SESSION['lock_success'] = true;
+        } else {
+            $_SESSION['lock_success_pending'] = true;
+        }
         header('Location: ' . $backUrl);
         exit;
     }
@@ -714,12 +731,50 @@ final class PollController
         }
         if (isset($result['event_id'])) {
             (new CalendarEventRepository())->create($poll->id, $lockedOption->id, (int) current_user()->id, $calendarId, $result['event_id']);
+            $pollUrl = url('/poll/' . $slug . '?secret=' . urlencode($secret));
+            $this->pollService->sendLockNotifications($poll, $lockedOption, $pollUrl);
+            $_SESSION['lock_success'] = true;
             header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
             exit;
         }
         $_SESSION['calendar_event_error_slug'] = $slug;
         $_SESSION['calendar_event_error'] = $result['error'] === 'no_token' ? 'not_connected' : 'failed';
         header('Location: ' . url('/poll/' . $slug . '?secret=' . urlencode($secret)));
+        exit;
+    }
+
+    /**
+     * POST /poll/{slug}/notify-lock
+     * Send lock notification emails with ICS to participants and invitees without creating a Google Calendar event.
+     * Use when the organizer does not want to (or cannot) connect calendar for events access.
+     */
+    public function notifyLock(string $slug): void
+    {
+        $this->auth();
+        $secret = $_POST['secret'] ?? '';
+        $resolved = $this->resolvePollForAccess($slug, $secret, '', true, false);
+        if ($resolved === null || !$resolved['poll']->isOrganizer((int) current_user()->id) || !$resolved['poll']->isLocked() || $resolved['poll']->locked_option_id === null) {
+            $_SESSION['vote_error'] = 'Poll not found or not allowed.';
+            header('Location: ' . $this->pollRedirectPath($slug, $secret, ''));
+            exit;
+        }
+        $poll = $resolved['poll'];
+        $options = $this->pollRepo->getOptions($poll->id);
+        $lockedOption = null;
+        foreach ($options as $o) {
+            if ($o->id === $poll->locked_option_id) {
+                $lockedOption = $o;
+                break;
+            }
+        }
+        if ($lockedOption === null) {
+            header('Location: ' . $resolved['back_url']);
+            exit;
+        }
+        $pollUrl = $secret !== '' ? url('/poll/' . $slug . '?secret=' . urlencode($secret)) : url('/poll/' . $slug);
+        $this->pollService->sendLockNotifications($poll, $lockedOption, $pollUrl);
+        $_SESSION['lock_success'] = true;
+        header('Location: ' . $this->pollRedirectPath($slug, $secret, ''));
         exit;
     }
 
@@ -739,19 +794,20 @@ final class PollController
                 echo json_encode(['ok' => false, 'error_code' => 'not_found', 'error_message' => 'Poll not found.', 'action_hint' => 'Use the correct poll link.']);
             } else {
                 $_SESSION['vote_error'] = 'Poll not found or invalid link.';
-                header('Location: ' . url('/poll/' . $slug));
+                header('Location: ' . $this->pollRedirectPath($slug, '', ''));
             }
             exit;
         }
         $poll = $resolved['poll'];
         $backUrl = $resolved['back_url'];
+        $redirectPath = $this->pollRedirectPath($slug, $secret, $inviteToken);
         $userId = (int) current_user()->id;
         $oauthRepo = new OAuthConnectionRepository();
         $selectionRepo = new GoogleCalendarSelectionRepository();
         $freebusyCache = new \Hillmeet\Repositories\FreebusyCacheRepository();
         $options = $this->pollRepo->getOptions($poll->id);
 
-        $sendError = function (string $code, string $message, string $hint, int $httpStatus = 400, array $extra = []) use ($wantsJson, $backUrl): void {
+        $sendError = function (string $code, string $message, string $hint, int $httpStatus = 400, array $extra = []) use ($wantsJson, $backUrl, $redirectPath): void {
             if ($wantsJson) {
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code($httpStatus);
@@ -759,7 +815,7 @@ final class PollController
                 echo json_encode($payload);
             } else {
                 $_SESSION['vote_error'] = $message . ' ' . $hint;
-                header('Location: ' . $backUrl);
+                header('Location: ' . $redirectPath);
             }
             exit;
         };
@@ -818,7 +874,7 @@ final class PollController
                 echo json_encode($payload);
             } else {
                 $_SESSION['vote_error'] = $desc . ' ' . $tuple[1];
-                header('Location: ' . $backUrl);
+                header('Location: ' . $redirectPath);
             }
             exit;
         }
@@ -838,7 +894,7 @@ final class PollController
         $wantsJson = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
             || (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
         if (!$wantsJson) {
-            header('Location: ' . $backUrl);
+            header('Location: ' . $redirectPath);
             exit;
         }
         header('Content-Type: application/json; charset=utf-8');

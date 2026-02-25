@@ -203,10 +203,11 @@ final class PollService
     }
 
     /**
-     * After a poll is locked: email all participants and invitees with final time (and timezone callout),
-     * attach .ics when organizer has email; create Google Calendar event for current user when connected.
+     * After a poll is locked: create Google Calendar event when connected (if that fails, do not notify yet);
+     * then email all participants and invitees with final time (and timezone callout), attach .ics when organizer has email.
+     * @return array{notified: bool} notified true if emails were sent, false if calendar event was required but failed (so participants not yet notified)
      */
-    public function afterLockNotifyAndCalendar(Poll $poll, PollOption $lockedOption, string $pollUrl, int $currentUserId): void
+    public function afterLockNotifyAndCalendar(Poll $poll, PollOption $lockedOption, string $pollUrl, int $currentUserId): array
     {
         $organizerTz = $poll->timezone;
         $userRepo = new UserRepository();
@@ -217,7 +218,65 @@ final class PollService
         if ($organizerEmail !== '') {
             $icsContent = IcsGenerator::singleEvent($poll->title, $lockedOption->start_utc, $lockedOption->end_utc, $organizerEmail);
         }
-        $emailsSent = [];
+        $calendarService = new GoogleCalendarService(
+            new OAuthConnectionRepository(),
+            new GoogleCalendarSelectionRepository(),
+            new FreebusyCacheRepository()
+        );
+        $eventRepo = new CalendarEventRepository();
+        $hasCalendar = $calendarService->getAuthUrl('x') !== '' && (new OAuthConnectionRepository())->hasConnection($currentUserId);
+        if ($hasCalendar && !$eventRepo->existsForPollAndOption($poll->id, $lockedOption->id)) {
+            $attendeeEmails = [];
+            foreach ($this->participantRepo->getResultsParticipants($poll->id) as $p) {
+                $email = isset($p->email) ? trim((string) $p->email) : '';
+                if ($email !== '') {
+                    $attendeeEmails[$email] = true;
+                }
+            }
+            foreach ($this->inviteRepo->listInvites($poll->id) as $inv) {
+                $email = strtolower(trim((string) $inv->email));
+                if ($email !== '') {
+                    $attendeeEmails[$email] = true;
+                }
+            }
+            $attendeeEmails = array_keys($attendeeEmails);
+            $result = $calendarService->createEvent(
+                $currentUserId,
+                'primary',
+                $poll->title,
+                $poll->description ?? '',
+                $poll->location ?? '',
+                $lockedOption->start_utc,
+                $lockedOption->end_utc,
+                $attendeeEmails,
+                $organizerEmail !== '' ? $organizerEmail : null
+            );
+            if (isset($result['error'])) {
+                return ['notified' => false];
+            }
+            $eventId = $result['event_id'] ?? null;
+            if ($eventId !== null) {
+                $eventRepo->create($poll->id, $lockedOption->id, $currentUserId, 'primary', $eventId);
+            }
+        }
+        $this->sendLockNotifications($poll, $lockedOption, $pollUrl);
+        return ['notified' => true];
+    }
+
+    /**
+     * Send lock notification emails to participants and invitees (e.g. after creating the calendar event from the finalize panel).
+     */
+    public function sendLockNotifications(Poll $poll, PollOption $lockedOption, string $pollUrl): void
+    {
+        $userRepo = new UserRepository();
+        $organizer = $userRepo->findById($poll->organizer_id);
+        $organizerName = $organizer ? ($organizer->name ?? $organizer->email ?? '') : '';
+        $organizerEmail = $organizer ? $organizer->email : '';
+        $organizerTz = $poll->timezone;
+        $icsContent = '';
+        if ($organizerEmail !== '') {
+            $icsContent = IcsGenerator::singleEvent($poll->title, $lockedOption->start_utc, $lockedOption->end_utc, $organizerEmail);
+        }
         $formatLockedTime = function (string $tzId) use ($lockedOption, $organizerTz): string {
             try {
                 $tz = new \DateTimeZone($tzId);
@@ -237,6 +296,7 @@ final class PollService
             $isRecipientTz = $recipientTz !== null && $tzId === $recipientTz;
             return [$tzId, $isRecipientTz];
         };
+        $emailsSent = [];
         foreach ($this->participantRepo->getResultsParticipants($poll->id) as $p) {
             $email = isset($p->email) ? trim((string) $p->email) : '';
             if ($email !== '' && !isset($emailsSent[$email])) {
@@ -257,31 +317,6 @@ final class PollService
                 $finalTimeLocalized = $formatLockedTime($tzId);
                 $timezoneCallout = $isRecipientTz ? 'Times in your timezone (' . $tzId . ').' : 'Times in organizer\'s timezone (' . $organizerTz . ').';
                 $this->emailService->sendPollLocked($email, $poll->title, $finalTimeLocalized, $timezoneCallout, $organizerName, $organizerEmail, $pollUrl, $icsContent);
-            }
-        }
-        $calendarService = new GoogleCalendarService(
-            new OAuthConnectionRepository(),
-            new GoogleCalendarSelectionRepository(),
-            new FreebusyCacheRepository()
-        );
-        $eventRepo = new CalendarEventRepository();
-        $hasCalendar = $calendarService->getAuthUrl('x') !== '' && (new OAuthConnectionRepository())->hasConnection($currentUserId);
-        if ($hasCalendar && !$eventRepo->existsForPollAndOption($poll->id, $lockedOption->id)) {
-            $attendeeEmails = array_keys($emailsSent);
-            $result = $calendarService->createEvent(
-                $currentUserId,
-                'primary',
-                $poll->title,
-                $poll->description ?? '',
-                $poll->location ?? '',
-                $lockedOption->start_utc,
-                $lockedOption->end_utc,
-                $attendeeEmails,
-                $organizerEmail !== '' ? $organizerEmail : null
-            );
-            $eventId = $result['event_id'] ?? null;
-            if ($eventId !== null) {
-                $eventRepo->create($poll->id, $lockedOption->id, $currentUserId, 'primary', $eventId);
             }
         }
     }

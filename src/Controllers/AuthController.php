@@ -218,6 +218,16 @@ final class AuthController
             );
             if (isset($result['event_id'])) {
                 (new \Hillmeet\Repositories\CalendarEventRepository())->create($poll->id, $lockedOption->id, (int) $_SESSION['user']->id, $pending['calendar_id'], $result['event_id']);
+                $pollUrl = url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret']));
+                $pollService = new \Hillmeet\Services\PollService(
+                    new \Hillmeet\Repositories\PollRepository(),
+                    new \Hillmeet\Repositories\VoteRepository(),
+                    new \Hillmeet\Repositories\PollParticipantRepository(),
+                    new \Hillmeet\Repositories\PollInviteRepository(),
+                    new \Hillmeet\Services\EmailService()
+                );
+                $pollService->sendLockNotifications($poll, $lockedOption, $pollUrl);
+                $_SESSION['lock_success'] = true;
             }
             header('Location: ' . url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret'])));
             exit;
