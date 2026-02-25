@@ -164,7 +164,7 @@ final class AuthController
             require_auth();
             $pending = $_SESSION['pending_create_event'] ?? null;
             unset($_SESSION['pending_create_event']);
-            if ($pending === null || !isset($pending['slug'], $pending['secret'], $pending['calendar_id'])) {
+            if ($pending === null || !isset($pending['slug'], $pending['calendar_id'])) {
                 header('Location: ' . url('/'));
                 exit;
             }
@@ -175,9 +175,17 @@ final class AuthController
             );
             $oauth->exchangeCodeForTokens($code, (int) $_SESSION['user']->id);
             $pollRepo = new \Hillmeet\Repositories\PollRepository();
-            $poll = $pollRepo->findBySlugAndVerifySecret($pending['slug'], $pending['secret']);
-            if ($poll === null || !$poll->isOrganizer((int) $_SESSION['user']->id) || !$poll->isLocked() || $poll->locked_option_id === null) {
-                header('Location: ' . url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret'])));
+            $pendingSecret = $pending['secret'] ?? '';
+            if ($pendingSecret !== '') {
+                $poll = $pollRepo->findBySlugAndVerifySecret($pending['slug'], $pendingSecret);
+            } else {
+                $poll = $pollRepo->findBySlug($pending['slug']);
+                if ($poll !== null && !$poll->isOrganizer((int) $_SESSION['user']->id)) {
+                    $poll = null;
+                }
+            }
+            if ($poll === null || !$poll->isLocked() || $poll->locked_option_id === null) {
+                header('Location: ' . url($pendingSecret !== '' ? '/poll/' . $pending['slug'] . '?secret=' . urlencode($pendingSecret) : '/poll/' . $pending['slug']));
                 exit;
             }
             $options = $pollRepo->getOptions($poll->id);
@@ -189,7 +197,7 @@ final class AuthController
                 }
             }
             if ($lockedOption === null) {
-                header('Location: ' . url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret'])));
+                header('Location: ' . url($pendingSecret !== '' ? '/poll/' . $pending['slug'] . '?secret=' . urlencode($pendingSecret) : '/poll/' . $pending['slug']));
                 exit;
             }
             $emails = [];
@@ -226,7 +234,7 @@ final class AuthController
             );
             if (isset($result['event_id'])) {
                 (new \Hillmeet\Repositories\CalendarEventRepository())->create($poll->id, $lockedOption->id, (int) $_SESSION['user']->id, $pending['calendar_id'], $result['event_id']);
-                $pollUrl = url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret']));
+                $pollUrl = url($pendingSecret !== '' ? '/poll/' . $pending['slug'] . '?secret=' . urlencode($pendingSecret) : '/poll/' . $pending['slug']);
                 $pollService = new \Hillmeet\Services\PollService(
                     new \Hillmeet\Repositories\PollRepository(),
                     new \Hillmeet\Repositories\VoteRepository(),
@@ -237,7 +245,7 @@ final class AuthController
                 $pollService->sendLockNotifications($poll, $lockedOption, $pollUrl);
                 $_SESSION['lock_success'] = true;
             }
-            header('Location: ' . url('/poll/' . $pending['slug'] . '?secret=' . urlencode($pending['secret'])));
+            header('Location: ' . url($pendingSecret !== '' ? '/poll/' . $pending['slug'] . '?secret=' . urlencode($pendingSecret) : '/poll/' . $pending['slug']));
             exit;
         }
         if (!empty($_SESSION['oauth2state_calendar']) && $state !== '' && hash_equals($_SESSION['oauth2state_calendar'], $state)) {

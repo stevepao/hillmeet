@@ -670,7 +670,12 @@ final class PollController
     {
         $this->auth();
         $secret = $_POST['secret'] ?? '';
-        $poll = $secret ? $this->pollRepo->findBySlugAndVerifySecret($slug, $secret) : null;
+        if ($secret !== '') {
+            $poll = $this->pollRepo->findBySlugAndVerifySecret($slug, $secret);
+        } else {
+            $resolved = $this->resolvePollForAccess($slug, '', '', true, false);
+            $poll = $resolved !== null ? $resolved['poll'] : null;
+        }
         if ($poll === null || !$poll->isOrganizer((int) current_user()->id) || !$poll->isLocked() || $poll->locked_option_id === null) {
             http_response_code(403);
             exit;
