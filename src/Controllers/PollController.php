@@ -726,26 +726,41 @@ final class PollController
     public function checkAvailability(string $slug): void
     {
         $this->auth();
-        header('Content-Type: application/json; charset=utf-8');
         $secret = $_GET['secret'] ?? $_POST['secret'] ?? '';
         $inviteToken = $_GET['invite'] ?? $_POST['invite'] ?? '';
         $resolved = $this->resolvePollForAccess($slug, $secret, $inviteToken, false, false);
+        $wantsJson = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
+            || (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
+
         if ($resolved === null) {
-            http_response_code(404);
-            echo json_encode(['ok' => false, 'error_code' => 'not_found', 'error_message' => 'Poll not found.', 'action_hint' => 'Use the correct poll link.']);
+            if ($wantsJson) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(404);
+                echo json_encode(['ok' => false, 'error_code' => 'not_found', 'error_message' => 'Poll not found.', 'action_hint' => 'Use the correct poll link.']);
+            } else {
+                $_SESSION['vote_error'] = 'Poll not found or invalid link.';
+                header('Location: ' . url('/poll/' . $slug));
+            }
             exit;
         }
         $poll = $resolved['poll'];
+        $backUrl = $resolved['back_url'];
         $userId = (int) current_user()->id;
         $oauthRepo = new OAuthConnectionRepository();
         $selectionRepo = new GoogleCalendarSelectionRepository();
         $freebusyCache = new \Hillmeet\Repositories\FreebusyCacheRepository();
         $options = $this->pollRepo->getOptions($poll->id);
 
-        $sendError = function (string $code, string $message, string $hint, int $httpStatus = 400, array $extra = []): void {
-            http_response_code($httpStatus);
-            $payload = array_merge(['ok' => false, 'error_code' => $code, 'error_message' => $message, 'action_hint' => $hint], $extra);
-            echo json_encode($payload);
+        $sendError = function (string $code, string $message, string $hint, int $httpStatus = 400, array $extra = []) use ($wantsJson, $backUrl): void {
+            if ($wantsJson) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code($httpStatus);
+                $payload = array_merge(['ok' => false, 'error_code' => $code, 'error_message' => $message, 'action_hint' => $hint], $extra);
+                echo json_encode($payload);
+            } else {
+                $_SESSION['vote_error'] = $message . ' ' . $hint;
+                header('Location: ' . $backUrl);
+            }
             exit;
         };
 
@@ -790,15 +805,21 @@ final class PollController
                 count($options),
                 (string) ($out['api_status'] ?? '')
             ));
-            $payload = ['ok' => false, 'error_code' => $code, 'error_message' => $desc, 'action_hint' => $tuple[1]];
-            if ($isLocal && isset($out['api_status'])) {
-                $payload['debug'] = ['api_status' => $out['api_status'], 'api_error_body' => $out['api_error_body'] ?? null];
+            if ($wantsJson) {
+                $payload = ['ok' => false, 'error_code' => $code, 'error_message' => $desc, 'action_hint' => $tuple[1]];
+                if ($isLocal && isset($out['api_status'])) {
+                    $payload['debug'] = ['api_status' => $out['api_status'], 'api_error_body' => $out['api_error_body'] ?? null];
+                }
+                if ($isLocal && isset($out['error_description']) && $out['error_description'] !== '') {
+                    $payload['debug'] = ($payload['debug'] ?? []) + ['error_description' => $out['error_description']];
+                }
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code($httpStatus);
+                echo json_encode($payload);
+            } else {
+                $_SESSION['vote_error'] = $desc . ' ' . $tuple[1];
+                header('Location: ' . $backUrl);
             }
-            if ($isLocal && isset($out['error_description']) && $out['error_description'] !== '') {
-                $payload['debug'] = ($payload['debug'] ?? []) + ['error_description' => $out['error_description']];
-            }
-            http_response_code($httpStatus);
-            echo json_encode($payload);
             exit;
         }
 
@@ -817,9 +838,10 @@ final class PollController
         $wantsJson = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
             || (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
         if (!$wantsJson) {
-            header('Location: ' . $resolved['back_url']);
+            header('Location: ' . $backUrl);
             exit;
         }
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['ok' => true, 'busy' => $out['busy'], 'checked_at' => $out['checked_at']]);
         exit;
     }

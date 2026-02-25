@@ -54,7 +54,15 @@ $canEdit = !$poll->isLocked();
     $calendarUrl = \Hillmeet\Support\url('/calendar', ['return_to' => $returnTo]);
     ?>
     <a href="<?= \Hillmeet\Support\e($calendarUrl) ?>" class="btn btn-secondary btn-sm">Choose calendars</a>
-    <button type="button" class="btn btn-secondary btn-sm" id="check-availability">Check my availability</button>
+    <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/check-availability') ?>" style="display:inline;">
+      <?= \Hillmeet\Support\Csrf::field() ?>
+      <?php if (!empty($accessByInvite) && $inviteToken !== ''): ?>
+      <input type="hidden" name="invite" value="<?= \Hillmeet\Support\e($inviteToken) ?>">
+      <?php else: ?>
+      <input type="hidden" name="secret" value="<?= \Hillmeet\Support\e($_GET['secret'] ?? '') ?>">
+      <?php endif; ?>
+      <button type="submit" class="btn btn-secondary btn-sm" id="check-availability">Check my availability</button>
+    </form>
     <?php if ($canEdit && count($freebusyByOption) > 0): ?>
     <form method="post" action="<?= \Hillmeet\Support\url('/poll/' . $poll->slug . '/auto-accept-availability') ?>" style="display:inline;">
       <?= \Hillmeet\Support\Csrf::field() ?>
