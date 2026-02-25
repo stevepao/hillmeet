@@ -14,7 +14,7 @@ $participatedPolls = $participatedPolls ?? [];
 $debugCounts = $debugCounts ?? null;
 $csrfToken = \Hillmeet\Support\Csrf::token();
 ?>
-<h1>Hillmeet</h1>
+<h1><?= !empty($_SESSION['user']) ? 'Welcome ' . \Hillmeet\Support\e($_SESSION['user']->email ?? '') : 'Hillmeet' ?></h1>
 <div class="home-actions" style="margin-bottom: var(--space-6);">
   <a href="<?= \Hillmeet\Support\url('/poll/new') ?>" class="btn btn-primary btn-lg">Create poll</a>
 </div>

@@ -30,7 +30,6 @@
           <a href="<?= \Hillmeet\Support\url('/') ?>">Home</a>
           <a href="<?= \Hillmeet\Support\url('/poll/new') ?>">Create poll</a>
           <a href="<?= \Hillmeet\Support\url('/calendar') ?>">Calendar</a>
-          <span class="muted" style="font-size:var(--text-sm);"><?= \Hillmeet\Support\e($_SESSION['user']->email ?? '') ?></span>
           <a href="<?= \Hillmeet\Support\url('/auth/signout') ?>">Sign out</a>
         <?php else: ?>
           <a href="<?= \Hillmeet\Support\url('/auth/login') ?>">Sign in</a>
