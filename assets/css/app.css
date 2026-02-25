@@ -67,6 +67,20 @@
   padding-top: var(--space-8);
 }
 
+.auth-tagline {
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  color: var(--text);
+  margin: 0 0 var(--space-6);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  max-width: 22rem;
+}
+
+.auth-tagline-wrap {
+  margin-bottom: 0;
+}
+
 .auth-page h1 {
   margin-bottom: var(--space-2);
 }

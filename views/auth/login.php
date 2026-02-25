@@ -12,6 +12,9 @@ $googleClientId = $googleClientId ?? '';
 $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
 ?>
 <div class="auth-page">
+  <section class="auth-tagline-wrap" aria-label="About Hillmeet">
+    <p class="auth-tagline">Hillmeet makes it effortless to find a time that works for everyone and send meeting invitations automatically.</p>
+  </section>
   <h1>Sign in</h1>
   <p class="muted">Sign in to create and vote on polls. See our <a href="<?= \Hillmeet\Support\url('/privacy') ?>">Privacy Policy</a> and <a href="<?= \Hillmeet\Support\url('/terms') ?>">Terms of Service</a>.</p>
 
