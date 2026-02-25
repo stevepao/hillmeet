@@ -194,9 +194,6 @@ $canEdit = !$poll->isLocked();
             <option value="primary">Primary</option>
           </select>
         </div>
-        <label class="checkbox-label">
-          <input type="checkbox" name="invite_participants" value="1"> Invite participants by email
-        </label>
         <button type="submit" class="btn btn-primary" style="margin-top:var(--space-3);">Create calendar event</button>
       </form>
       <p class="helper" style="margin-top:var(--space-3);">Or notify participants by email only (with ICS attachment), without adding to Google Calendar:</p>

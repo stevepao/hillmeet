@@ -193,17 +193,25 @@ final class AuthController
                 exit;
             }
             $emails = [];
-            if (isset($pending['invitee_emails']) && is_array($pending['invitee_emails'])) {
+            if (isset($pending['invitee_emails']) && is_array($pending['invitee_emails']) && $pending['invitee_emails'] !== []) {
                 $emails = array_values(array_filter(array_map('strval', $pending['invitee_emails'])));
-            } elseif (!empty($pending['invite_participants'])) {
+            } else {
                 $participantRepo = new \Hillmeet\Repositories\PollParticipantRepository();
-                $userRepo = new \Hillmeet\Repositories\UserRepository();
-                foreach ($participantRepo->getParticipantIds($poll->id) as $uid) {
-                    $u = $userRepo->findById($uid);
-                    if ($u !== null) {
-                        $emails[] = $u->email;
+                $inviteRepo = new \Hillmeet\Repositories\PollInviteRepository();
+                $byEmail = [];
+                foreach ($participantRepo->getResultsParticipants($poll->id) as $p) {
+                    $e = isset($p->email) ? trim((string) $p->email) : '';
+                    if ($e !== '') {
+                        $byEmail[$e] = true;
                     }
                 }
+                foreach ($inviteRepo->listInvites($poll->id) as $inv) {
+                    $e = strtolower(trim((string) $inv->email));
+                    if ($e !== '') {
+                        $byEmail[$e] = true;
+                    }
+                }
+                $emails = array_keys($byEmail);
             }
             $result = $oauth->createEvent(
                 (int) $_SESSION['user']->id,

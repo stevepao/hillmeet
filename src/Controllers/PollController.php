@@ -688,18 +688,22 @@ final class PollController
             exit;
         }
         $calendarId = $_POST['calendar_id'] ?? 'primary';
-        $inviteParticipants = !empty($_POST['invite_participants']);
         $participantRepo = new PollParticipantRepository();
-        $userRepo = new UserRepository();
+        $inviteRepo = new PollInviteRepository();
         $emails = [];
-        if ($inviteParticipants) {
-            foreach ($participantRepo->getParticipantIds($poll->id) as $uid) {
-                $u = $userRepo->findById($uid);
-                if ($u !== null) {
-                    $emails[] = $u->email;
-                }
+        foreach ($participantRepo->getResultsParticipants($poll->id) as $p) {
+            $email = isset($p->email) ? trim((string) $p->email) : '';
+            if ($email !== '') {
+                $emails[$email] = true;
             }
         }
+        foreach ($inviteRepo->listInvites($poll->id) as $inv) {
+            $email = strtolower(trim((string) $inv->email));
+            if ($email !== '') {
+                $emails[$email] = true;
+            }
+        }
+        $emails = array_keys($emails);
         $calendarService = new GoogleCalendarService(
             new OAuthConnectionRepository(),
             new GoogleCalendarSelectionRepository(),
@@ -723,7 +727,6 @@ final class PollController
                 'slug' => $slug,
                 'secret' => $secret,
                 'calendar_id' => $calendarId,
-                'invite_participants' => $inviteParticipants,
                 'invitee_emails' => $emails,
             ];
             header('Location: ' . $calendarService->getAuthUrlForEventsScope($state));
