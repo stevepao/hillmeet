@@ -60,25 +60,8 @@
           }
           return;
         }
-        var busy = data.busy || {};
-        var list = document.getElementById('poll-options-list');
-        if (list) {
-          list.querySelectorAll('.option-card').forEach(function(card) {
-            var optionId = card.getAttribute('data-option-id');
-            var badge = card.querySelector('.freebusy-badge');
-            if (!badge) return;
-            if (optionId !== null && optionId !== undefined && optionId in busy) {
-              badge.textContent = 'Your calendar: ' + (busy[optionId] ? 'Busy ⛔' : 'Free ✅');
-            }
-          });
-        }
-        if (window.HILLMEET_POLL) window.HILLMEET_POLL.lastBusy = busy;
-        var autoAcceptBtn = document.getElementById('auto-accept-availability');
-        if (autoAcceptBtn) {
-          autoAcceptBtn.style.display = '';
-          autoAcceptBtn.removeAttribute('aria-hidden');
-        }
-        showToast('Availability updated.');
+        // Success: backend wrote freebusy to cache; reload to show badges and auto-accept button
+        window.location.href = window.location.pathname + (window.location.search || '');
       })
       .catch(function() {
         showToast('Could not check availability. Try again.');
@@ -91,62 +74,59 @@
   });
 
   var autoAcceptBtn = document.getElementById('auto-accept-availability');
-  if (autoAcceptBtn && checkUrl && csrfToken && window.HILLMEET_POLL) {
-    var poll = window.HILLMEET_POLL;
-    var voteBatchUrl = poll.voteBatchUrl;
-    if (voteBatchUrl) {
-      autoAcceptBtn.addEventListener('click', function() {
-        var lastBusy = poll.lastBusy;
-        if (!lastBusy || typeof lastBusy !== 'object' || Object.keys(lastBusy).length === 0) {
-          showToast('Check availability first.');
-          return;
+  var poll = window.HILLMEET_POLL;
+  if (autoAcceptBtn && poll && poll.voteBatchUrl && checkUrl && csrfToken) {
+    autoAcceptBtn.addEventListener('click', function() {
+      var lastBusy = poll.lastBusy;
+      if (!lastBusy || typeof lastBusy !== 'object' || Object.keys(lastBusy).length === 0) {
+        showToast('Check availability first.');
+        return;
+      }
+      var list = document.getElementById('poll-options-list');
+      if (!list) return;
+      var votes = {};
+      list.querySelectorAll('.option-card').forEach(function(card) {
+        var optionId = String(card.getAttribute('data-option-id') || '');
+        if (!optionId) return;
+        if (optionId in lastBusy) {
+          votes[optionId] = lastBusy[optionId] ? 'no' : 'yes';
+        } else {
+          var active = card.querySelector('.vote-chip.active');
+          votes[optionId] = active ? (active.getAttribute('data-vote') || active.value || '') : '';
         }
-        var list = document.getElementById('poll-options-list');
-        if (!list) return;
-        var votes = {};
-        list.querySelectorAll('.option-card').forEach(function(card) {
-          var optionId = String(card.getAttribute('data-option-id') || '');
-          if (!optionId) return;
-          if (optionId in lastBusy) {
-            votes[optionId] = lastBusy[optionId] ? 'no' : 'yes';
+      });
+      var formData = new FormData();
+      formData.append('csrf_token', csrfToken);
+      if (poll.secret) formData.append('secret', poll.secret);
+      if (poll.invite) formData.append('invite', poll.invite);
+      for (var oid in votes) {
+        if (Object.prototype.hasOwnProperty.call(votes, oid)) {
+          formData.append('votes[' + oid + ']', votes[oid] || '');
+        }
+      }
+      var label = autoAcceptBtn.textContent;
+      autoAcceptBtn.disabled = true;
+      autoAcceptBtn.textContent = 'Applying…';
+      fetch(poll.voteBatchUrl, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } })
+        .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, status: r.status, data: data || {} }; }); })
+        .then(function(result) {
+          var data = result.data;
+          if (result.ok && data.success) {
+            showToast('Votes saved. Showing results.');
+            var base = window.location.pathname + window.location.search;
+            var sep = window.location.search ? '&' : '?';
+            window.location.href = base + sep + 'expand=results';
           } else {
-            var active = card.querySelector('.vote-chip.active');
-            votes[optionId] = active ? (active.getAttribute('data-vote') || active.value || '') : '';
-          }
-        });
-        var formData = new FormData();
-        formData.append('csrf_token', csrfToken);
-        if (poll.secret) formData.append('secret', poll.secret);
-        if (poll.invite) formData.append('invite', poll.invite);
-        for (var oid in votes) {
-          if (Object.prototype.hasOwnProperty.call(votes, oid)) {
-            formData.append('votes[' + oid + ']', votes[oid] || '');
-          }
-        }
-        var label = autoAcceptBtn.textContent;
-        autoAcceptBtn.disabled = true;
-        autoAcceptBtn.textContent = 'Applying…';
-        fetch(voteBatchUrl, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } })
-          .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, status: r.status, data: data || {} }; }); })
-          .then(function(result) {
-            var data = result.data;
-            if (result.ok && data.success) {
-              showToast('Votes saved. Showing results.');
-              var base = window.location.pathname + window.location.search;
-              var sep = window.location.search ? '&' : '?';
-              window.location.href = base + sep + 'expand=results';
-            } else {
-              autoAcceptBtn.disabled = false;
-              autoAcceptBtn.textContent = label;
-              showToast(data.error || 'Could not save votes.');
-            }
-          })
-          .catch(function() {
             autoAcceptBtn.disabled = false;
             autoAcceptBtn.textContent = label;
-            showToast('Could not save votes.');
-          });
-      });
-    }
+            showToast(data.error || 'Could not save votes.');
+          }
+        })
+        .catch(function() {
+          autoAcceptBtn.disabled = false;
+          autoAcceptBtn.textContent = label;
+          showToast('Could not save votes.');
+        });
+    });
   }
 })();
