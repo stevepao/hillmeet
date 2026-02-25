@@ -276,7 +276,8 @@ final class PollService
                 $poll->location ?? '',
                 $lockedOption->start_utc,
                 $lockedOption->end_utc,
-                $attendeeEmails
+                $attendeeEmails,
+                $organizerEmail !== '' ? $organizerEmail : null
             );
             $eventId = $result['event_id'] ?? null;
             if ($eventId !== null) {

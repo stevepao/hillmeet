@@ -230,9 +230,10 @@ final class GoogleCalendarService
 
     /**
      * Create a calendar event. Returns result shape for callers to detect scope errors.
+     * When $organizerEmail is set, the organizer is added as an attendee with responseStatus 'accepted' so the event shows as accepted for them.
      * @return array{event_id?: string, error?: string} event_id on success, error one of no_token, insufficient_scope
      */
-    public function createEvent(int $userId, string $calendarId, string $title, string $description, string $location, string $startUtc, string $endUtc, array $attendeeEmails = []): array
+    public function createEvent(int $userId, string $calendarId, string $title, string $description, string $location, string $startUtc, string $endUtc, array $attendeeEmails = [], ?string $organizerEmail = null): array
     {
         $tokenResult = $this->getAccessToken($userId);
         $accessToken = $tokenResult['access_token'] ?? null;
@@ -246,8 +247,24 @@ final class GoogleCalendarService
             'start' => ['dateTime' => date('c', strtotime($startUtc)), 'timeZone' => 'UTC'],
             'end' => ['dateTime' => date('c', strtotime($endUtc)), 'timeZone' => 'UTC'],
         ];
-        if ($attendeeEmails !== []) {
-            $event['attendees'] = array_map(fn($e) => ['email' => $e], $attendeeEmails);
+        $attendees = array_map(fn($e) => ['email' => $e], $attendeeEmails);
+        $organizerEmailNormalized = $organizerEmail !== null && $organizerEmail !== '' ? strtolower(trim($organizerEmail)) : '';
+        if ($organizerEmailNormalized !== '') {
+            $found = false;
+            foreach ($attendees as &$a) {
+                if (isset($a['email']) && strtolower(trim($a['email'])) === $organizerEmailNormalized) {
+                    $a['responseStatus'] = 'accepted';
+                    $found = true;
+                    break;
+                }
+            }
+            unset($a);
+            if (!$found) {
+                $attendees[] = ['email' => $organizerEmail, 'responseStatus' => 'accepted'];
+            }
+        }
+        if ($attendees !== []) {
+            $event['attendees'] = $attendees;
         }
         $url = 'https://www.googleapis.com/calendar/v3/calendars/' . urlencode($calendarId) . '/events';
         $apiResult = $this->apiPostWithStatus($accessToken, $url, $event);

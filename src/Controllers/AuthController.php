@@ -213,7 +213,8 @@ final class AuthController
                 $poll->location ?? '',
                 $lockedOption->start_utc,
                 $lockedOption->end_utc,
-                $emails
+                $emails,
+                $_SESSION['user']->email ?? null
             );
             if (isset($result['event_id'])) {
                 (new \Hillmeet\Repositories\CalendarEventRepository())->create($poll->id, $lockedOption->id, (int) $_SESSION['user']->id, $pending['calendar_id'], $result['event_id']);

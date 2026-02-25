@@ -696,7 +696,8 @@ final class PollController
             $poll->location ?? '',
             $lockedOption->start_utc,
             $lockedOption->end_utc,
-            $emails
+            $emails,
+            current_user()->email ?? null
         );
         if (isset($result['error']) && $result['error'] === 'insufficient_scope') {
             $state = bin2hex(random_bytes(16));
