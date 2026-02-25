@@ -65,17 +65,44 @@ final class PollService
         return ['poll' => $poll, 'secret' => $secret];
     }
 
+    /**
+     * Set poll's time options to the submitted set, merging with existing when a slot is identical (same start_utc, end_utc).
+     * Keeps existing option rows and their votes when the times match; adds new rows for new slots; deletes options no longer in the set.
+     */
     public function addTimeOptions(int $pollId, array $options): array
     {
         $existing = $this->pollRepo->getOptions($pollId);
-        $sortOrder = count($existing);
+        $key = static fn(string $s, string $e): string => $s . "\0" . $e;
+        $existingByTimes = [];
+        foreach ($existing as $opt) {
+            $k = $key($opt->start_utc, $opt->end_utc);
+            $existingByTimes[$k] = $opt;
+        }
+
+        $sortOrder = 0;
+        $keptIds = [];
         foreach ($options as $opt) {
             $start = $opt['start_utc'] ?? null;
             $end = $opt['end_utc'] ?? null;
-            if ($start && $end) {
-                $this->pollRepo->addOption($pollId, $start, $end, $opt['label'] ?? null, $sortOrder++);
+            if ($start === null || $end === null) {
+                continue;
             }
+            $k = $key($start, $end);
+            if (isset($existingByTimes[$k])) {
+                $existingOpt = $existingByTimes[$k];
+                unset($existingByTimes[$k]);
+                $keptIds[$existingOpt->id] = true;
+                $this->pollRepo->updateOption($pollId, $existingOpt->id, $sortOrder, $opt['label'] ?? null);
+            } else {
+                $this->pollRepo->addOption($pollId, $start, $end, $opt['label'] ?? null, $sortOrder);
+            }
+            $sortOrder++;
         }
+
+        foreach ($existingByTimes as $opt) {
+            $this->pollRepo->deleteOption($pollId, $opt->id);
+        }
+
         return [];
     }
 

@@ -45,10 +45,26 @@ $canEdit = !$poll->isLocked();
     <button type="button" class="view-toggle" data-view="grid">Grid view</button>
   </div>
   <?php if ($hasCalendar): ?>
-    <a href="<?= \Hillmeet\Support\url('/calendar') ?>" class="btn btn-secondary btn-sm">Choose calendars</a>
+    <?php
+    $returnTo = '/poll/' . $poll->slug;
+    $returnToQuery = array_filter(['secret' => $_GET['secret'] ?? null, 'invite' => $_GET['invite'] ?? null]);
+    if ($returnToQuery !== []) {
+      $returnTo .= '?' . http_build_query($returnToQuery);
+    }
+    $calendarUrl = \Hillmeet\Support\url('/calendar', ['return_to' => $returnTo]);
+    ?>
+    <a href="<?= \Hillmeet\Support\e($calendarUrl) ?>" class="btn btn-secondary btn-sm">Choose calendars</a>
     <button type="button" class="btn btn-secondary btn-sm" id="check-availability">Check my availability</button>
   <?php else: ?>
-    <a href="<?= \Hillmeet\Support\url('/calendar') ?>" class="btn btn-secondary btn-sm">Connect Google Calendar</a>
+    <?php
+    $returnTo = '/poll/' . $poll->slug;
+    $returnToQuery = array_filter(['secret' => $_GET['secret'] ?? null, 'invite' => $_GET['invite'] ?? null]);
+    if ($returnToQuery !== []) {
+      $returnTo .= '?' . http_build_query($returnToQuery);
+    }
+    $calendarUrl = \Hillmeet\Support\url('/calendar', ['return_to' => $returnTo]);
+    ?>
+    <a href="<?= \Hillmeet\Support\e($calendarUrl) ?>" class="btn btn-secondary btn-sm">Connect Google Calendar</a>
   <?php endif; ?>
   <a href="<?= \Hillmeet\Support\e($resultsExpandUrl) ?>" class="btn btn-secondary btn-sm" id="toggle-results" aria-expanded="false" data-no-js="Show results">Show results</a>
 </div>

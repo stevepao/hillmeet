@@ -173,4 +173,19 @@ final class PollRepository
         $stmt->execute([$pollId, $optionId]);
         return $stmt->rowCount() > 0;
     }
+
+    /** Update an option's sort_order and optional label (e.g. when merging submitted options). */
+    public function updateOption(int $pollId, int $optionId, int $sortOrder, ?string $label = null): void
+    {
+        $stmt = Database::get()->prepare("UPDATE poll_options SET sort_order = ?, label = ? WHERE poll_id = ? AND id = ?");
+        $stmt->execute([$sortOrder, $label, $pollId, $optionId]);
+    }
+
+    /** Delete all options for a poll (votes cascade). Clears locked_option_id if set. */
+    public function deleteOptionsForPoll(int $pollId): void
+    {
+        $pdo = Database::get();
+        $pdo->prepare("UPDATE polls SET locked_option_id = NULL WHERE id = ?")->execute([$pollId]);
+        $pdo->prepare("DELETE FROM poll_options WHERE poll_id = ?")->execute([$pollId]);
+    }
 }

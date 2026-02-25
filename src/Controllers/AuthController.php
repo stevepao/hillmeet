@@ -138,7 +138,14 @@ final class AuthController
                 unset($_SESSION['oauth2state_calendar']);
                 require_auth();
                 $_SESSION['calendar_connect_cancelled'] = true;
-                header('Location: ' . url('/calendar'));
+                $redirect = url('/calendar');
+                if (!empty($_SESSION['calendar_return_to'])) {
+                    $returnTo = (string) $_SESSION['calendar_return_to'];
+                    if ($returnTo !== '' && $returnTo[0] === '/' && strpos($returnTo, '//') === false) {
+                        $redirect = url('/calendar', ['return_to' => $returnTo]);
+                    }
+                }
+                header('Location: ' . $redirect);
                 exit;
             }
             $_SESSION['auth_error'] = 'Google sign-in was cancelled or failed.';
@@ -221,7 +228,15 @@ final class AuthController
                 new \Hillmeet\Repositories\FreebusyCacheRepository()
             );
             $oauth->exchangeCodeForTokens($code, (int) $_SESSION['user']->id);
-            header('Location: ' . url('/calendar'));
+            $redirect = url('/calendar');
+            if (!empty($_SESSION['calendar_return_to'])) {
+                $returnTo = (string) $_SESSION['calendar_return_to'];
+                unset($_SESSION['calendar_return_to']);
+                if ($returnTo !== '' && $returnTo[0] === '/' && strpos($returnTo, '//') === false) {
+                    $redirect = url('/calendar', ['return_to' => $returnTo]);
+                }
+            }
+            header('Location: ' . $redirect);
             exit;
         }
         if (empty($_SESSION['oauth2state']) || $state === '' || !hash_equals($_SESSION['oauth2state'], $state)) {

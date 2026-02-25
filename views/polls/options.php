@@ -30,6 +30,7 @@ $content = ob_start();
       foreach ($options as $i => $opt):
         $startLocal = (new DateTime($opt->start_utc, $utc))->setTimezone($pollTz)->format('Y-m-d\TH:i');
         $endLocal = (new DateTime($opt->end_utc, $utc))->setTimezone($pollTz)->format('Y-m-d\TH:i');
+        $endLocalDisplay = (new DateTime($opt->end_utc, $utc))->setTimezone($pollTz)->format('M j, Y g:i A');
       ?>
         <div class="form-group option-row" data-option-id="<?= (int) $opt->id ?>">
           <div style="display:flex;align-items:flex-start;gap:var(--space-2);flex-wrap:wrap;">
@@ -37,7 +38,8 @@ $content = ob_start();
               <label>Start (<?= \Hillmeet\Support\e($poll->timezone) ?>)</label>
               <input type="text" name="options[<?= $i ?>][start]" class="input option-start flatpickr-datetime" value="<?= \Hillmeet\Support\e($startLocal) ?>" placeholder="Date & time" autocomplete="off">
               <label>End (<?= \Hillmeet\Support\e($poll->timezone) ?>)</label>
-              <input type="text" name="options[<?= $i ?>][end]" class="input option-end" value="<?= \Hillmeet\Support\e($endLocal) ?>" readonly tabindex="-1" aria-label="End time (auto from start + <?= $pollDurationMinutes ?> min)" autocomplete="off">
+              <input type="hidden" name="options[<?= $i ?>][end]" class="option-end" value="<?= \Hillmeet\Support\e($endLocal) ?>">
+              <input type="text" class="input option-end-display" value="<?= \Hillmeet\Support\e($endLocalDisplay) ?>" readonly tabindex="-1" aria-label="End time (auto from start + <?= $pollDurationMinutes ?> min)" autocomplete="off">
             </div>
             <button type="button" class="btn btn-secondary btn-sm option-delete-btn" data-option-id="<?= (int) $opt->id ?>" aria-label="Delete this time option" title="Delete">&#10005;</button>
           </div>
@@ -104,13 +106,25 @@ window.addEventListener('load', function() {
     var row = startInput.closest('.option-row');
     if (!row) return;
     var endInput = row.querySelector('.option-end');
+    var endDisplay = row.querySelector('.option-end-display');
     var startVal = startInput.value;
-    if (!startVal) { endInput.value = ''; return; }
+    if (!startVal) {
+      if (endInput) endInput.value = '';
+      if (endDisplay) endDisplay.value = '';
+      return;
+    }
     var d = new Date(startVal);
     d.setMinutes(d.getMinutes() + durationMinutes);
     var y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
     var h = String(d.getHours()).padStart(2, '0'), min = String(d.getMinutes()).padStart(2, '0');
-    endInput.value = y + '-' + m + '-' + day + 'T' + h + ':' + min;
+    var iso = y + '-' + m + '-' + day + 'T' + h + ':' + min;
+    if (endInput) endInput.value = iso;
+    if (endDisplay) endDisplay.value = formatEnd12hr(d);
+  }
+
+  function formatEnd12hr(d) {
+    if (!d || isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
   }
 
   var fpDateFormat = 'Y-m-d\\TH:i';
@@ -139,11 +153,13 @@ window.addEventListener('load', function() {
 
   function addRow(startVal, endVal) {
     var i = container.querySelectorAll('.option-row').length;
+    var endDisplayVal = endVal ? formatEnd12hr(new Date(endVal)) : '';
     var div = document.createElement('div');
     div.className = 'form-group option-row';
     div.innerHTML = '<div style="display:flex;align-items:flex-start;gap:var(--space-2);flex-wrap:wrap;"><div style="flex:1;min-width:0;">' +
       '<label>Start (' + pollTz + ')</label><input type="text" name="options[' + i + '][start]" class="input option-start flatpickr-datetime" value="' + (startVal || '') + '" placeholder="Date & time" autocomplete="off">' +
-      '<label>End (' + pollTz + ')</label><input type="text" name="options[' + i + '][end]" class="input option-end" value="' + (endVal || '') + '" readonly tabindex="-1" aria-label="End (start + ' + durationMinutes + ' min)" autocomplete="off">' +
+      '<label>End (' + pollTz + ')</label><input type="hidden" name="options[' + i + '][end]" class="option-end" value="' + (endVal || '') + '">' +
+      '<input type="text" class="input option-end-display" value="' + endDisplayVal.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '" readonly tabindex="-1" aria-label="End (start + ' + durationMinutes + ' min)" autocomplete="off">' +
       '</div><button type="button" class="btn btn-secondary btn-sm option-remove-row" aria-label="Remove this row" title="Remove">&#10005;</button></div>';
     container.appendChild(div);
     div.querySelector('.option-remove-row').addEventListener('click', function() { div.remove(); });

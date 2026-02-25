@@ -51,6 +51,10 @@ final class CalendarController
         }
         $authUrl = $connected ? '' : url('/calendar/connect');
         $cacheTtl = config('freebusy_cache_ttl', 600);
+        $returnTo = isset($_GET['return_to']) ? (string) $_GET['return_to'] : '';
+        if ($returnTo !== '' && ($returnTo[0] !== '/' || strpos($returnTo, '//') !== false)) {
+            $returnTo = '';
+        }
         require dirname(__DIR__, 2) . '/views/calendar/settings.php';
     }
 
@@ -59,6 +63,13 @@ final class CalendarController
         \Hillmeet\Middleware\RequireAuth::check();
         $state = bin2hex(random_bytes(16));
         $_SESSION['oauth2state_calendar'] = $state;
+        $returnTo = isset($_GET['return_to']) ? (string) $_GET['return_to'] : '';
+        if ($returnTo !== '' && ($returnTo[0] !== '/' || strpos($returnTo, '//') !== false)) {
+            $returnTo = '';
+        }
+        if ($returnTo !== '') {
+            $_SESSION['calendar_return_to'] = $returnTo;
+        }
         $calendarService = new GoogleCalendarService(
             new OAuthConnectionRepository(),
             new GoogleCalendarSelectionRepository(),
@@ -83,7 +94,15 @@ final class CalendarController
             new FreebusyCacheRepository()
         );
         $calendarService->exchangeCodeForTokens($code, (int) current_user()->id);
-        header('Location: ' . url('/calendar'));
+        $redirect = url('/calendar');
+        if (!empty($_SESSION['calendar_return_to'])) {
+            $returnTo = (string) $_SESSION['calendar_return_to'];
+            unset($_SESSION['calendar_return_to']);
+            if ($returnTo !== '' && $returnTo[0] === '/' && strpos($returnTo, '//') === false) {
+                $redirect = url('/calendar', ['return_to' => $returnTo]);
+            }
+        }
+        header('Location: ' . $redirect);
         exit;
     }
 
@@ -108,6 +127,11 @@ final class CalendarController
         $selectionRepo->saveList($userId, $list);
         $selectionRepo->setTentativeAsBusy($userId, $tentativeAsBusy);
         $_SESSION['calendar_saved'] = true;
+        $returnTo = trim((string) ($_POST['return_to'] ?? ''));
+        if ($returnTo !== '' && $returnTo[0] === '/' && strpos($returnTo, '//') === false) {
+            header('Location: ' . url($returnTo));
+            exit;
+        }
         header('Location: ' . url('/calendar'));
         exit;
     }

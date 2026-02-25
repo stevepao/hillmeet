@@ -23,12 +23,18 @@ $content = ob_start();
     <a href="<?= \Hillmeet\Support\e($authUrl) ?>" class="btn btn-primary">Connect Google Calendar</a>
   </div>
 <?php else: ?>
+  <?php if (!empty($returnTo)): ?>
+    <p><a href="<?= \Hillmeet\Support\e(\Hillmeet\Support\url($returnTo)) ?>" class="link">← Back to poll</a></p>
+  <?php endif; ?>
   <p class="muted">Connected. Choose which calendars to use for availability.</p>
   <?php if (!empty($_SESSION['calendar_saved'])): unset($_SESSION['calendar_saved']); ?>
     <p class="success-message" role="alert">Calendar preferences saved.</p>
   <?php endif; ?>
   <form method="post" action="<?= \Hillmeet\Support\url('/calendar/save') ?>">
     <?= \Hillmeet\Support\Csrf::field() ?>
+    <?php if (!empty($returnTo)): ?>
+      <input type="hidden" name="return_to" value="<?= \Hillmeet\Support\e($returnTo) ?>">
+    <?php endif; ?>
     <div class="form-group">
       <label class="checkbox-label">
         <input type="checkbox" name="tentative_as_busy" value="1" <?= ($calendars[0]['tentative_as_busy'] ?? true) ? 'checked' : '' ?>> Treat tentative events as busy
