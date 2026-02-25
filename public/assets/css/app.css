@@ -104,6 +104,13 @@
   margin-top: var(--space-5);
 }
 
+.auth-footer {
+  margin: var(--space-6) 0 0;
+  padding-top: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
 .auth-page .btn-primary {
   width: 100%;
   margin-top: var(--space-3);

@@ -47,6 +47,7 @@ $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
     <div class="auth-divider">or</div>
     <a href="<?= \Hillmeet\Support\url('/auth/email') ?>" class="btn btn-secondary" style="width:100%;">Use email instead</a>
   </div>
+  <p class="auth-footer">© 2026 Hillwork, LLC. All rights reserved.</p>
 </div>
 
 <?php
