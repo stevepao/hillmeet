@@ -7,7 +7,7 @@
  * Copyright (c) 2026 Hillwork, LLC
  */
 $pageTitle = 'Sign in';
-$canonicalUrl = \Hillmeet\Support\url('/auth/login');
+$canonicalUrl = \Hillmeet\Support\url('/');
 $content = ob_start();
 $googleClientId = $googleClientId ?? '';
 $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
