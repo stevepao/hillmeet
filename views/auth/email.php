@@ -31,7 +31,7 @@ $email = $_SESSION['auth_email'] ?? '';
       <button type="submit" class="btn btn-primary" style="width:100%;">Send PIN</button>
     </form>
   </div>
-  <p style="margin-top:var(--space-4);"><a href="<?= \Hillmeet\Support\url('/auth/login') ?>">← Back to sign in</a></p>
+  <p style="margin-top:var(--space-4);"><a href="<?= \Hillmeet\Support\url('/') ?>">← Back to sign in</a></p>
 </div>
 <?php
 $content = ob_get_clean();

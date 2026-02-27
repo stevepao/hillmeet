@@ -93,7 +93,7 @@ function current_user(): ?object
 function require_auth(): void
 {
     if (empty($_SESSION['user'])) {
-        header('Location: ' . url('/auth/login'));
+        header('Location: ' . url('/'));
         exit;
     }
 }

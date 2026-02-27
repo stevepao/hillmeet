@@ -39,8 +39,8 @@ final class AuthController
             header('Location: ' . url('/'));
             exit;
         }
-        $googleClientId = \Hillmeet\Support\config('google.client_id', '');
-        require dirname(__DIR__, 2) . '/views/auth/login.php';
+        header('Location: ' . url('/'), true, 301);
+        exit;
     }
 
     /** Redirect to Google OAuth for sign-in (League OAuth2). */
@@ -53,7 +53,7 @@ final class AuthController
         $clientId = config('google.client_id', '');
         $clientSecret = config('google.client_secret', '');
         if ($clientId === '' || $clientSecret === '') {
-            header('Location: ' . url('/auth/login'));
+            header('Location: ' . url('/'));
             exit;
         }
         $redirectUri = config('google.redirect_uri') ?: (rtrim((string) config('app.url', ''), '/') . '/auth/google/callback');
@@ -149,13 +149,13 @@ final class AuthController
                 exit;
             }
             $_SESSION['auth_error'] = 'Google sign-in was cancelled or failed.';
-            header('Location: ' . url('/auth/login'));
+            header('Location: ' . url('/'));
             exit;
         }
         $code = $_GET['code'] ?? '';
         $state = $_GET['state'] ?? '';
         if ($code === '') {
-            header('Location: ' . url('/auth/login'));
+            header('Location: ' . url('/'));
             exit;
         }
         // Incremental auth: add calendar.events scope then complete event creation
@@ -271,7 +271,7 @@ final class AuthController
         if (empty($_SESSION['oauth2state']) || $state === '' || !hash_equals($_SESSION['oauth2state'], $state)) {
             unset($_SESSION['oauth2state']);
             $_SESSION['auth_error'] = 'Invalid state. Please try signing in again.';
-            header('Location: ' . url('/auth/login'));
+            header('Location: ' . url('/'));
             exit;
         }
         unset($_SESSION['oauth2state']);
@@ -288,13 +288,13 @@ final class AuthController
             $owner = $provider->getResourceOwner($token);
         } catch (\Throwable $e) {
             $_SESSION['auth_error'] = 'Google sign-in failed. Try again or use email.';
-            header('Location: ' . url('/auth/login'));
+            header('Location: ' . url('/'));
             exit;
         }
         $email = $owner->getEmail();
         if ($email === null || $email === '') {
             $_SESSION['auth_error'] = 'Google did not provide an email. Try again or use email.';
-            header('Location: ' . url('/auth/login'));
+            header('Location: ' . url('/'));
             exit;
         }
         $user = $this->auth->findOrCreateUserFromGoogleProfile(
@@ -305,7 +305,7 @@ final class AuthController
         );
         if ($user === null) {
             $_SESSION['auth_error'] = 'Could not sign you in. Try again or use email.';
-            header('Location: ' . url('/auth/login'));
+            header('Location: ' . url('/'));
             exit;
         }
         $_SESSION['user'] = $user;
@@ -316,7 +316,7 @@ final class AuthController
     public function signOut(): void
     {
         $this->auth->signOut();
-        header('Location: ' . url('/auth/login'));
+        header('Location: ' . url('/'));
         exit;
     }
 
@@ -352,7 +352,7 @@ final class AuthController
 function require_auth(): void
 {
     if (empty($_SESSION['user'])) {
-        header('Location: ' . \Hillmeet\Support\url('/auth/login'));
+        header('Location: ' . \Hillmeet\Support\url('/'));
         exit;
     }
 }

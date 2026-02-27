@@ -31,10 +31,9 @@ assert_contains() {
 }
 
 echo "Smoke: $BASE_URL"
-assert_status 200 "$BASE_URL/auth/login"
-assert_contains "Hillmeet" "$BASE_URL/auth/login"
-assert_contains "Sign in" "$BASE_URL/auth/login"
-# Root may 302 to login when not authenticated
-curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/" | grep -qE '200|302' && echo "OK $BASE_URL/ -> 200 or 302"
-
+# Sign-in page is served at / when not authenticated; /auth/login redirects to /
+assert_status 301 "$BASE_URL/auth/login"
+assert_status 200 "$BASE_URL/"
+assert_contains "Hillmeet" "$BASE_URL/"
+assert_contains "Sign in" "$BASE_URL/"
 echo "Smoke done."

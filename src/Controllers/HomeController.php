@@ -18,7 +18,12 @@ final class HomeController
 {
     public function index(): void
     {
-        \Hillmeet\Middleware\RequireAuth::check();
+        if (empty($_SESSION['user'])) {
+            $googleClientId = \Hillmeet\Support\config('google.client_id', '');
+            $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
+            require dirname(__DIR__, 2) . '/views/auth/login.php';
+            return;
+        }
         $user = \Hillmeet\Support\current_user();
         $userId = (int) $user->id;
         $pollRepo = new PollRepository();

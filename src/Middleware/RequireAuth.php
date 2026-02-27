@@ -30,7 +30,7 @@ final class RequireAuth
             $_SESSION['return_to'] = $pathAndQuery;
         }
         $query = (isset($_GET['debug']) && $_GET['debug'] === '1') ? ['debug' => '1'] : [];
-        header('Location: ' . url('/auth/login', $query));
+        header('Location: ' . url('/', $query));
         exit;
     }
 }
