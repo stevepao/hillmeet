@@ -7,6 +7,7 @@
  * Copyright (c) 2026 Hillwork, LLC
  */
 $pageTitle = 'Home';
+$canonicalUrl = \Hillmeet\Support\url('/');
 $content = ob_start();
 
 $ownedPolls = $ownedPolls ?? [];

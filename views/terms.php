@@ -7,6 +7,7 @@
  * Copyright (c) 2026 Hillwork, LLC
  */
 $pageTitle = 'Terms of Service';
+$canonicalUrl = \Hillmeet\Support\url('/terms');
 $content = ob_start();
 ?>
 <div class="legal-page" style="max-width:720px; margin:0 auto;">

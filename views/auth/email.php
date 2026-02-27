@@ -7,6 +7,7 @@
  * Copyright (c) 2026 Hillwork, LLC
  */
 $pageTitle = 'Sign in with email';
+$canonicalUrl = \Hillmeet\Support\url('/auth/email');
 $content = ob_start();
 $email = $_SESSION['auth_email'] ?? '';
 ?>

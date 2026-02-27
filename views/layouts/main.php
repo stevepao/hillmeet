@@ -13,6 +13,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($pageTitle) ? \Hillmeet\Support\e($pageTitle) . ' — ' : '' ?>Hillmeet</title>
+  <?php if (!empty($canonicalUrl)): ?>
+  <link rel="canonical" href="<?= \Hillmeet\Support\e($canonicalUrl) ?>">
+  <?php endif; ?>
   <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/tokens.css') ?>">
   <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/base.css') ?>">
   <link rel="stylesheet" href="<?= \Hillmeet\Support\url('/assets/css/components.css') ?>">

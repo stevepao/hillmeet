@@ -7,6 +7,7 @@
  * Copyright (c) 2026 Hillwork, LLC
  */
 $pageTitle = 'Privacy Policy';
+$canonicalUrl = \Hillmeet\Support\url('/privacy');
 $content = ob_start();
 ?>
 <div class="legal-page" style="max-width:720px; margin:0 auto;">

@@ -7,6 +7,7 @@
  * Copyright (c) 2026 Hillwork, LLC
  */
 $pageTitle = 'Verify PIN';
+$canonicalUrl = \Hillmeet\Support\url('/auth/verify');
 $content = ob_start();
 $email = $_GET['email'] ?? $_SESSION['pin_sent_to'] ?? '';
 ?>
