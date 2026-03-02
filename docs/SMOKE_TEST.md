@@ -9,13 +9,14 @@ Use this after refactors or before release to verify key flows without breaking 
 ## Manual checklist
 
 ### Auth
-- [ ] GET `/auth/login` → 200, login page.
+- [ ] GET `/auth/login` → 301 redirect to `/`.
+- [ ] GET `/` (not logged in) → 200, sign-in page.
 - [ ] Sign in (email or Google) → redirect to `/` or return_to.
-- [ ] GET `/auth/signout` → redirect to login or home.
+- [ ] GET `/auth/signout` → redirect to `/` (sign-in page).
 
 ### Home
 - [ ] GET `/` (logged in) → 200, list of owned and participated polls.
-- [ ] GET `/` (not logged in) → redirect to login.
+- [ ] GET `/` (not logged in) → 200, sign-in page (no redirect).
 
 ### Poll creation (full flow)
 - [ ] GET `/poll/create` → 200, create form.
