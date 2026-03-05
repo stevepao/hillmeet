@@ -49,7 +49,9 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
             if ($existingPollId !== null) {
                 $poll = $this->pollRepository->findById($existingPollId);
                 if ($poll !== null) {
-                    return $this->buildResult($poll);
+                    $optionsCount = \count($this->pollRepository->getOptions($poll->id));
+                    $invites = $this->pollInviteRepository->listInvites($poll->id);
+                    return $this->buildResult($poll, $optionsCount, \count($invites));
                 }
             }
         }
