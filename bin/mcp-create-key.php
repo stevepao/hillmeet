@@ -6,7 +6,8 @@ declare(strict_types=1);
 /**
  * mcp-create-key.php
  * Create a tenant API key, store hash, and verify resolveTenantFromApiKey().
- * Usage: php bin/mcp-create-key.php [owner_user_id]
+ * Usage: php bin/mcp-create-key.php [owner_email]
+ *        If owner_email is omitted, uses the first user in the database.
  */
 
 require_once dirname(__DIR__) . '/config/env.php';
@@ -21,16 +22,23 @@ if (!is_file($configPath)) {
 use Hillmeet\Mcp\Auth;
 use Hillmeet\Support\Database;
 
-$ownerUserId = isset($argv[1]) ? (int) $argv[1] : null;
 $pdo = Database::get();
+$ownerUserId = null;
 
-if ($ownerUserId === 0) {
-    $ownerUserId = null;
-}
-if ($ownerUserId === null) {
+if (!empty($argv[1])) {
+    $emailNormalized = strtolower(trim((string) $argv[1]));
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE email_normalized = ? LIMIT 1");
+    $stmt->execute([$emailNormalized]);
+    $row = $stmt->fetch(PDO::FETCH_OBJ);
+    if ($row === false) {
+        fwrite(STDERR, "No user found with that email.\n");
+        exit(1);
+    }
+    $ownerUserId = (int) $row->id;
+} else {
     $row = $pdo->query("SELECT id FROM users LIMIT 1")->fetch(PDO::FETCH_OBJ);
     if ($row === false) {
-        fwrite(STDERR, "No users in database. Create a user first or pass owner_user_id.\n");
+        fwrite(STDERR, "No users in database. Create a user first or pass owner email.\n");
         exit(1);
     }
     $ownerUserId = (int) $row->id;
