@@ -105,6 +105,13 @@ final class UserRepository
         return $this->createFromEmail($email, $name);
     }
 
+    /** Resolve normalized email to user id; create user if not found. */
+    public function getOrCreateUserIdByEmail(string $normalizedEmail): int
+    {
+        $user = $this->getOrCreateByEmail($normalizedEmail, '');
+        return $user->id;
+    }
+
     /** Set the user's timezone (IANA name, e.g. America/New_York). No-op if invalid. */
     public function setTimezone(int $userId, string $timezone): void
     {

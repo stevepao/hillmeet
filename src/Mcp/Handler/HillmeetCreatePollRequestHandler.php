@@ -68,6 +68,7 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
         }
 
         $payload = $this->mapPayload($arguments);
+        $payload['_tenant_id'] = $tenant->tenant_id;
 
         try {
             $result = $this->adapter->createPoll($ownerEmail, $payload);

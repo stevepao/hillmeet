@@ -46,7 +46,12 @@ $hillmeetPingHandler = static function (RequestContext $ctx) use ($tenant): arra
     }
 };
 
-$hillmeetAdapter = new \Hillmeet\Adapter\StubHillmeetAdapter(\Hillmeet\Support\config('app.url', 'https://meet.hillwork.net'));
+$hillmeetAdapter = new \Hillmeet\Adapter\DbHillmeetAdapter(
+    new \Hillmeet\Repositories\UserRepository(),
+    new \Hillmeet\Repositories\PollRepository(),
+    new \Hillmeet\Repositories\PollInviteRepository(),
+    \Hillmeet\Support\config('app.url', 'https://meet.hillwork.net'),
+);
 $hillmeetCreatePollInputSchema = [
     'type' => 'object',
     'properties' => [
