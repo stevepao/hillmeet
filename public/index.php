@@ -24,7 +24,7 @@ $path = '/' . trim((string) $path, '/');
 $path = $path !== '/' && $path !== '' ? (rtrim($path, '/') ?: '/') : $path;
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($path === '/mcp/v1' && in_array($method, ['GET', 'POST', 'OPTIONS'], true)) {
-    require __DIR__ . '/mcp/v1/index.php';
+    require dirname(__DIR__) . '/src/Support/McpEndpoint.php';
     exit;
 }
 

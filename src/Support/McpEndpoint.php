@@ -3,17 +3,19 @@
 declare(strict_types=1);
 
 /**
- * MCP v1 endpoint (Apache/PHP-FPM).
- * POST-only JSON-RPC; responds to initialize, tools/list, tools/call.
- * No long-running daemon, no SSE.
+ * McpEndpoint.php
+ * MCP v1 HTTP handler (POST-only JSON-RPC). No session/CSRF.
+ * Invoked from front controller when path is /mcp/v1.
  */
+
+namespace Hillmeet\Support;
 
 use Mcp\Server;
 use Mcp\Server\Transport\StreamableHttpTransport;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
 
-require_once dirname(__DIR__, 3) . '/vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 $psr17 = new Psr17Factory();
 $creator = new ServerRequestCreator($psr17, $psr17, $psr17, $psr17);

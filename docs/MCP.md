@@ -59,6 +59,6 @@ Expected: JSON-RPC error if the tool is not implemented.
 
 ## Implementation
 
-- Entry point: `public/mcp/v1/index.php`
+- Handler: `src/Support/McpEndpoint.php` (included by front controller when path is `/mcp/v1`; no physical directory at `public/mcp/v1` to avoid Apache 301).
 - SDK: [mcp/sdk](https://github.com/modelcontextprotocol/php-sdk) (official PHP MCP SDK)
 - Transport: `StreamableHttpTransport` (POST-only JSON, no SSE in this setup)
