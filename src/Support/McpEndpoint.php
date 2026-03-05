@@ -53,7 +53,7 @@ $server = Server::builder()
         'hillmeet_ping',
         'Ping the Hillmeet service',
         null,
-        ['type' => 'object', 'properties' => []],
+        ['type' => 'object', 'properties' => new \stdClass()],
         null,
         null,
         null,
