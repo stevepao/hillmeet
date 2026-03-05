@@ -47,6 +47,7 @@ $hillmeetPingHandler = static function (RequestContext $ctx) use ($tenant): arra
 
 $server = Server::builder()
     ->setServerInfo('Hillmeet', '1.0.0', 'Hillmeet availability polls and calendar integration')
+    ->setSession(new \Hillmeet\Mcp\Session\DatabaseSessionStore(3600))
     ->addTool(
         $hillmeetPingHandler,
         'hillmeet_ping',
