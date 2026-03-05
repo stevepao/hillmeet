@@ -28,10 +28,12 @@ final class StubHillmeetAdapter implements HillmeetAdapterInterface
         $pollId = $slug;
         $shareUrl = rtrim($this->baseUrl, '/') . '/poll/' . $slug;
         $title = $payload['title'] ?? 'Poll';
+        $timezone = isset($payload['timezone']) && \is_string($payload['timezone']) ? trim($payload['timezone']) : 'UTC';
         return new HillmeetPollResult(
             $pollId,
             $shareUrl,
             "Poll \"{$title}\" created. Share: {$shareUrl}",
+            $timezone,
         );
     }
 

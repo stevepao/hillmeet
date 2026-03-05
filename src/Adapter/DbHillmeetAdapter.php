@@ -13,6 +13,7 @@ use Hillmeet\HillmeetAdapter as HillmeetAdapterInterface;
 use Hillmeet\Repositories\PollInviteRepository;
 use Hillmeet\Repositories\PollRepository;
 use Hillmeet\Repositories\UserRepository;
+use Hillmeet\Services\EmailService;
 use Hillmeet\Support\Database;
 
 /**
@@ -25,6 +26,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         private readonly UserRepository $userRepository,
         private readonly PollRepository $pollRepository,
         private readonly PollInviteRepository $pollInviteRepository,
+        private readonly EmailService $emailService,
         private readonly string $baseUrl = 'https://meet.hillwork.net',
     ) {
     }
@@ -57,7 +59,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         if ($description === '') {
             $description = null;
         }
-        $timezone = isset($payload['timezone']) && \is_string($payload['timezone']) ? trim($payload['timezone']) : 'UTC';
+        $timezone = $this->resolvePollTimezone($payload, $userId);
         $durationMinutes = isset($payload['duration_minutes']) ? (int) $payload['duration_minutes'] : 60;
         if ($durationMinutes < 1) {
             $durationMinutes = 60;
@@ -113,7 +115,13 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
                 continue;
             }
             $seenEmails[$email] = true;
-            $this->pollInviteRepository->createInvite($poll->id, $email, '', $userId);
+            $rawToken = bin2hex(random_bytes(32));
+            $tokenHash = hash('sha256', $rawToken);
+            $inviteId = $this->pollInviteRepository->createInvite($poll->id, $email, $tokenHash, $userId);
+            $inviteUrl = rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug . '?invite=' . $rawToken;
+            if ($this->emailService->sendPollInvite($email, $poll->title, $inviteUrl)) {
+                $this->pollInviteRepository->markSent($inviteId);
+            }
         }
 
         if ($tenantId !== null && $idempotencyKey !== null) {
@@ -158,6 +166,22 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
     }
 
+    /**
+     * Resolve poll timezone: explicit payload value, else organizer's saved timezone, else UTC.
+     */
+    private function resolvePollTimezone(array $payload, int $organizerUserId): string
+    {
+        $explicit = isset($payload['timezone']) && \is_string($payload['timezone']) ? trim($payload['timezone']) : '';
+        if ($explicit !== '') {
+            return $explicit;
+        }
+        $user = $this->userRepository->findById($organizerUserId);
+        if ($user !== null && $user->timezone !== null && $user->timezone !== '') {
+            return $user->timezone;
+        }
+        return 'UTC';
+    }
+
     private function findIdempotentPollId(string $tenantId, string $idempotencyKey): ?int
     {
         $stmt = Database::get()->prepare(
@@ -191,6 +215,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
             $poll->slug,
             $shareUrl,
             $summary,
+            $poll->timezone,
         );
     }
 }

@@ -50,6 +50,7 @@ $hillmeetAdapter = new \Hillmeet\Adapter\DbHillmeetAdapter(
     new \Hillmeet\Repositories\UserRepository(),
     new \Hillmeet\Repositories\PollRepository(),
     new \Hillmeet\Repositories\PollInviteRepository(),
+    new \Hillmeet\Services\EmailService(),
     \Hillmeet\Support\config('app.url', 'https://meet.hillwork.net'),
 );
 $hillmeetCreatePollInputSchema = [
@@ -57,7 +58,7 @@ $hillmeetCreatePollInputSchema = [
     'properties' => [
         'title' => ['type' => 'string', 'description' => 'Poll title'],
         'description' => ['type' => 'string', 'description' => 'Optional description'],
-        'timezone' => ['type' => 'string', 'description' => 'Timezone (e.g. America/Los_Angeles). Default: UTC'],
+        'timezone' => ['type' => 'string', 'description' => "Optional. IANA timezone (e.g. America/Los_Angeles). Defaults to organizer's timezone if set, otherwise UTC."],
         'duration_minutes' => ['type' => 'integer', 'description' => 'Duration of each option in minutes'],
         'options' => [
             'type' => 'array',

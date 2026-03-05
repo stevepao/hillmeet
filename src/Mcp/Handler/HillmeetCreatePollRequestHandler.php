@@ -97,6 +97,7 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
             'poll_id' => $result->pollId,
             'share_url' => $result->shareUrl,
             'summary' => $result->summary,
+            'timezone' => $result->timezone,
         ];
         $callResult = new CallToolResult(
             [new TextContent(json_encode($content, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES))],
@@ -178,7 +179,7 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
     }
 
     /**
-     * @return array{title: string, description?: string|null, timezone: string, duration_minutes: int, options: list<array{start: string, end: string}>, participants: list<array{name?: string, email: string}>, deadline?: string|null, idempotency_key?: string|null}
+     * @return array{title: string, description?: string|null, timezone?: string, duration_minutes: int, options: list<array{start: string, end: string}>, participants: list<array{name?: string, email: string}>, deadline?: string|null, idempotency_key?: string|null}
      */
     private function mapPayload(array $args): array
     {
@@ -187,7 +188,10 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
         if ($description === '') {
             $description = null;
         }
-        $timezone = isset($args['timezone']) && \is_string($args['timezone']) ? trim($args['timezone']) : 'UTC';
+        $timezone = isset($args['timezone']) && \is_string($args['timezone']) ? trim($args['timezone']) : null;
+        if ($timezone === '') {
+            $timezone = null;
+        }
         $duration_minutes = (int) ($args['duration_minutes'] ?? 60);
         $options = [];
         foreach ($args['options'] ?? [] as $opt) {
@@ -221,12 +225,11 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
         return [
             'title' => $title,
             'description' => $description,
-            'timezone' => $timezone,
             'duration_minutes' => $duration_minutes,
             'options' => $options,
             'participants' => $participants,
             'deadline' => $deadline,
             'idempotency_key' => $idempotency_key,
-        ];
+        ] + ($timezone !== null ? ['timezone' => $timezone] : []);
     }
 }

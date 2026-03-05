@@ -13,6 +13,7 @@ final readonly class HillmeetPollResult
         public string $pollId,
         public string $shareUrl,
         public string $summary,
+        public string $timezone,
     ) {
     }
 }
