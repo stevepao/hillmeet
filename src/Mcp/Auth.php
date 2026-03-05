@@ -54,10 +54,20 @@ final class Auth
 
     /**
      * Extract Bearer token from Authorization header.
+     * Tries $_SERVER first (needs .htaccess to pass Authorization on Apache), then getallheaders().
      */
     public static function getBearerKey(): ?string
     {
         $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if ($auth === '') {
+            $headers = function_exists('getallheaders') ? getallheaders() : [];
+            foreach ($headers as $name => $value) {
+                if (strcasecmp($name, 'Authorization') === 0) {
+                    $auth = $value;
+                    break;
+                }
+            }
+        }
         if ($auth === '' || !preg_match('/^Bearer\s+(.+)$/i', trim($auth), $m)) {
             return null;
         }

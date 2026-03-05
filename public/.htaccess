@@ -5,6 +5,10 @@
     RewriteEngine On
     RewriteBase /
 
+    # Pass Authorization header to PHP (Apache often strips it from $_SERVER)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
     # Allow existing files and directories
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
