@@ -16,6 +16,9 @@ use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
 
 require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/config/env.php';
+
+$tenant = \Hillmeet\Mcp\Auth::requireApiKey();
 
 $psr17 = new Psr17Factory();
 $creator = new ServerRequestCreator($psr17, $psr17, $psr17, $psr17);
