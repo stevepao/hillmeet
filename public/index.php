@@ -17,6 +17,17 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
     error_reporting(E_ALL);
 }
 
+// MCP endpoint: handle before bootstrap (no session/CSRF). Avoids 301 when request is /mcp/v1.
+$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+$path = parse_url($requestUri, PHP_URL_PATH);
+$path = '/' . trim((string) $path, '/');
+$path = $path !== '/' && $path !== '' ? (rtrim($path, '/') ?: '/') : $path;
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+if ($path === '/mcp/v1' && in_array($method, ['GET', 'POST', 'OPTIONS'], true)) {
+    require __DIR__ . '/mcp/v1/index.php';
+    exit;
+}
+
 require_once dirname(__DIR__) . '/src/bootstrap.php';
 
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
