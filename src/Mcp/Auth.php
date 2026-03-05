@@ -21,7 +21,7 @@ final class Auth
      * Resolve tenant from API key (Bearer token).
      * Updates last_used_at on success. Returns null if key missing, revoked, or invalid.
      *
-     * @return object|null Tenant row with tenant_id, owner_user_id, name, created_at
+     * @return object|null Tenant row with tenant_id, owner_user_id, owner_email, name, created_at
      */
     public static function resolveTenantFromApiKey(string $apiKey): ?object
     {
@@ -32,9 +32,10 @@ final class Auth
         $prefix = substr($apiKey, 0, self::KEY_PREFIX_LENGTH);
         $pdo = Database::get();
         $stmt = $pdo->prepare(
-            "SELECT k.key_id, k.tenant_id, k.key_hash, t.tenant_id AS t_tenant_id, t.owner_user_id, t.name, t.created_at
+            "SELECT k.key_id, k.tenant_id, k.key_hash, t.tenant_id AS t_tenant_id, t.owner_user_id, t.name, t.created_at, u.email AS owner_email
              FROM tenant_api_keys k
              INNER JOIN tenants t ON t.tenant_id = k.tenant_id
+             INNER JOIN users u ON u.id = t.owner_user_id
              WHERE k.key_prefix = ? AND k.revoked_at IS NULL"
         );
         $stmt->execute([$prefix]);
@@ -47,6 +48,7 @@ final class Auth
         return (object) [
             'tenant_id' => $row->tenant_id,
             'owner_user_id' => (int) $row->owner_user_id,
+            'owner_email' => $row->owner_email ?? '',
             'name' => $row->name,
             'created_at' => $row->created_at,
         ];
@@ -77,7 +79,7 @@ final class Auth
     /**
      * Require valid API key; return tenant or send 401 with JSON-RPC error -32001 and exit.
      *
-     * @return object Tenant row (tenant_id, owner_user_id, name, created_at)
+     * @return object Tenant row (tenant_id, owner_user_id, owner_email, name, created_at)
      */
     public static function requireApiKey(): object
     {
