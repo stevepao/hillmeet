@@ -31,46 +31,72 @@ All responses preserve the JSON-RPC **id** from the request (request_id propagat
 
 All requests must be `POST` with `Content-Type: application/json`. The transport supports the `Mcp-Session-Id` header for session affinity when the client sends it.
 
+## Session flow
+
+The MCP transport **requires a session** for every request except the first:
+
+1. **First request** must be `initialize` — do **not** send `Mcp-Session-Id`. The response body is JSON and the response **headers** include `Mcp-Session-Id: <uuid>`.
+2. **All later requests** (e.g. `tools/list`, `tools/call`) must send that same UUID in the header: `Mcp-Session-Id: <uuid>`.
+
+If you call `tools/list` or `tools/call` without having called `initialize` first (or without sending the session id), you get:
+
+```json
+{"jsonrpc":"2.0","id":"","error":{"code":-32600,"message":"A valid session id is REQUIRED for non-initialize requests."}}
+```
+
+So in practice: call `initialize` once, capture `Mcp-Session-Id` from the response headers, then pass it on every subsequent request.
+
 ## cURL examples
 
-Use a valid API key from `bin/mcp-create-key.php` in the `Authorization` header.
+Use a valid API key from `bin/mcp-create-key.php` in the `Authorization` header. Replace `YOUR_API_KEY` and the base URL if needed.
 
-### Initialize (handshake)
+**Step 1: Initialize and capture session id**
 
 ```bash
-curl -s -X POST "https://meet.hillwork.net/mcp/v1" \
+# Option A: show response headers (-i), then copy Mcp-Session-Id from the output
+curl -s -i -X POST "https://meet.hillwork.net/mcp/v1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"example","version":"1.0.0"}}}'
+
+# Option B: save session id to a variable (requires grep/sed)
+RESP=$(curl -s -D - -X POST "https://meet.hillwork.net/mcp/v1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"example","version":"1.0.0"}}}')
+SESSION=$(echo "$RESP" | grep -i '^Mcp-Session-Id:' | cut -d' ' -f2 | tr -d '\r')
+# Now use $SESSION in the next requests
 ```
 
-Expected: JSON-RPC result with `serverInfo` and `capabilities`; response `id` equals request `id`.
+Expected: JSON-RPC result with `serverInfo` and `capabilities`; response headers include `Mcp-Session-Id: <uuid>`.
 
-### List tools
+**Step 2: List tools** (send the session id from step 1)
 
 ```bash
 curl -s -X POST "https://meet.hillwork.net/mcp/v1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Mcp-Session-Id: YOUR_SESSION_UUID" \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
 ```
 
-Expected: `result.tools` array including `hillmeet_ping` with empty input schema, e.g.:
+Replace `YOUR_SESSION_UUID` with the `Mcp-Session-Id` value from the initialize response. Expected: `result.tools` array including `hillmeet_ping`, e.g.:
 
 ```json
 {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"hillmeet_ping","inputSchema":{"type":"object","properties":{}},"description":"Ping the Hillmeet service"}]}}
 ```
 
-### Call tool: hillmeet_ping
+**Step 3: Call tool** `hillmeet_ping` (same session id)
 
 ```bash
 curl -s -X POST "https://meet.hillwork.net/mcp/v1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Mcp-Session-Id: YOUR_SESSION_UUID" \
   -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"hillmeet_ping","arguments":{}}}'
 ```
 
-Expected: JSON-RPC result with content describing the ping response; response `id` equals `3`. Example result content:
+Expected: JSON-RPC result with content describing the ping response. Example result content:
 
 ```json
 {"ok":true,"service":"hillmeet","time":"2026-02-24T12:00:00+00:00"}
