@@ -169,7 +169,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
             $rawToken = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $rawToken);
             $inviteId = $this->pollInviteRepository->createInvite($poll->id, $email, $tokenHash, $userId);
-            $inviteUrl = rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug . '?invite=' . $rawToken;
+            $inviteUrl = \Hillmeet\Support\url('/poll/' . $poll->slug, ['invite' => $rawToken]);
             if ($this->emailService->sendPollInvite($email, $poll->title, $inviteUrl)) {
                 $this->pollInviteRepository->markSent($inviteId);
             }
