@@ -139,8 +139,14 @@ final class PollRepository
 
     public function lockPoll(int $pollId, int $optionId): void
     {
+        $this->setPollLocked($pollId, $optionId);
+    }
+
+    /** Set poll as closed (locked). If $lockedOptionId is null, poll is closed with no selected time. */
+    public function setPollLocked(int $pollId, ?int $lockedOptionId): void
+    {
         $stmt = Database::get()->prepare("UPDATE polls SET locked_at = NOW(), locked_option_id = ? WHERE id = ?");
-        $stmt->execute([$optionId, $pollId]);
+        $stmt->execute([$lockedOptionId, $pollId]);
     }
 
     public function generateSlug(): string

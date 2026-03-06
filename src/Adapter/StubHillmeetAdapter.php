@@ -39,17 +39,36 @@ final class StubHillmeetAdapter implements HillmeetAdapterInterface
 
     public function findAvailability(string $ownerEmail, string $pollId, array $constraints): HillmeetAvailabilityResult
     {
-        throw new \BadMethodCallException('Not implemented');
+        $shareUrl = rtrim($this->baseUrl, '/') . '/poll/' . $pollId;
+        $bestSlots = [
+            [
+                'start' => '2026-02-24T14:00:00+00:00',
+                'end' => '2026-02-24T14:30:00+00:00',
+                'available_count' => 2,
+                'total_invited' => 3,
+                'available_emails' => ['a@example.com', 'b@example.com'],
+                'unavailable_emails' => ['c@example.com'],
+            ],
+        ];
+        return new HillmeetAvailabilityResult($bestSlots, 'Best slot: 2026-02-24T14:00:00+00:00–2026-02-24T14:30:00+00:00 UTC (2 of 3 available).', $shareUrl);
     }
 
     public function listNonresponders(string $ownerEmail, string $pollId): HillmeetNonrespondersResult
     {
-        throw new \BadMethodCallException('Not implemented');
+        $list = [
+            ['email' => 'lee@example.com'],
+            ['email' => 'morgan@example.com', 'name' => 'Morgan'],
+        ];
+        return new HillmeetNonrespondersResult($list, '2 person(s) haven\'t responded yet: lee@example.com, morgan@example.com.');
     }
 
     public function closePoll(string $ownerEmail, string $pollId, ?array $finalSlot, bool $notify): HillmeetCloseResult
     {
-        throw new \BadMethodCallException('Not implemented');
+        $slot = $finalSlot !== null
+            ? ['start' => $finalSlot['start'] ?? '', 'end' => $finalSlot['end'] ?? '']
+            : null;
+        $summary = 'Poll closed. Final time selected: ' . ($slot ? $slot['start'] . ' – ' . $slot['end'] : 'N/A') . '.';
+        return new HillmeetCloseResult(true, $slot, $summary, $notify ? true : null, $notify ? true : null);
     }
 
     public function getPoll(string $ownerEmail, string $pollId): HillmeetPollDetails

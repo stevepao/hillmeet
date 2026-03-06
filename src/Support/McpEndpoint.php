@@ -39,11 +39,11 @@ $hillmeetPingHandler = static function (RequestContext $ctx) use ($tenant): arra
         $durationMs = (int) round((hrtime(true) - $start) / 1e6);
         \Hillmeet\Mcp\Audit::logToolCall($tenant, $toolName, $durationMs, true, $requestId);
         return $result;
-    } catch (\Throwable $e) {
-        $durationMs = (int) round((hrtime(true) - $start) / 1e6);
-        \Hillmeet\Mcp\Audit::logToolCall($tenant, $toolName, $durationMs, false, $requestId, $e->getMessage());
-        throw $e;
-    }
+        } catch (\Throwable $e) {
+            $durationMs = (int) round((hrtime(true) - $start) / 1e6);
+            \Hillmeet\Mcp\Audit::logToolCall($tenant, $toolName, $durationMs, false, $requestId, $e->getMessage(), -32050);
+            throw $e;
+        }
 };
 
 $hillmeetAdapter = new \Hillmeet\Adapter\DbHillmeetAdapter(
@@ -51,7 +51,27 @@ $hillmeetAdapter = new \Hillmeet\Adapter\DbHillmeetAdapter(
     new \Hillmeet\Repositories\PollRepository(),
     new \Hillmeet\Repositories\PollInviteRepository(),
     new \Hillmeet\Services\EmailService(),
+    new \Hillmeet\Services\AvailabilityService(
+        new \Hillmeet\Repositories\PollRepository(),
+        new \Hillmeet\Repositories\VoteRepository(),
+        new \Hillmeet\Repositories\PollParticipantRepository(),
+        new \Hillmeet\Repositories\PollInviteRepository(),
+    ),
+    new \Hillmeet\Services\NonresponderService(
+        new \Hillmeet\Repositories\PollRepository(),
+        new \Hillmeet\Repositories\PollInviteRepository(),
+        new \Hillmeet\Repositories\PollParticipantRepository(),
+        new \Hillmeet\Repositories\VoteRepository(),
+    ),
     \Hillmeet\Support\config('app.url', 'https://meet.hillwork.net'),
+    new \Hillmeet\Services\PollService(
+        new \Hillmeet\Repositories\PollRepository(),
+        new \Hillmeet\Repositories\VoteRepository(),
+        new \Hillmeet\Repositories\PollParticipantRepository(),
+        new \Hillmeet\Repositories\PollInviteRepository(),
+        new \Hillmeet\Services\EmailService(),
+    ),
+    new \Hillmeet\Repositories\CalendarEventRepository(),
 );
 $hillmeetCreatePollInputSchema = [
     'type' => 'object',
@@ -94,6 +114,9 @@ $server = Server::builder()
     ->setServerInfo('Hillmeet', '1.0.0', 'Hillmeet availability polls and calendar integration')
     ->setSession(new \Hillmeet\Mcp\Session\DatabaseSessionStore(3600))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetCreatePollRequestHandler($hillmeetAdapter))
+    ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetFindAvailabilityRequestHandler($hillmeetAdapter))
+    ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetListNonrespondersRequestHandler($hillmeetAdapter))
+    ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetClosePollRequestHandler($hillmeetAdapter))
     ->addTool(
         $hillmeetPingHandler,
         'hillmeet_ping',
@@ -112,6 +135,88 @@ $server = Server::builder()
         'Create a Hillmeet availability poll',
         null,
         $hillmeetCreatePollInputSchema,
+        null,
+        null,
+        null,
+    )
+    ->addTool(
+        static function (): never {
+            throw new \BadMethodCallException('hillmeet_find_availability is handled by HillmeetFindAvailabilityRequestHandler');
+        },
+        'hillmeet_find_availability',
+        'Find best time slots for a poll given optional constraints (min attendees, preferred times, exclude emails)',
+        null,
+        [
+            'type' => 'object',
+            'properties' => [
+                'poll_id' => ['type' => 'string', 'description' => 'Poll identifier (slug)'],
+                'min_attendees' => ['type' => 'integer', 'description' => 'Optional minimum number of available attendees'],
+                'prefer_times' => [
+                    'type' => 'array',
+                    'description' => 'Optional windows to boost (ISO8601 UTC)',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'start' => ['type' => 'string', 'description' => 'Start ISO8601 UTC'],
+                            'end' => ['type' => 'string', 'description' => 'End ISO8601 UTC'],
+                        ],
+                        'required' => ['start', 'end'],
+                    ],
+                ],
+                'exclude_emails' => [
+                    'type' => 'array',
+                    'description' => 'Optional emails to exclude from availability counts',
+                    'items' => ['type' => 'string'],
+                ],
+            ],
+            'required' => ['poll_id'],
+        ],
+        null,
+        null,
+        null,
+    )
+    ->addTool(
+        static function (): never {
+            throw new \BadMethodCallException('hillmeet_list_nonresponders is handled by HillmeetListNonrespondersRequestHandler');
+        },
+        'hillmeet_list_nonresponders',
+        'List participants who have not yet responded to a poll',
+        null,
+        [
+            'type' => 'object',
+            'properties' => [
+                'poll_id' => ['type' => 'string', 'description' => 'Poll identifier (slug)'],
+            ],
+            'required' => ['poll_id'],
+        ],
+        null,
+        null,
+        null,
+    )
+    ->addTool(
+        static function (): never {
+            throw new \BadMethodCallException('hillmeet_close_poll is handled by HillmeetClosePollRequestHandler');
+        },
+        'hillmeet_close_poll',
+        'Close a poll, optionally with a final chosen slot and notification',
+        null,
+        [
+            'type' => 'object',
+            'properties' => [
+                'poll_id' => ['type' => 'string', 'description' => 'Poll identifier (slug)'],
+                'final_slot' => [
+                    'type' => 'object',
+                    'description' => 'Optional chosen slot (ISO8601 start/end in UTC)',
+                    'properties' => [
+                        'start' => ['type' => 'string', 'description' => 'Start ISO8601 UTC'],
+                        'end' => ['type' => 'string', 'description' => 'End ISO8601 UTC'],
+                    ],
+                    'required' => ['start', 'end'],
+                ],
+                'notify' => ['type' => 'boolean', 'description' => 'Optional; if true, notify participants (default false)'],
+            ],
+            'required' => ['poll_id'],
+        ],
         null,
         null,
         null,

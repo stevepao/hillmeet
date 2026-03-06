@@ -9,11 +9,18 @@ use Hillmeet\Dto\HillmeetCloseResult;
 use Hillmeet\Dto\HillmeetNonrespondersResult;
 use Hillmeet\Dto\HillmeetPollDetails;
 use Hillmeet\Dto\HillmeetPollResult;
+use Hillmeet\Exception\HillmeetConflict;
+use Hillmeet\Exception\HillmeetNotFound;
+use Hillmeet\Exception\HillmeetValidationError;
 use Hillmeet\HillmeetAdapter as HillmeetAdapterInterface;
+use Hillmeet\Repositories\CalendarEventRepository;
 use Hillmeet\Repositories\PollInviteRepository;
 use Hillmeet\Repositories\PollRepository;
 use Hillmeet\Repositories\UserRepository;
+use Hillmeet\Services\AvailabilityService;
 use Hillmeet\Services\EmailService;
+use Hillmeet\Services\NonresponderService;
+use Hillmeet\Services\PollService;
 use Hillmeet\Support\Database;
 
 /**
@@ -27,7 +34,11 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         private readonly PollRepository $pollRepository,
         private readonly PollInviteRepository $pollInviteRepository,
         private readonly EmailService $emailService,
+        private readonly AvailabilityService $availabilityService,
+        private readonly NonresponderService $nonresponderService,
         private readonly string $baseUrl = 'https://meet.hillwork.net',
+        private readonly ?PollService $pollService = null,
+        private readonly ?CalendarEventRepository $calendarEventRepository = null,
     ) {
     }
 
@@ -135,17 +146,243 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     public function findAvailability(string $ownerEmail, string $pollId, array $constraints): HillmeetAvailabilityResult
     {
-        throw new \BadMethodCallException('Not implemented');
+        $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
+        $user = $this->userRepository->findByEmail($ownerEmail);
+        if ($user === null) {
+            return new HillmeetAvailabilityResult([], 'Owner not found.', rtrim($this->baseUrl, '/') . '/poll/' . $pollId);
+        }
+        $poll = $this->pollRepository->findBySlug($pollId);
+        if ($poll === null || $poll->organizer_id !== $user->id) {
+            return new HillmeetAvailabilityResult([], 'Poll not found or access denied.', rtrim($this->baseUrl, '/') . '/poll/' . $pollId);
+        }
+        $normalized = $this->normalizeAvailabilityConstraints($constraints);
+        $slots = $this->availabilityService->computeBestSlots($user->id, $poll->id, $normalized);
+        $shareUrl = rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug;
+        $bestSlots = [];
+        foreach ($slots as $s) {
+            $bestSlots[] = [
+                'start' => $this->formatInPollTimezone($s['start_utc'], $poll->timezone),
+                'end' => $this->formatInPollTimezone($s['end_utc'], $poll->timezone),
+                'available_count' => $s['available_count'],
+                'total_invited' => $s['total_invited'],
+                'available_emails' => $s['available_emails'],
+                'unavailable_emails' => $s['unavailable_emails'],
+            ];
+        }
+        $summary = $this->buildAvailabilitySummary($bestSlots, $poll->title);
+        return new HillmeetAvailabilityResult($bestSlots, $summary, $shareUrl);
+    }
+
+    /**
+     * Format a UTC DateTimeImmutable in the poll's timezone as ISO8601 (with offset).
+     * Falls back to UTC if the poll timezone is invalid.
+     */
+    private function formatInPollTimezone(\DateTimeImmutable $utc, string $pollTimezone): string
+    {
+        $tz = 'UTC';
+        if ($pollTimezone !== '') {
+            try {
+                new \DateTimeZone($pollTimezone);
+                $tz = $pollTimezone;
+            } catch (\Exception) {
+                // fallback to UTC
+            }
+        }
+        return $utc->setTimezone(new \DateTimeZone($tz))->format('c');
+    }
+
+    /**
+     * @param list<array{start: string, end: string, available_count: int, total_invited: int, available_emails: list<string>, unavailable_emails: list<string>}> $bestSlots
+     */
+    private function buildAvailabilitySummary(array $bestSlots, string $pollTitle): string
+    {
+        if ($bestSlots === []) {
+            return sprintf('No time slots meet the criteria for "%s".', $pollTitle);
+        }
+        $first = $bestSlots[0];
+        $line = sprintf(
+            'Best slot: %s–%s (%d of %d available).',
+            $first['start'],
+            $first['end'],
+            $first['available_count'],
+            $first['total_invited'],
+        );
+        if (isset($bestSlots[1])) {
+            $second = $bestSlots[1];
+            $line .= sprintf(' Runner-up: %s–%s (%d of %d).', $second['start'], $second['end'], $second['available_count'], $second['total_invited']);
+        }
+        return $line;
+    }
+
+    /** @return array{min_attendees?: int, prefer_times?: list<array{start: string, end: string}>, exclude_emails?: list<string>} */
+    private function normalizeAvailabilityConstraints(array $constraints): array
+    {
+        $out = [];
+        if (isset($constraints['min_attendees']) && (is_int($constraints['min_attendees']) || (is_numeric($constraints['min_attendees']) && (int) $constraints['min_attendees'] == $constraints['min_attendees']))) {
+            $out['min_attendees'] = max(0, (int) $constraints['min_attendees']);
+        }
+        if (isset($constraints['prefer_times']) && \is_array($constraints['prefer_times'])) {
+            $windows = [];
+            foreach ($constraints['prefer_times'] as $w) {
+                if (\is_array($w) && isset($w['start'], $w['end']) && \is_string($w['start']) && \is_string($w['end'])) {
+                    $windows[] = ['start' => trim($w['start']), 'end' => trim($w['end'])];
+                }
+            }
+            if ($windows !== []) {
+                $out['prefer_times'] = $windows;
+            }
+        }
+        if (isset($constraints['exclude_emails']) && \is_array($constraints['exclude_emails'])) {
+            $emails = [];
+            foreach ($constraints['exclude_emails'] as $e) {
+                if (\is_string($e) && $e !== '') {
+                    $emails[] = strtolower(trim($e));
+                }
+            }
+            if ($emails !== []) {
+                $out['exclude_emails'] = $emails;
+            }
+        }
+        return $out;
     }
 
     public function listNonresponders(string $ownerEmail, string $pollId): HillmeetNonrespondersResult
     {
-        throw new \BadMethodCallException('Not implemented');
+        $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
+        $user = $this->userRepository->findByEmail($ownerEmail);
+        if ($user === null) {
+            throw new HillmeetNotFound('Owner not found.');
+        }
+        $poll = $this->pollRepository->findBySlug($pollId);
+        if ($poll === null || $poll->organizer_id !== $user->id) {
+            throw new HillmeetNotFound('Poll not found or access denied.');
+        }
+        $list = $this->nonresponderService->findNonrespondersForPoll($user->id, $poll->id);
+        $summary = $this->buildNonrespondersSummary($list);
+        return new HillmeetNonrespondersResult($list, $summary);
     }
+
+    /**
+     * @param list<array{email: string, name?: string}> $nonresponders
+     */
+    private function buildNonrespondersSummary(array $nonresponders): string
+    {
+        $n = \count($nonresponders);
+        if ($n === 0) {
+            return 'Everyone has responded.';
+        }
+        $emails = array_column($nonresponders, 'email');
+        return sprintf('%d person(s) haven\'t responded yet: %s.', $n, implode(', ', $emails));
+    }
+
 
     public function closePoll(string $ownerEmail, string $pollId, ?array $finalSlot, bool $notify): HillmeetCloseResult
     {
-        throw new \BadMethodCallException('Not implemented');
+        $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
+        $user = $this->userRepository->findByEmail($ownerEmail);
+        if ($user === null) {
+            throw new HillmeetNotFound('Owner not found.');
+        }
+        $poll = $this->pollRepository->findBySlug($pollId);
+        if ($poll === null || $poll->organizer_id !== $user->id) {
+            throw new HillmeetNotFound('Poll not found or access denied.');
+        }
+
+        $options = $this->pollRepository->getOptions($poll->id);
+        $lockedOptionId = $poll->locked_option_id;
+        $alreadyLocked = $poll->isLocked();
+
+        if ($alreadyLocked) {
+            $lockedOption = null;
+            foreach ($options as $o) {
+                if ($o->id === $lockedOptionId) {
+                    $lockedOption = $o;
+                    break;
+                }
+            }
+            if ($finalSlot === null || $finalSlot === []) {
+                $summary = $this->buildCloseSummary($poll, $lockedOption);
+                $finalSlotFormatted = $lockedOption !== null
+                    ? ['start' => $this->formatInPollTimezone(new \DateTimeImmutable($lockedOption->start_utc, new \DateTimeZone('UTC')), $poll->timezone), 'end' => $this->formatInPollTimezone(new \DateTimeImmutable($lockedOption->end_utc, new \DateTimeZone('UTC')), $poll->timezone)]
+                    : null;
+                return new HillmeetCloseResult(true, $finalSlotFormatted, $summary);
+            }
+            $matched = $this->findOptionByFinalSlot($options, $finalSlot);
+            if ($matched !== null && $matched->id === $lockedOptionId) {
+                $summary = $this->buildCloseSummary($poll, $matched);
+                $finalSlotFormatted = ['start' => $this->formatInPollTimezone(new \DateTimeImmutable($matched->start_utc, new \DateTimeZone('UTC')), $poll->timezone), 'end' => $this->formatInPollTimezone(new \DateTimeImmutable($matched->end_utc, new \DateTimeZone('UTC')), $poll->timezone)];
+                return new HillmeetCloseResult(true, $finalSlotFormatted, $summary);
+            }
+            throw new HillmeetConflict('Poll is already closed with a different final time.');
+        }
+
+        if ($finalSlot === null || $finalSlot === []) {
+            $this->pollRepository->setPollLocked($poll->id, null);
+            return new HillmeetCloseResult(true, null, 'Poll closed with no final time selected.');
+        }
+
+        $matched = $this->findOptionByFinalSlot($options, $finalSlot);
+        if ($matched === null) {
+            throw new HillmeetValidationError('No poll option matches the given final_slot start/end.');
+        }
+
+        $this->pollRepository->setPollLocked($poll->id, $matched->id);
+        $finalSlotFormatted = ['start' => $this->formatInPollTimezone(new \DateTimeImmutable($matched->start_utc, new \DateTimeZone('UTC')), $poll->timezone), 'end' => $this->formatInPollTimezone(new \DateTimeImmutable($matched->end_utc, new \DateTimeZone('UTC')), $poll->timezone)];
+        $summary = $this->buildCloseSummary($poll, $matched);
+        $notified = null;
+        $calendarEventCreated = null;
+        if ($notify && $this->pollService !== null) {
+            $pollUrl = rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug;
+            $result = $this->pollService->afterLockNotifyAndCalendar($poll, $matched, $pollUrl, $user->id);
+            $notified = $result['notified'];
+            if ($this->calendarEventRepository !== null) {
+                $calendarEventCreated = $this->calendarEventRepository->existsForPollAndOption($poll->id, $matched->id);
+            }
+            if ($notified) {
+                $summary .= ' Participants notified by email.';
+                if ($calendarEventCreated) {
+                    $summary .= ' Google Calendar event created.';
+                }
+            } else {
+                $summary .= ' Notification emails were not sent (e.g. calendar creation failed or not configured).';
+            }
+        }
+        return new HillmeetCloseResult(true, $finalSlotFormatted, $summary, $notified, $calendarEventCreated);
+    }
+
+    /**
+     * @param list<\Hillmeet\Models\PollOption> $options
+     * @param array{start: string, end: string} $finalSlot
+     */
+    private function findOptionByFinalSlot(array $options, array $finalSlot): ?\Hillmeet\Models\PollOption
+    {
+        $startStr = isset($finalSlot['start']) && \is_string($finalSlot['start']) ? trim($finalSlot['start']) : '';
+        $endStr = isset($finalSlot['end']) && \is_string($finalSlot['end']) ? trim($finalSlot['end']) : '';
+        if ($startStr === '' || $endStr === '') {
+            return null;
+        }
+        try {
+            $startUtc = (new \DateTimeImmutable($startStr, new \DateTimeZone('UTC')))->format('Y-m-d H:i:s');
+            $endUtc = (new \DateTimeImmutable($endStr, new \DateTimeZone('UTC')))->format('Y-m-d H:i:s');
+        } catch (\Throwable) {
+            return null;
+        }
+        foreach ($options as $opt) {
+            if ($opt->start_utc === $startUtc && $opt->end_utc === $endUtc) {
+                return $opt;
+            }
+        }
+        return null;
+    }
+
+    private function buildCloseSummary(\Hillmeet\Models\Poll $poll, ?\Hillmeet\Models\PollOption $lockedOption): string
+    {
+        if ($lockedOption === null) {
+            return 'Poll closed with no final time selected.';
+        }
+        $startFormatted = $this->formatInPollTimezone(new \DateTimeImmutable($lockedOption->start_utc, new \DateTimeZone('UTC')), $poll->timezone);
+        $endFormatted = $this->formatInPollTimezone(new \DateTimeImmutable($lockedOption->end_utc, new \DateTimeZone('UTC')), $poll->timezone);
+        return sprintf('Poll closed. Final time selected: %s – %s.', $startFormatted, $endFormatted);
     }
 
     public function getPoll(string $ownerEmail, string $pollId): HillmeetPollDetails

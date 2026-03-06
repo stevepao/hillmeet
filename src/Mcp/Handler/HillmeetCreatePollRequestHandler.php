@@ -63,7 +63,7 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
         $validation = $this->validate($arguments);
         if ($validation !== null) {
             $durationMs = (int) round((hrtime(true) - $start) / 1e6);
-            $this->logAudit($tenant, $durationMs, false, $id, 'Validation error');
+            $this->logAudit($tenant, $durationMs, false, $id, 'Validation error', self::CODE_VALIDATION);
             return new Error($id, self::CODE_VALIDATION, 'Validation error', $validation);
         }
 
@@ -74,24 +74,24 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
             $result = $this->adapter->createPoll($ownerEmail, $payload);
         } catch (HillmeetValidationError $e) {
             $durationMs = (int) round((hrtime(true) - $start) / 1e6);
-            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage());
+            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_VALIDATION);
             return new Error($id, self::CODE_VALIDATION, $e->getMessage(), $e->data);
         } catch (HillmeetNotFound $e) {
             $durationMs = (int) round((hrtime(true) - $start) / 1e6);
-            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage());
+            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_NOT_FOUND);
             return new Error($id, self::CODE_NOT_FOUND, 'Poll not found');
         } catch (HillmeetConflict $e) {
             $durationMs = (int) round((hrtime(true) - $start) / 1e6);
-            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage());
+            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_CONFLICT);
             return new Error($id, self::CODE_CONFLICT, 'Conflict');
         } catch (\Throwable $e) {
             $durationMs = (int) round((hrtime(true) - $start) / 1e6);
-            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage());
+            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_INTERNAL);
             return new Error($id, self::CODE_INTERNAL, 'Internal error', ['message' => $e->getMessage()]);
         }
 
         $durationMs = (int) round((hrtime(true) - $start) / 1e6);
-        $this->logAudit($tenant, $durationMs, true, $id);
+        $this->logAudit($tenant, $durationMs, true, $id, null, null);
 
         $content = [
             'poll_id' => $result->pollId,
@@ -164,12 +164,12 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
         return $errors === [] ? null : $errors;
     }
 
-    private function logAudit(object $tenant, int $durationMs, bool $ok, string|int $requestId, ?string $error = null): void
+    private function logAudit(object $tenant, int $durationMs, bool $ok, string|int $requestId, ?string $error = null, ?int $errorCode = null): void
     {
         if ($this->auditLogger !== null) {
-            ($this->auditLogger)($tenant, self::TOOL_NAME, $durationMs, $ok, $requestId, $error);
+            ($this->auditLogger)($tenant, self::TOOL_NAME, $durationMs, $ok, $requestId, $error, $errorCode);
         } else {
-            \Hillmeet\Mcp\Audit::logToolCall($tenant, self::TOOL_NAME, $durationMs, $ok, $requestId, $error);
+            \Hillmeet\Mcp\Audit::logToolCall($tenant, self::TOOL_NAME, $durationMs, $ok, $requestId, $error, $errorCode);
         }
     }
 

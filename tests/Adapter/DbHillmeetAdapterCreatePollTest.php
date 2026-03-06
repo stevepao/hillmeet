@@ -6,8 +6,11 @@ namespace Hillmeet\Tests\Adapter;
 
 use Hillmeet\Adapter\DbHillmeetAdapter;
 use Hillmeet\Repositories\PollInviteRepository;
+use Hillmeet\Repositories\PollParticipantRepository;
 use Hillmeet\Repositories\PollRepository;
 use Hillmeet\Repositories\UserRepository;
+use Hillmeet\Repositories\VoteRepository;
+use Hillmeet\Services\AvailabilityService;
 use Hillmeet\Services\EmailService;
 use Hillmeet\Support\Database;
 use PHPUnit\Framework\TestCase;
@@ -44,6 +47,12 @@ final class DbHillmeetAdapterCreatePollTest extends TestCase
             $this->pollRepository,
             $this->pollInviteRepository,
             new EmailService(),
+            new AvailabilityService(
+                $this->pollRepository,
+                new VoteRepository(),
+                new PollParticipantRepository(),
+                $this->pollInviteRepository,
+            ),
             'https://meet.hillwork.net',
         );
         $userId = $this->userRepository->getOrCreateUserIdByEmail($this->ownerEmail);
