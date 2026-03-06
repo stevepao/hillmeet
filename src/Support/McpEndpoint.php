@@ -63,6 +63,11 @@ $hillmeetAdapter = new \Hillmeet\Adapter\DbHillmeetAdapter(
         new \Hillmeet\Repositories\PollParticipantRepository(),
         new \Hillmeet\Repositories\VoteRepository(),
     ),
+    new \Hillmeet\Services\PollDetailsService(
+        new \Hillmeet\Repositories\PollRepository(),
+        new \Hillmeet\Repositories\PollInviteRepository(),
+        new \Hillmeet\Repositories\UserRepository(),
+    ),
     \Hillmeet\Support\config('app.url', 'https://meet.hillwork.net'),
     new \Hillmeet\Services\PollService(
         new \Hillmeet\Repositories\PollRepository(),
@@ -115,6 +120,7 @@ $server = Server::builder()
     ->setSession(new \Hillmeet\Mcp\Session\DatabaseSessionStore(3600))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetCreatePollRequestHandler($hillmeetAdapter))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetFindAvailabilityRequestHandler($hillmeetAdapter))
+    ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetGetPollRequestHandler($hillmeetAdapter))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetListNonrespondersRequestHandler($hillmeetAdapter))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetListPollsRequestHandler($hillmeetAdapter))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetClosePollRequestHandler($hillmeetAdapter))
@@ -169,6 +175,24 @@ $server = Server::builder()
                     'description' => 'Optional emails to exclude from availability counts',
                     'items' => ['type' => 'string'],
                 ],
+            ],
+            'required' => ['poll_id'],
+        ],
+        null,
+        null,
+        null,
+    )
+    ->addTool(
+        static function (): never {
+            throw new \BadMethodCallException('hillmeet_get_poll is handled by HillmeetGetPollRequestHandler');
+        },
+        'hillmeet_get_poll',
+        'Fetch details for a poll owned by the current user, including options and participants',
+        null,
+        [
+            'type' => 'object',
+            'properties' => [
+                'poll_id' => ['type' => 'string', 'description' => 'Poll identifier (slug)'],
             ],
             'required' => ['poll_id'],
         ],

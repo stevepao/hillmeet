@@ -21,6 +21,7 @@ use Hillmeet\Repositories\UserRepository;
 use Hillmeet\Services\AvailabilityService;
 use Hillmeet\Services\EmailService;
 use Hillmeet\Services\NonresponderService;
+use Hillmeet\Services\PollDetailsService;
 use Hillmeet\Services\PollService;
 use Hillmeet\Support\Database;
 
@@ -37,6 +38,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         private readonly EmailService $emailService,
         private readonly AvailabilityService $availabilityService,
         private readonly NonresponderService $nonresponderService,
+        private readonly PollDetailsService $pollDetailsService,
         private readonly string $baseUrl = 'https://meet.hillwork.net',
         private readonly ?PollService $pollService = null,
         private readonly ?CalendarEventRepository $calendarEventRepository = null,
@@ -449,7 +451,30 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     public function getPoll(string $ownerEmail, string $pollId): HillmeetPollDetails
     {
-        throw new \BadMethodCallException('Not implemented');
+        $pollId = $this->normalizePollId($pollId);
+        $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
+        $user = $this->userRepository->findByEmail($ownerEmail);
+        if ($user === null) {
+            throw new HillmeetNotFound('Owner not found.');
+        }
+        $data = $this->pollDetailsService->getPollDetailsForOwner($user->id, $pollId);
+        $options = [];
+        foreach ($data->options as $opt) {
+            $options[] = [
+                'start' => $this->formatInPollTimezone($opt['start_utc'], $data->timezone),
+                'end' => $this->formatInPollTimezone($opt['end_utc'], $data->timezone),
+            ];
+        }
+        $createdAtIso = (new \DateTimeImmutable($data->created_at, new \DateTimeZone('UTC')))->format('c');
+        return new HillmeetPollDetails(
+            $data->pollId,
+            $data->title,
+            $data->timezone,
+            $createdAtIso,
+            $options,
+            $data->participants,
+            $data->status === 'closed',
+        );
     }
 
     private function parseUtcDatetime(string $value): ?\DateTimeImmutable

@@ -13,6 +13,7 @@ use Hillmeet\Repositories\VoteRepository;
 use Hillmeet\Services\AvailabilityService;
 use Hillmeet\Services\EmailService;
 use Hillmeet\Services\NonresponderService;
+use Hillmeet\Services\PollDetailsService;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -55,6 +56,11 @@ final class DbHillmeetAdapterFindAvailabilityTest extends TestCase
                 $this->pollInviteRepository,
                 new PollParticipantRepository(),
                 new VoteRepository(),
+            ),
+            new PollDetailsService(
+                $this->pollRepository,
+                $this->pollInviteRepository,
+                $this->userRepository,
             ),
             'https://meet.hillwork.net',
         );

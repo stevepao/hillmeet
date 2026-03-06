@@ -1,4 +1,4 @@
-# Manual cURL tests: find_availability, list_nonresponders, close_poll, list_polls
+# Manual cURL tests: find_availability, list_nonresponders, close_poll, list_polls, get_poll
 
 Use these steps to test the MCP tools end-to-end. Replace `YOUR_API_KEY`, `YOUR_BASE_URL`, and (after step 1) `YOUR_SESSION_UUID` and `POLL_SLUG` with real values.
 
@@ -119,6 +119,33 @@ curl -s -X POST "${BASE_URL}/mcp/v1" \
 ```
 
 Expected: `result.structuredContent` with `polls` (array of objects with `poll_id`, `title`, `created_at`, `timezone`, `status` (`open` or `closed`), `share_url`) and `summary` (e.g. “You have 1 poll. Most recent: 'Team standup'.”). After step 2, you should see the poll you just created in the list.
+
+
+---
+
+## Step 2b: Get poll details
+
+Fetch full details for a poll (metadata, options in poll timezone, participants). Use the same `POLL_SLUG` from step 2.
+
+```bash
+curl -s -X POST "${BASE_URL}/mcp/v1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Mcp-Session-Id: ${SESSION}" \
+  -d "{
+    \"jsonrpc\": \"2.0\",
+    \"id\": 21,
+    \"method\": \"tools/call\",
+    \"params\": {
+      \"name\": \"hillmeet_get_poll\",
+      \"arguments\": {
+        \"poll_id\": \"${POLL_SLUG}\"
+      }
+    }
+  }"
+```
+
+Expected: `result.structuredContent` with `poll_id`, `title`, `timezone`, `status` (`open` or `closed`), `created_at` (ISO8601), `options` (array of `{ start, end }` in poll timezone), and `participants` (array of `{ email, name? }`).
 
 ---
 

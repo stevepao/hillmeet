@@ -17,10 +17,10 @@ use Hillmeet\Services\PollDetailsService;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Integration-style tests for DbHillmeetAdapter::listNonresponders.
+ * Integration-style tests for DbHillmeetAdapter::getPoll.
  * Requires config and database; skips if config is not available.
  */
-final class DbHillmeetAdapterListNonrespondersTest extends TestCase
+final class DbHillmeetAdapterGetPollTest extends TestCase
 {
     private ?int $pollId = null;
     private UserRepository $userRepository;
@@ -75,59 +75,79 @@ final class DbHillmeetAdapterListNonrespondersTest extends TestCase
     }
 
     /**
-     * Valid owner + poll with one non-responder returns result with that email and summary.
+     * getPoll returns HillmeetPollDetails with localized options (poll timezone) and participants.
      */
-    public function testListNonrespondersReturnsResultWithEmailsAndSummary(): void
+    public function testGetPollReturnsDetailsWithLocalizedOptionsAndParticipants(): void
     {
-        $ownerEmail = 'list-nr-owner@example.com';
-        $userId = (int) $this->userRepository->getOrCreateUserIdByEmail($ownerEmail);
+        $ownerEmail = 'getpoll-owner-' . bin2hex(random_bytes(4)) . '@example.com';
+        $ownerId = (int) $this->userRepository->getOrCreateUserIdByEmail($ownerEmail);
         $slug = $this->pollRepository->generateSlug();
         $poll = $this->pollRepository->create(
-            $userId,
+            $ownerId,
             $slug,
-            password_hash('secret', PASSWORD_DEFAULT),
-            'List NR test',
+            password_hash('s', PASSWORD_DEFAULT),
+            'Standup poll',
             null,
             null,
-            'UTC',
+            'Europe/London',
             30,
         );
-        $this->pollRepository->addOption($poll->id, '2026-03-01 14:00:00', '2026-03-01 14:30:00', null, 0);
+        $this->pollRepository->addOption($poll->id, '2026-03-10 14:00:00', '2026-03-10 14:30:00', null, 0);
         $this->pollId = $poll->id;
-        $this->pollInviteRepository->createInvite($poll->id, 'lee@example.com', hash('sha256', 'tok1'), $userId);
-        $this->pollInviteRepository->createInvite($poll->id, 'morgan@example.com', hash('sha256', 'tok2'), $userId);
-        $morganId = (int) $this->userRepository->getOrCreateUserIdByEmail('morgan@example.com');
-        (new PollParticipantRepository())->add($poll->id, $morganId);
-        $options = $this->pollRepository->getOptions($poll->id);
-        (new VoteRepository())->setVote($poll->id, $options[0]->id, $morganId, 'yes');
+        $this->pollInviteRepository->createInvite($poll->id, 'participant-getpoll@example.com', hash('sha256', 'tok'), $ownerId);
 
-        $result = $this->adapter->listNonresponders($ownerEmail, $slug);
+        $result = $this->adapter->getPoll($ownerEmail, $slug);
 
-        $this->assertCount(1, $result->nonresponders);
-        $this->assertSame('lee@example.com', $result->nonresponders[0]['email']);
-        $this->assertStringContainsString('lee@example.com', $result->summary);
-        $this->assertStringContainsString('haven\'t responded', $result->summary);
+        $this->assertSame($slug, $result->pollId);
+        $this->assertSame('Standup poll', $result->title);
+        $this->assertSame('Europe/London', $result->timezone);
+        $this->assertFalse($result->closed);
+        $this->assertNotEmpty($result->created_at);
+        $this->assertCount(1, $result->options);
+        $this->assertArrayHasKey('start', $result->options[0]);
+        $this->assertArrayHasKey('end', $result->options[0]);
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $result->options[0]['start']);
+        $this->assertCount(1, $result->participants);
+        $this->assertSame('participant-getpoll@example.com', $result->participants[0]['email']);
     }
 
     /**
      * Owner not found throws HillmeetNotFound.
      */
-    public function testListNonrespondersOwnerNotFoundThrows(): void
+    public function testGetPollOwnerNotFoundThrows(): void
     {
         $this->expectException(HillmeetNotFound::class);
         $this->expectExceptionMessage('Owner not found');
-        $this->adapter->listNonresponders('nonexistent-' . bin2hex(random_bytes(4)) . '@example.com', 'any-slug');
+        $this->adapter->getPoll('nonexistent-' . bin2hex(random_bytes(4)) . '@example.com', 'any-slug');
     }
 
     /**
      * Poll not found or not owned throws HillmeetNotFound.
      */
-    public function testListNonrespondersPollNotFoundThrows(): void
+    public function testGetPollPollNotFoundThrows(): void
     {
-        $ownerEmail = 'list-nr-other@example.com';
+        $ownerEmail = 'getpoll-other@example.com';
         $this->userRepository->getOrCreateUserIdByEmail($ownerEmail);
         $this->expectException(HillmeetNotFound::class);
         $this->expectExceptionMessage('Poll not found');
-        $this->adapter->listNonresponders($ownerEmail, 'non-existent-slug-abc');
+        $this->adapter->getPoll($ownerEmail, 'nonexistent-slug-abc');
+    }
+
+    /**
+     * Closed poll returns closed true.
+     */
+    public function testGetPollClosedPollReturnsClosedTrue(): void
+    {
+        $ownerEmail = 'getpoll-closed@example.com';
+        $ownerId = (int) $this->userRepository->getOrCreateUserIdByEmail($ownerEmail);
+        $slug = $this->pollRepository->generateSlug();
+        $poll = $this->pollRepository->create($ownerId, $slug, password_hash('s', PASSWORD_DEFAULT), 'Closed', null, null, 'UTC', 30);
+        $this->pollRepository->addOption($poll->id, '2026-03-01 14:00:00', '2026-03-01 14:30:00', null, 0);
+        $options = $this->pollRepository->getOptions($poll->id);
+        $this->pollRepository->setPollLocked($poll->id, $options[0]->id);
+        $this->pollId = $poll->id;
+
+        $result = $this->adapter->getPoll($ownerEmail, $slug);
+        $this->assertTrue($result->closed);
     }
 }

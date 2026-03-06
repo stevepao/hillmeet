@@ -74,7 +74,23 @@ final class StubHillmeetAdapter implements HillmeetAdapterInterface
 
     public function getPoll(string $ownerEmail, string $pollId): HillmeetPollDetails
     {
-        throw new \BadMethodCallException('Not implemented');
+        $options = [
+            ['start' => '2026-02-24T14:00:00+00:00', 'end' => '2026-02-24T14:30:00+00:00'],
+            ['start' => '2026-02-24T15:00:00+00:00', 'end' => '2026-02-24T15:30:00+00:00'],
+        ];
+        $participants = [
+            ['email' => 'alice@example.com', 'name' => 'Alice'],
+            ['email' => 'bob@example.com'],
+        ];
+        return new HillmeetPollDetails(
+            $pollId ?: 'stub-slug',
+            'Stub poll',
+            'UTC',
+            '2026-02-24T12:00:00+00:00',
+            $options,
+            $participants,
+            false,
+        );
     }
 
     public function listPolls(string $ownerEmail): HillmeetPollListResult
