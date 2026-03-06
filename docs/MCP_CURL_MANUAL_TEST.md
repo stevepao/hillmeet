@@ -1,6 +1,6 @@
-# Manual cURL tests: find_availability, list_nonresponders, close_poll
+# Manual cURL tests: find_availability, list_nonresponders, close_poll, list_polls
 
-Use these steps to test the three MCP tools end-to-end. Replace `YOUR_API_KEY`, `YOUR_BASE_URL`, and (after step 1) `YOUR_SESSION_UUID` and `POLL_SLUG` with real values.
+Use these steps to test the MCP tools end-to-end. Replace `YOUR_API_KEY`, `YOUR_BASE_URL`, and (after step 1) `YOUR_SESSION_UUID` and `POLL_SLUG` with real values.
 
 **Prerequisite: API key**
 
@@ -95,6 +95,30 @@ Optional (with `jq`):
 # If the response is in a file or you pipe the curl output:
 # export POLL_SLUG=$(curl -s ... | jq -r '.result.structuredContent.poll_id // .result.content[0].text | fromjson? | .poll_id // empty')
 ```
+
+---
+
+## Step 2a: List my polls
+
+Lists all polls owned by the current user (the tenant’s owner email). No arguments. Use this after creating a poll to confirm it appears.
+
+```bash
+curl -s -X POST "${BASE_URL}/mcp/v1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Mcp-Session-Id: ${SESSION}" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 20,
+    "method": "tools/call",
+    "params": {
+      "name": "hillmeet_list_polls",
+      "arguments": {}
+    }
+  }'
+```
+
+Expected: `result.structuredContent` with `polls` (array of objects with `poll_id`, `title`, `created_at`, `timezone`, `status` (`open` or `closed`), `share_url`) and `summary` (e.g. “You have 1 poll. Most recent: 'Team standup'.”). After step 2, you should see the poll you just created in the list.
 
 ---
 
@@ -248,7 +272,7 @@ Expected: `error.code` **-32020** (not found), e.g. “Poll not found or access 
 
 ## One-shot script (optional)
 
-Save as `scripts/mcp-curl-test.sh`, make executable, set `BASE_URL` and `API_KEY`, then run. It will initialize, create a poll, print the slug and share URL, then run find_availability, list_nonresponders, and close_poll. You still need to do step 3 (vote as one participant) in the browser before re-running the script for list_nonresponders/find_availability, or run the script twice (once before and once after voting).
+Save as `scripts/mcp-curl-test.sh`, make executable, set `BASE_URL` and `API_KEY`, then run. It will initialize, create a poll, list my polls, print the slug and share URL, then run find_availability, list_nonresponders, and close_poll. You still need to do step 3 (vote as one participant) in the browser before re-running the script for list_nonresponders/find_availability, or run the script twice (once before and once after voting).
 
 ```bash
 #!/usr/bin/env bash
@@ -276,6 +300,15 @@ POLL_SLUG=$(echo "$CREATE" | jq -r '.result.structuredContent.poll_id // .result
 if [ -z "$POLL_SLUG" ]; then POLL_SLUG=$(echo "$CREATE" | jq -r '.result.content[0].text' | jq -r '.poll_id'); fi
 echo "POLL_SLUG=$POLL_SLUG"
 echo "Share URL: $(echo "$CREATE" | jq -r '.result.structuredContent.share_url // .result.content[0].text | if type == "string" then . | fromjson? | .share_url // empty else empty end // empty')"
+
+# List my polls
+echo "--- List my polls ---"
+curl -s -X POST "${BASE_URL}/mcp/v1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Mcp-Session-Id: ${SESSION}" \
+  -d '{"jsonrpc":"2.0","id":20,"method":"tools/call","params":{"name":"hillmeet_list_polls","arguments":{}}}' | jq .
+
 echo "--- Now vote as one participant in the browser, then run find_availability and list_nonresponders ---"
 
 # Find availability

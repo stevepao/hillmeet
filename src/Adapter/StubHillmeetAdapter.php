@@ -8,6 +8,7 @@ use Hillmeet\Dto\HillmeetAvailabilityResult;
 use Hillmeet\Dto\HillmeetCloseResult;
 use Hillmeet\Dto\HillmeetNonrespondersResult;
 use Hillmeet\Dto\HillmeetPollDetails;
+use Hillmeet\Dto\HillmeetPollListResult;
 use Hillmeet\Dto\HillmeetPollResult;
 use Hillmeet\HillmeetAdapter as HillmeetAdapterInterface;
 
@@ -74,5 +75,20 @@ final class StubHillmeetAdapter implements HillmeetAdapterInterface
     public function getPoll(string $ownerEmail, string $pollId): HillmeetPollDetails
     {
         throw new \BadMethodCallException('Not implemented');
+    }
+
+    public function listPolls(string $ownerEmail): HillmeetPollListResult
+    {
+        $polls = [
+            [
+                'poll_id' => 'stub-abc123',
+                'title' => 'Stub poll',
+                'created_at' => '2026-02-24 12:00:00',
+                'timezone' => 'UTC',
+                'status' => 'open',
+                'share_url' => rtrim($this->baseUrl, '/') . '/poll/stub-abc123',
+            ],
+        ];
+        return new HillmeetPollListResult($polls, "You have 1 poll. Most recent: 'Stub poll'.");
     }
 }

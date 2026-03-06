@@ -99,6 +99,28 @@ final class PollRepository
         return array_map(fn($r) => Poll::fromRow($r), $rows);
     }
 
+    /**
+     * Polls owned by the user for MCP/list: poll_id (slug), title, created_at, timezone, status (open|closed).
+     * Ordered by most recent activity (updated_at DESC). Does not include share_url (adapter adds it).
+     *
+     * @return list<array{poll_id: string, title: string, created_at: string, timezone: string, status: string}>
+     */
+    public function findPollsOwnedByUser(int $userId, int $limit = 100): array
+    {
+        $polls = $this->listOwnedPolls($userId, $limit);
+        $out = [];
+        foreach ($polls as $poll) {
+            $out[] = [
+                'poll_id' => $poll->slug,
+                'title' => $poll->title,
+                'created_at' => $poll->created_at,
+                'timezone' => $poll->timezone,
+                'status' => $poll->isLocked() ? 'closed' : 'open',
+            ];
+        }
+        return $out;
+    }
+
     /** Polls the user participated in (in poll_participants or has a vote), excluding polls they own. Ordered by updated_at. */
     public function listParticipatedPolls(int $userId, int $limit = 100): array
     {

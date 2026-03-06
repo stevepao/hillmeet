@@ -8,6 +8,7 @@ use Hillmeet\Dto\HillmeetAvailabilityResult;
 use Hillmeet\Dto\HillmeetCloseResult;
 use Hillmeet\Dto\HillmeetNonrespondersResult;
 use Hillmeet\Dto\HillmeetPollDetails;
+use Hillmeet\Dto\HillmeetPollListResult;
 use Hillmeet\Dto\HillmeetPollResult;
 
 /**
@@ -65,4 +66,11 @@ interface HillmeetAdapter
      * @param string $pollId    Poll identifier.
      */
     public function getPoll(string $ownerEmail, string $pollId): HillmeetPollDetails;
+
+    /**
+     * List polls owned by the given owner (organizer).
+     *
+     * @param string $ownerEmail Logical owner identity (mapped to internal user_id).
+     */
+    public function listPolls(string $ownerEmail): HillmeetPollListResult;
 }

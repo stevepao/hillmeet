@@ -8,6 +8,7 @@ use Hillmeet\Dto\HillmeetAvailabilityResult;
 use Hillmeet\Dto\HillmeetCloseResult;
 use Hillmeet\Dto\HillmeetNonrespondersResult;
 use Hillmeet\Dto\HillmeetPollDetails;
+use Hillmeet\Dto\HillmeetPollListResult;
 use Hillmeet\Dto\HillmeetPollResult;
 use Hillmeet\Exception\HillmeetConflict;
 use Hillmeet\Exception\HillmeetNotFound;
@@ -298,6 +299,41 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         }
         $emails = array_column($nonresponders, 'email');
         return sprintf('%d person(s) haven\'t responded yet: %s.', $n, implode(', ', $emails));
+    }
+
+    public function listPolls(string $ownerEmail): HillmeetPollListResult
+    {
+        $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
+        $user = $this->userRepository->findByEmail($ownerEmail);
+        if ($user === null) {
+            return new HillmeetPollListResult([], 'Owner not found.');
+        }
+        $rows = $this->pollRepository->findPollsOwnedByUser($user->id);
+        $base = rtrim($this->baseUrl, '/');
+        $polls = [];
+        foreach ($rows as $row) {
+            $row['share_url'] = $base . '/poll/' . $row['poll_id'];
+            $polls[] = $row;
+        }
+        $summary = $this->buildListPollsSummary($polls);
+        return new HillmeetPollListResult($polls, $summary);
+    }
+
+    /**
+     * @param list<array{poll_id: string, title: string, created_at: string, timezone: string, status: string, share_url: string}> $polls
+     */
+    private function buildListPollsSummary(array $polls): string
+    {
+        $n = \count($polls);
+        if ($n === 0) {
+            return 'You have no polls.';
+        }
+        $mostRecent = $polls[0]['title'] ?? '';
+        $word = $n === 1 ? 'poll' : 'polls';
+        if ($mostRecent !== '') {
+            return sprintf("You have %d %s. Most recent: '%s'.", $n, $word, $mostRecent);
+        }
+        return sprintf('You have %d %s.', $n, $word);
     }
 
 

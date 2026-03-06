@@ -116,6 +116,7 @@ $server = Server::builder()
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetCreatePollRequestHandler($hillmeetAdapter))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetFindAvailabilityRequestHandler($hillmeetAdapter))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetListNonrespondersRequestHandler($hillmeetAdapter))
+    ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetListPollsRequestHandler($hillmeetAdapter))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetClosePollRequestHandler($hillmeetAdapter))
     ->addTool(
         $hillmeetPingHandler,
@@ -189,6 +190,18 @@ $server = Server::builder()
             ],
             'required' => ['poll_id'],
         ],
+        null,
+        null,
+        null,
+    )
+    ->addTool(
+        static function (): never {
+            throw new \BadMethodCallException('hillmeet_list_polls is handled by HillmeetListPollsRequestHandler');
+        },
+        'hillmeet_list_polls',
+        'List polls owned by the current user (organizer)',
+        null,
+        ['type' => 'object', 'properties' => new \stdClass()],
         null,
         null,
         null,
