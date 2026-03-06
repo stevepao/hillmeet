@@ -106,6 +106,10 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         if ($description === '') {
             $description = null;
         }
+        $location = isset($payload['location']) && \is_string($payload['location']) ? trim($payload['location']) : null;
+        if ($location === '') {
+            $location = null;
+        }
         $timezone = $this->resolvePollTimezone($payload, $userId);
         $durationMinutes = isset($payload['duration_minutes']) ? (int) $payload['duration_minutes'] : 60;
         if ($durationMinutes < 1) {
@@ -122,7 +126,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
             $secretHash,
             $title,
             $description,
-            null,
+            $location,
             $timezone,
             $durationMinutes,
         );
@@ -477,6 +481,8 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         return new HillmeetPollDetails(
             $data->pollId,
             $data->title,
+            $data->description,
+            $data->location,
             $data->timezone,
             $createdAtIso,
             $options,

@@ -97,6 +97,8 @@ final class HillmeetGetPollRequestHandler implements RequestHandlerInterface
         $content = [
             'poll_id' => $details->pollId,
             'title' => $details->title,
+            'description' => $details->description,
+            'location' => $details->location,
             'timezone' => $details->timezone,
             'status' => $details->closed ? 'closed' : 'open',
             'created_at' => $details->created_at,

@@ -120,6 +120,13 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
             $errors[] = ['field' => 'title', 'reason' => 'required and non-empty'];
         }
 
+        if (array_key_exists('description', $args) && $args['description'] !== null && !\is_string($args['description'])) {
+            $errors[] = ['field' => 'description', 'reason' => 'must be a string if provided'];
+        }
+        if (array_key_exists('location', $args) && $args['location'] !== null && !\is_string($args['location'])) {
+            $errors[] = ['field' => 'location', 'reason' => 'must be a string if provided'];
+        }
+
         $duration = $args['duration_minutes'] ?? null;
         if (!\is_int($duration) && !(is_numeric($duration) && (int) $duration == $duration)) {
             $errors[] = ['field' => 'duration_minutes', 'reason' => 'must be an integer'];
@@ -180,7 +187,7 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
     }
 
     /**
-     * @return array{title: string, description?: string|null, timezone?: string, duration_minutes: int, options: list<array{start: string}>, participants: list<array{name?: string, email: string}>, deadline?: string|null, idempotency_key?: string|null}
+     * @return array{title: string, description?: string|null, location?: string|null, timezone?: string, duration_minutes: int, options: list<array{start: string}>, participants: list<array{name?: string, email: string}>, deadline?: string|null, idempotency_key?: string|null}
      */
     private function mapPayload(array $args): array
     {
@@ -188,6 +195,10 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
         $description = isset($args['description']) && \is_string($args['description']) ? trim($args['description']) : null;
         if ($description === '') {
             $description = null;
+        }
+        $location = isset($args['location']) && \is_string($args['location']) ? trim($args['location']) : null;
+        if ($location === '') {
+            $location = null;
         }
         $timezone = isset($args['timezone']) && \is_string($args['timezone']) ? trim($args['timezone']) : null;
         if ($timezone === '') {
@@ -226,6 +237,7 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
         return [
             'title' => $title,
             'description' => $description,
+            'location' => $location,
             'duration_minutes' => $duration_minutes,
             'options' => $options,
             'participants' => $participants,

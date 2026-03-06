@@ -93,6 +93,8 @@ final class StubHillmeetAdapter implements HillmeetAdapterInterface
         return new HillmeetPollDetails(
             $pollId ?: 'stub-slug',
             'Stub poll',
+            null,
+            null,
             'UTC',
             '2026-02-24T12:00:00+00:00',
             $options,

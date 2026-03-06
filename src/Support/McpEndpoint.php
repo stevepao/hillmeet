@@ -85,6 +85,7 @@ $hillmeetCreatePollInputSchema = [
     'properties' => [
         'title' => ['type' => 'string', 'description' => 'Poll title'],
         'description' => ['type' => 'string', 'description' => 'Optional description'],
+        'location' => ['type' => 'string', 'description' => 'Optional short location (e.g. "Zoom", "Room 401", "123 Main St")'],
         'timezone' => ['type' => 'string', 'description' => "Optional. IANA timezone (e.g. America/Los_Angeles). Defaults to organizer's timezone if set, otherwise UTC."],
         'duration_minutes' => ['type' => 'integer', 'description' => 'Duration of each option in minutes'],
         'options' => [

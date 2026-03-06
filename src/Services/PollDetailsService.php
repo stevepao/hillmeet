@@ -63,6 +63,8 @@ final class PollDetailsService
         return new PollDetailsData(
             $poll->slug,
             $poll->title,
+            $poll->description,
+            $poll->location,
             $poll->timezone,
             $status,
             $poll->created_at,
