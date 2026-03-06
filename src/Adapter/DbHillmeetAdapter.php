@@ -129,6 +129,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
             $location,
             $timezone,
             $durationMinutes,
+            $secret,
         );
 
         $options = $payload['options'] ?? [];
@@ -179,7 +180,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
             $this->storeIdempotency((string) $tenantId, $idempotencyKey, $poll->id);
         }
 
-        return $this->buildResult($poll, $optionsAdded, \count($seenEmails));
+        return $this->buildResult($poll, $optionsAdded, \count($seenEmails), $secret);
     }
 
     public function findAvailability(string $ownerEmail, string $pollId, array $constraints): HillmeetAvailabilityResult
@@ -196,7 +197,10 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         }
         $normalized = $this->normalizeAvailabilityConstraints($constraints);
         $slots = $this->availabilityService->computeBestSlots($user->id, $poll->id, $normalized);
-        $shareUrl = rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug;
+        $secret = $this->pollRepository->getDecryptedSecretForOwner($poll->id, $user->id);
+        $shareUrl = ($secret !== null && $secret !== '')
+            ? \Hillmeet\Support\url('/poll/' . $poll->slug, ['secret' => $secret])
+            : rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug;
         $bestSlots = [];
         foreach ($slots as $s) {
             $bestSlots[] = [
@@ -326,7 +330,11 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         $base = rtrim($this->baseUrl, '/');
         $polls = [];
         foreach ($rows as $row) {
-            $row['share_url'] = $base . '/poll/' . $row['poll_id'];
+            $secret = $this->pollRepository->getDecryptedSecretForOwner($row['id'], $user->id);
+            $row['share_url'] = ($secret !== null && $secret !== '')
+                ? \Hillmeet\Support\url('/poll/' . $row['poll_id'], ['secret' => $secret])
+                : $base . '/poll/' . $row['poll_id'];
+            unset($row['id']);
             $polls[] = $row;
         }
         $summary = $this->buildListPollsSummary($polls);
@@ -470,6 +478,11 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
             throw new HillmeetNotFound('Owner not found.');
         }
         $data = $this->pollDetailsService->getPollDetailsForOwner($user->id, $pollId);
+        $poll = $this->pollRepository->findBySlug($data->pollId);
+        $secret = $poll !== null ? $this->pollRepository->getDecryptedSecretForOwner($poll->id, $user->id) : null;
+        $shareUrl = ($secret !== null && $secret !== '')
+            ? \Hillmeet\Support\url('/poll/' . $data->pollId, ['secret' => $secret])
+            : null;
         $options = [];
         foreach ($data->options as $opt) {
             $options[] = [
@@ -488,6 +501,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
             $options,
             $data->participants,
             $data->status === 'closed',
+            $shareUrl,
         );
     }
 
@@ -540,9 +554,11 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         $stmt->execute([$tenantId, $idempotencyKey, $pollId]);
     }
 
-    private function buildResult(\Hillmeet\Models\Poll $poll, ?int $optionsCount = null, ?int $participantsCount = null): HillmeetPollResult
+    private function buildResult(\Hillmeet\Models\Poll $poll, ?int $optionsCount = null, ?int $participantsCount = null, ?string $secret = null): HillmeetPollResult
     {
-        $shareUrl = rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug;
+        $shareUrl = ($secret !== null && $secret !== '')
+            ? \Hillmeet\Support\url('/poll/' . $poll->slug, ['secret' => $secret])
+            : rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug;
         $nOpt = $optionsCount ?? 0;
         $nPart = $participantsCount ?? 0;
         $summary = sprintf(

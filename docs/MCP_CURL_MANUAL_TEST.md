@@ -153,7 +153,7 @@ Expected: `result.structuredContent` with `poll_id`, `title`, `timezone`, `statu
 
 To test **list_nonresponders** (one responded, one not) and **find_availability** (votes affect availability):
 
-1. Open **share_url** from step 2 in a browser (e.g. `https://meet.hillwork.net/poll/POLL_SLUG`).
+1. Open **share_url** from step 2 in a browser. The create_poll response returns the full shareable link (with `?secret=...`), so that URL works for any participant; e.g. `https://meet.hillwork.net/poll/POLL_SLUG?secret=...`.
 2. Sign in or use the invite link for **alice@example.com** (ensure that user exists; create via the app or DB if needed).
 3. Submit votes for Alice (e.g. “yes” on the first option, “no” on others).
 4. Do **not** respond as Bob — leave Bob as a non-responder.

@@ -80,6 +80,7 @@ final class PollRepositoryFindPollsOwnedByUserTest extends TestCase
 
         $this->assertCount(2, $rows);
         $this->assertSame($slug2, $rows[0]['poll_id']);
+        $this->assertArrayHasKey('id', $rows[0]);
         $this->assertSame('Second poll', $rows[0]['title']);
         $this->assertSame('UTC', $rows[0]['timezone']);
         $this->assertSame('open', $rows[0]['status']);

@@ -100,6 +100,7 @@ final class StubHillmeetAdapter implements HillmeetAdapterInterface
             $options,
             $participants,
             false,
+            null,
         );
     }
 

@@ -100,10 +100,10 @@ final class PollRepository
     }
 
     /**
-     * Polls owned by the user for MCP/list: poll_id (slug), title, created_at, timezone, status (open|closed).
+     * Polls owned by the user for MCP/list: poll_id (slug), id (internal), title, created_at, timezone, status (open|closed).
      * Ordered by most recent activity (updated_at DESC). Does not include share_url (adapter adds it).
      *
-     * @return list<array{poll_id: string, title: string, created_at: string, timezone: string, status: string}>
+     * @return list<array{poll_id: string, id: int, title: string, created_at: string, timezone: string, status: string}>
      */
     public function findPollsOwnedByUser(int $userId, int $limit = 100): array
     {
@@ -112,6 +112,7 @@ final class PollRepository
         foreach ($polls as $poll) {
             $out[] = [
                 'poll_id' => $poll->slug,
+                'id' => $poll->id,
                 'title' => $poll->title,
                 'created_at' => $poll->created_at,
                 'timezone' => $poll->timezone,
@@ -119,6 +120,24 @@ final class PollRepository
             ];
         }
         return $out;
+    }
+
+    /**
+     * Get the decrypted poll secret for building the share URL. Only returns a value when the poll belongs to the given owner and secret_encrypted is set.
+     */
+    public function getDecryptedSecretForOwner(int $pollId, int $ownerUserId): ?string
+    {
+        $stmt = Database::get()->prepare("SELECT secret_encrypted FROM polls WHERE id = ? AND organizer_id = ?");
+        $stmt->execute([$pollId, $ownerUserId]);
+        $encrypted = $stmt->fetchColumn();
+        if ($encrypted === false || $encrypted === null || $encrypted === '') {
+            return null;
+        }
+        try {
+            return \Hillmeet\Support\Encryption::decrypt($encrypted);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /** Polls the user participated in (in poll_participants or has a vote), excluding polls they own. Ordered by updated_at. */
@@ -141,11 +160,14 @@ final class PollRepository
         return array_map(fn($r) => Poll::fromRow($r), $rows);
     }
 
-    public function create(int $organizerId, string $slug, string $secretHash, string $title, ?string $description, ?string $location, string $timezone, int $durationMinutes = 60): Poll
+    public function create(int $organizerId, string $slug, string $secretHash, string $title, ?string $description, ?string $location, string $timezone, int $durationMinutes = 60, ?string $secretPlaintext = null): Poll
     {
         $pdo = Database::get();
-        $stmt = $pdo->prepare("INSERT INTO polls (organizer_id, slug, secret_hash, title, description, location, timezone, duration_minutes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$organizerId, $slug, $secretHash, $title, $description, $location, $timezone, $durationMinutes]);
+        $encrypted = $secretPlaintext !== null && $secretPlaintext !== ''
+            ? \Hillmeet\Support\Encryption::encrypt($secretPlaintext)
+            : null;
+        $stmt = $pdo->prepare("INSERT INTO polls (organizer_id, slug, secret_hash, title, description, location, timezone, duration_minutes, secret_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$organizerId, $slug, $secretHash, $title, $description, $location, $timezone, $durationMinutes, $encrypted]);
         return $this->findById((int) $pdo->lastInsertId());
     }
 

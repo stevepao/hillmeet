@@ -59,7 +59,8 @@ final class PollService
             trim($input['description'] ?? '') ?: null,
             trim($input['location'] ?? '') ?: null,
             $timezone,
-            $durationMinutes
+            $durationMinutes,
+            $secret,
         );
         AuditLog::log('poll.create', 'poll', (string) $poll->id, ['slug' => $slug], $organizerId, $ip);
         return ['poll' => $poll, 'secret' => $secret];

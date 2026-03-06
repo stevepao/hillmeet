@@ -105,6 +105,9 @@ final class HillmeetGetPollRequestHandler implements RequestHandlerInterface
             'options' => $details->options,
             'participants' => $details->participants,
         ];
+        if ($details->shareUrl !== null && $details->shareUrl !== '') {
+            $content['share_url'] = $details->shareUrl;
+        }
         $callResult = new CallToolResult(
             [new TextContent(json_encode($content, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES))],
             false,

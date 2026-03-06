@@ -60,6 +60,8 @@ Each tool returns a `summary` (and often `share_url`, `poll_id`, or structured d
 | **hillmeet_list_nonresponders** | See who has not voted yet (e.g. to send a reminder). | `nonresponders` (email, name), `summary`. |
 | **hillmeet_close_poll** | User has chosen a final time; lock the poll and optionally notify participants. | `closed`, `final_slot`, `summary`; if `notify` was true, summary mentions email/calendar. |
 
+**Share URL:** For **hillmeet_create_poll**, the returned `share_url` is the full shareable link (includes a secret in the query string). Anyone with this URL can open the poll; treat it like a password and share it only with intended participants. For **hillmeet_list_polls**, **hillmeet_get_poll**, and **hillmeet_find_availability**, `share_url` is the full shareable link (with secret) when the poll has a stored encrypted secret (polls created via MCP or the web app after this feature); otherwise it is the base poll URL without the secret. So the AI agent can call **list_polls** or **get_poll** anytime and share the returned `share_url` with participants without maintaining state from the create response.
+
 All times in **create_poll** options are **start only** (ISO8601 UTC); the server computes end from `duration_minutes`. Do not send `end` in options. For **close_poll**, `final_slot` must include both `start` and `end` (ISO8601 UTC) and must match one of the poll's options.
 
 ## cURL examples

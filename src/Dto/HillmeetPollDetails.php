@@ -19,6 +19,7 @@ namespace Hillmeet\Dto;
  * @property list<array{start: string, end: string}> $options     Time options in poll timezone (ISO8601).
  * @property list<array{email: string, name?: string}> $participants
  * @property bool     $closed      Whether the poll is closed.
+ * @property string|null $shareUrl Full shareable URL (with secret) when available for the owner; null otherwise.
  *
  * Project: Hillmeet
  * SPDX-License-Identifier: MIT
@@ -38,6 +39,7 @@ final readonly class HillmeetPollDetails
         /** @var list<array{email: string, name?: string}> */
         public array $participants,
         public bool $closed,
+        public ?string $shareUrl = null,
     ) {
     }
 }
