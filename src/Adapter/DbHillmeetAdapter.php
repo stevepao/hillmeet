@@ -42,6 +42,29 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
     ) {
     }
 
+    /**
+     * Accept either a short slug (e.g. "8tjrm6pnq43p") or a full poll URL;
+     * returns the slug for lookup.
+     */
+    private function normalizePollId(string $pollId): string
+    {
+        $pollId = trim($pollId);
+        if ($pollId === '') {
+            return $pollId;
+        }
+        if (str_contains($pollId, '://')) {
+            $path = parse_url($pollId, PHP_URL_PATH);
+            if ($path !== null && $path !== '') {
+                $segments = array_filter(explode('/', $path));
+                $last = end($segments);
+                if ($last !== false && $last !== '') {
+                    return $last;
+                }
+            }
+        }
+        return $pollId;
+    }
+
     public function createPoll(string $ownerEmail, array $payload): HillmeetPollResult
     {
         $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
@@ -146,6 +169,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     public function findAvailability(string $ownerEmail, string $pollId, array $constraints): HillmeetAvailabilityResult
     {
+        $pollId = $this->normalizePollId($pollId);
         $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
         $user = $this->userRepository->findByEmail($ownerEmail);
         if ($user === null) {
@@ -248,6 +272,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     public function listNonresponders(string $ownerEmail, string $pollId): HillmeetNonrespondersResult
     {
+        $pollId = $this->normalizePollId($pollId);
         $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
         $user = $this->userRepository->findByEmail($ownerEmail);
         if ($user === null) {
@@ -278,6 +303,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     public function closePoll(string $ownerEmail, string $pollId, ?array $finalSlot, bool $notify): HillmeetCloseResult
     {
+        $pollId = $this->normalizePollId($pollId);
         $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
         $user = $this->userRepository->findByEmail($ownerEmail);
         if ($user === null) {
