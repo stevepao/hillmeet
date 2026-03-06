@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * McpContext.php
+ * Purpose: Request-scoped context for MCP: current tenant (set after API key auth). Used by tool handlers to get owner_email.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Mcp;
 
 /**

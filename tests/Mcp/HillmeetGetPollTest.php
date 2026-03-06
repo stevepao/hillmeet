@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * HillmeetGetPollTest.php
+ * Purpose: MCP tool tests for hillmeet_get_poll.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Tests\Mcp;
 
 use Hillmeet\Adapter\StubHillmeetAdapter;

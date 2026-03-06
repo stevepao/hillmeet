@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * StubHillmeetAdapter.php
+ * Purpose: Stub adapter for MCP tool development and tests. createPoll returns a fake result; other methods throw.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Adapter;
 
 use Hillmeet\Dto\HillmeetAvailabilityResult;

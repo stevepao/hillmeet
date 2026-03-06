@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * DbHillmeetAdapterFindAvailabilityTest.php
+ * Purpose: Integration-style tests for DbHillmeetAdapter::findAvailability. Requires config and database; skips if config is not available.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Tests\Adapter;
 
 use Hillmeet\Adapter\DbHillmeetAdapter;

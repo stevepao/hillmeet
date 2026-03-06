@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * DbHillmeetAdapterCreatePollTest.php
+ * Purpose: Integration-style tests for DbHillmeetAdapter::createPoll. Requires config and database; skips if config is not available.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Tests\Adapter;
 
 use Hillmeet\Adapter\DbHillmeetAdapter;
@@ -113,8 +121,8 @@ final class DbHillmeetAdapterCreatePollTest extends TestCase
             'timezone' => 'UTC',
             'duration_minutes' => 30,
             'options' => [
-                ['start' => '2026-02-24T14:00:00Z', 'end' => '2026-02-24T14:30:00Z'],
-                ['start' => '2026-02-24T15:00:00Z', 'end' => '2026-02-24T15:30:00Z'],
+                ['start' => '2026-02-24T14:00:00Z'],
+                ['start' => '2026-02-24T15:00:00Z'],
             ],
             'participants' => [
                 ['email' => 'alice@example.com'],
@@ -159,8 +167,8 @@ final class DbHillmeetAdapterCreatePollTest extends TestCase
             'timezone' => 'UTC',
             'duration_minutes' => 60,
             'options' => [
-                ['start' => '2026-03-01T10:00:00Z', 'end' => '2026-03-01T11:00:00Z'],
-                ['start' => '2026-03-01T11:00:00Z', 'end' => '2026-03-01T12:00:00Z'],
+                ['start' => '2026-03-01T10:00:00Z'],
+                ['start' => '2026-03-01T11:00:00Z'],
             ],
             'participants' => [
                 ['email' => 'one@example.com'],

@@ -21,6 +21,10 @@ use Hillmeet\Dto\HillmeetPollResult;
  *
  * Only operations required for v1 are exposed; additional operations (e.g. deletePoll,
  * addTimeOption) will be added when new MCP tools need them.
+ *
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 interface HillmeetAdapter
 {

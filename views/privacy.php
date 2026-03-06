@@ -12,7 +12,7 @@ $content = ob_start();
 ?>
 <div class="legal-page" style="max-width:720px; margin:0 auto;">
   <h1>Privacy Policy</h1>
-  <p class="muted">Last updated: February 19, 2026</p>
+  <p class="muted">Last updated: March 6, 2026</p>
 
   <section style="margin-top:var(--space-5);">
     <h2 style="font-size:1.125rem; margin-bottom:var(--space-2);">1. Introduction</h2>
@@ -39,6 +39,7 @@ $content = ob_start();
         </ul>
       </li>
     </ul>
+    <p><strong>API (programmatic) access.</strong> The service can also be accessed via an API (e.g. the MCP endpoint for integrations or automated tools). When the API is used with an API key, we collect the same types of data described above (poll details, participant emails, availability, etc.) as when you use the website. We associate API key usage with the account linked to that key and may log API tool calls (e.g. tool name, duration, success or error) for security and operational purposes, consistent with the logging described above.</p>
     <p>We also store session data so you stay signed in, and we may log certain actions (e.g. creating a poll, sending invites) with an identifier and IP address for security and operational purposes. IP addresses are not used for tracking or profiling.</p>
 
     <h3 style="font-size:1rem; margin-top:var(--space-3);">b. Google Account Information (Optional)</h3>
@@ -94,7 +95,7 @@ $content = ob_start();
     <h2 style="font-size:1.125rem; margin-bottom:var(--space-2);">5. Data Retention</h2>
     <ul style="margin:var(--space-2) 0; padding-left:1.25rem;">
       <li>Poll and availability data is retained until you delete the poll or your account. You may delete polls at any time from the app.</li>
-      <li>Authentication and account data (email, name, session, Google OAuth tokens if connected) is retained for as long as your account is active. You may request account and data deletion by contacting us.</li>
+      <li>Authentication and account data (email, name, session, Google OAuth tokens if connected, API key hashes if you use the API) is retained for as long as your account is active. You may request account and data deletion by contacting us.</li>
       <li>One-time PINs expire after a short period and are not retained for longer than necessary.</li>
     </ul>
 
@@ -124,6 +125,7 @@ $content = ob_start();
       <li>Disconnect Google Calendar in the app (Calendar settings → Disconnect) to revoke access with Google and remove our stored tokens, calendar selections, and free/busy cache. You can also revoke Hillmeet’s access in <strong>Google Account → Security → Third-party access</strong>; using Disconnect in the app then removes our stored copies.</li>
       <li>Delete individual polls at any time</li>
       <li>Request deletion of your account and associated data by contacting us</li>
+      <li>If you use an API key: revoke the key (e.g. by contacting us or through any in-app controls we provide) to stop programmatic access to your account; revoked keys are no longer valid for authentication.</li>
     </ul>
   </section>
 

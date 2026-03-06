@@ -20,7 +20,9 @@ use Mcp\Server\Session\SessionInterface;
 
 /**
  * Handles tools/call for hillmeet_create_poll only.
- * Uses ownerEmail from tenant (McpContext); validates MCP arguments and delegates to HillmeetAdapter.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
 {
@@ -131,16 +133,15 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
         } else {
             foreach ($options as $i => $opt) {
                 if (!\is_array($opt)) {
-                    $errors[] = ['field' => "options[{$i}]", 'reason' => 'must be an object with start and end'];
+                    $errors[] = ['field' => "options[{$i}]", 'reason' => 'must be an object with start (end is computed by server)'];
                     continue;
                 }
+                if (array_key_exists('end', $opt)) {
+                    $errors[] = ['field' => "options[{$i}].end", 'reason' => 'not allowed; server computes end from duration_minutes'];
+                }
                 $start = $opt['start'] ?? null;
-                $end = $opt['end'] ?? null;
                 if (!\is_string($start) || $start === '') {
                     $errors[] = ['field' => "options[{$i}].start", 'reason' => 'required ISO8601 string (UTC)'];
-                }
-                if (!\is_string($end) || $end === '') {
-                    $errors[] = ['field' => "options[{$i}].end", 'reason' => 'required ISO8601 string (UTC)'];
                 }
             }
         }
@@ -179,7 +180,7 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
     }
 
     /**
-     * @return array{title: string, description?: string|null, timezone?: string, duration_minutes: int, options: list<array{start: string, end: string}>, participants: list<array{name?: string, email: string}>, deadline?: string|null, idempotency_key?: string|null}
+     * @return array{title: string, description?: string|null, timezone?: string, duration_minutes: int, options: list<array{start: string}>, participants: list<array{name?: string, email: string}>, deadline?: string|null, idempotency_key?: string|null}
      */
     private function mapPayload(array $args): array
     {
@@ -195,8 +196,8 @@ final class HillmeetCreatePollRequestHandler implements RequestHandlerInterface
         $duration_minutes = (int) ($args['duration_minutes'] ?? 60);
         $options = [];
         foreach ($args['options'] ?? [] as $opt) {
-            if (\is_array($opt) && isset($opt['start'], $opt['end']) && \is_string($opt['start']) && \is_string($opt['end'])) {
-                $options[] = ['start' => $opt['start'], 'end' => $opt['end']];
+            if (\is_array($opt) && isset($opt['start']) && \is_string($opt['start']) && trim($opt['start']) !== '') {
+                $options[] = ['start' => trim($opt['start'])];
             }
         }
         $participants = [];

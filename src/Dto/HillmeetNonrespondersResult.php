@@ -11,6 +11,10 @@ namespace Hillmeet\Dto;
  *
  * @property list<array{email: string, name?: string}> $nonresponders
  * @property string $summary Short human-readable summary.
+ *
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 final readonly class HillmeetNonrespondersResult
 {

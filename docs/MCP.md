@@ -46,6 +46,22 @@ If you call `tools/list` or `tools/call` without having called `initialize` firs
 
 So in practice: call `initialize` once, capture `Mcp-Session-Id` from the response headers, then pass it on every subsequent request.
 
+## Tools overview (for AI / tool-calling clients)
+
+Each tool returns a `summary` (and often `share_url`, `poll_id`, or structured data) suitable for natural-language replies. Typical flow:
+
+| Tool | When to use | Returns |
+|------|-------------|--------|
+| **hillmeet_ping** | Verify API key and connectivity. | `ok`, `service`, `time`. |
+| **hillmeet_create_poll** | User wants to schedule a meeting; you have title, duration, time options (start only), and optional participants. | `poll_id`, `share_url`, `summary`, `timezone`. **Next:** Share `share_url` with participants so they can vote. |
+| **hillmeet_list_polls** | List the user's polls or get a `poll_id` for other tools. | `polls` (each with `poll_id`, `title`, `status`, `share_url`), `summary`. |
+| **hillmeet_get_poll** | Fetch full poll details (options, participants, status). | Full poll object; options include `start`/`end` in poll timezone. |
+| **hillmeet_find_availability** | After participants have voted; find which time(s) work best. | `best_slots` (start, end, available_count, total_invited), `summary`, `share_url`. |
+| **hillmeet_list_nonresponders** | See who has not voted yet (e.g. to send a reminder). | `nonresponders` (email, name), `summary`. |
+| **hillmeet_close_poll** | User has chosen a final time; lock the poll and optionally notify participants. | `closed`, `final_slot`, `summary`; if `notify` was true, summary mentions email/calendar. |
+
+All times in **create_poll** options are **start only** (ISO8601 UTC); the server computes end from `duration_minutes`. Do not send `end` in options. For **close_poll**, `final_slot` must include both `start` and `end` (ISO8601 UTC) and must match one of the poll's options.
+
 ## cURL examples
 
 Use a valid API key from `bin/mcp-create-key.php` in the `Authorization` header. Replace `YOUR_API_KEY` and the base URL if needed.

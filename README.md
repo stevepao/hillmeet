@@ -15,6 +15,8 @@ Hillmeet is a Doodle-like group availability poll app with Google Calendar integ
 - **Email sign-in** — One-time PIN to your email if you don’t use Google.
 - **Privacy-first** — No public listing; each poll is identified by a secret link. See [Privacy Policy](https://meet.hillwork.net/privacy) and [Terms of Service](https://meet.hillwork.net/terms) on the live site.
 
+**MCP server** — For AI assistants and integrations, Hillmeet exposes an [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server at `/mcp/v1`. Authenticate with a tenant API key; then use tools such as `hillmeet_create_poll`, `hillmeet_find_availability`, `hillmeet_list_polls`, and `hillmeet_close_poll` to create polls, find best times, and close polls. See [MCP documentation](docs/MCP.md) and [manual cURL tests](docs/MCP_CURL_MANUAL_TEST.md). Create API keys with `php bin/mcp-create-key.php [owner_email]`.
+
 **Stack:** PHP 8.4+, MySQL, Composer. No front-end framework. IONOS shared hosting friendly (Apache, no Docker).
 
 ---
@@ -96,6 +98,24 @@ If OAuth is not configured, the app still works with **Use email instead** (emai
 - **Vote submission** — Vote on a time slot; confirm “Vote saved,” the button stays selected, and results update after refresh.
 - **Lock and calendar** — Lock a poll, then use “Create calendar event” (or “Notify by email only”) and confirm participants are notified.
 
+- **MCP (API)** — Use [MCP cURL tests](docs/MCP_CURL_MANUAL_TEST.md) to test the MCP tools (create poll, find availability, list nonresponders, close poll). Requires an API key from `php bin/mcp-create-key.php [owner_email]`.
+
+---
+
+## Acknowledgements
+
+This project uses the following third-party libraries (see `composer.json`). Their licenses are compatible with this project’s MIT license.
+
+| Package | License | Purpose |
+|---------|---------|--------|
+| [league/oauth2-google](https://github.com/thephpleague/oauth2-google) | MIT | Google OAuth 2.0 provider |
+| [mcp/sdk](https://github.com/modelcontextprotocol/php-sdk) | MIT / Apache-2.0 | MCP server (tools, session, transport) |
+| [nyholm/psr7](https://github.com/Nyholm/psr7) | MIT | PSR-7 HTTP message implementation |
+| [nyholm/psr7-server](https://github.com/Nyholm/psr7-server) | MIT | PSR-7 server request creation |
+| [phpmailer/phpmailer](https://github.com/PHPMailer/PHPMailer) | LGPL-2.1 | Email (PIN, invites, notifications) |
+
+Development dependencies include PHPUnit (BSD-3-Clause). Full license texts are in each package under `vendor/`.
+
 ---
 
 ## License
@@ -107,4 +127,5 @@ MIT. See [LICENSE.md](LICENSE.md).
 ## Links
 
 - [Privacy Policy](https://meet.hillwork.net/privacy) · [Terms of Service](https://meet.hillwork.net/terms)  
+- [MCP server](docs/MCP.md) · [MCP cURL tests](docs/MCP_CURL_MANUAL_TEST.md)  
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)

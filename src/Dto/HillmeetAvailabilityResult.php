@@ -13,6 +13,10 @@ namespace Hillmeet\Dto;
  * @property list<array{start: string, end: string, available_count: int, total_invited: int, available_emails: list<string>, unavailable_emails: list<string>}> $bestSlots
  * @property string $summary  Short human-readable summary.
  * @property string $shareUrl Full URL to the poll.
+ *
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 final readonly class HillmeetAvailabilityResult
 {

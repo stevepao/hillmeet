@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 /**
  * Audit.php
- * MCP tool call audit: writes to mcp_audit_log and optionally to generic audit_log.
+ * Purpose: MCP tool call audit: writes to mcp_audit_log and optionally to generic audit_log.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 
 namespace Hillmeet\Mcp;

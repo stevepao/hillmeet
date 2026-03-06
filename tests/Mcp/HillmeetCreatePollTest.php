@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * HillmeetCreatePollTest.php
+ * Purpose: Integration-style tests for hillmeet_create_poll MCP tool.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Tests\Mcp;
 
 use Hillmeet\Adapter\StubHillmeetAdapter;
@@ -141,8 +149,8 @@ final class HillmeetCreatePollTest extends TestCase
             'timezone' => 'America/Los_Angeles',
             'duration_minutes' => 30,
             'options' => [
-                ['start' => '2026-02-24T14:00:00Z', 'end' => '2026-02-24T14:30:00Z'],
-                ['start' => '2026-02-24T15:00:00Z', 'end' => '2026-02-24T15:30:00Z'],
+                ['start' => '2026-02-24T14:00:00Z'],
+                ['start' => '2026-02-24T15:00:00Z'],
             ],
             'participants' => [
                 ['name' => 'Alice', 'contact' => 'alice@example.com'],
@@ -183,7 +191,7 @@ final class HillmeetCreatePollTest extends TestCase
             'title' => 'Standup',
             'duration_minutes' => 30,
             'options' => [
-                ['start' => '2026-02-24T14:00:00Z', 'end' => '2026-02-24T14:30:00Z'],
+                ['start' => '2026-02-24T14:00:00Z'],
             ],
             'participants' => [
                 ['contact' => 'alice@example.com'],
@@ -212,5 +220,44 @@ final class HillmeetCreatePollTest extends TestCase
             }
         }
         $this->assertTrue($found, 'Error data should include a participants-related field and reason');
+    }
+
+    /**
+     * Options containing "end" are rejected with JSON-RPC -32010; server computes end from duration_minutes.
+     */
+    public function testCreatePollOptionsWithEndReturnsValidationError(): void
+    {
+        $request = new CallToolRequest('hillmeet_create_poll', [
+            'title' => 'Standup',
+            'duration_minutes' => 30,
+            'options' => [
+                ['start' => '2026-02-24T14:00:00Z'],
+                ['start' => '2026-02-24T15:00:00Z', 'end' => '2026-02-24T15:30:00Z'],
+            ],
+            'participants' => [
+                ['contact' => 'alice@example.com'],
+            ],
+        ]);
+        $request = $request->withId(100);
+
+        $adapter = new StubHillmeetAdapter();
+        $handler = new HillmeetCreatePollRequestHandler($adapter, static function (): void {});
+        $session = $this->createSession();
+
+        $response = $handler->handle($request, $session);
+
+        $this->assertInstanceOf(Error::class, $response);
+        $this->assertSame(100, $response->getId());
+        $this->assertSame(-32010, $response->code);
+        $this->assertSame('Validation error', $response->message);
+        $this->assertIsArray($response->data);
+        $found = false;
+        foreach ($response->data as $item) {
+            if (isset($item['field']) && str_contains((string) $item['field'], 'options') && str_contains((string) $item['field'], 'end')) {
+                $found = true;
+                break;
+            }
+        }
+        $this->assertTrue($found, 'Error data should include options[].end field and reason');
     }
 }

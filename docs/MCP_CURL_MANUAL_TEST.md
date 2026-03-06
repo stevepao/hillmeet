@@ -68,9 +68,9 @@ curl -s -X POST "${BASE_URL}/mcp/v1" \
         "title": "Team standup",
         "duration_minutes": 30,
         "options": [
-          {"start": "2026-03-10T14:00:00Z", "end": "2026-03-10T14:30:00Z"},
-          {"start": "2026-03-10T15:00:00Z", "end": "2026-03-10T15:30:00Z"},
-          {"start": "2026-03-10T16:00:00Z", "end": "2026-03-10T16:30:00Z"}
+          {"start": "2026-03-10T14:00:00Z"},
+          {"start": "2026-03-10T15:00:00Z"},
+          {"start": "2026-03-10T16:00:00Z"}
         ],
         "participants": [
           {"contact": "spao@spao.net"},
@@ -321,7 +321,7 @@ CREATE=$(curl -s -X POST "${BASE_URL}/mcp/v1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Mcp-Session-Id: ${SESSION}" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"hillmeet_create_poll","arguments":{"title":"Team standup","duration_minutes":30,"options":[{"start":"2026-03-01T14:00:00Z","end":"2026-03-01T14:30:00Z"},{"start":"2026-03-01T15:00:00Z","end":"2026-03-01T15:30:00Z"},{"start":"2026-03-01T16:00:00Z","end":"2026-03-01T16:30:00Z"}],"participants":[{"contact":"alice@example.com"},{"contact":"bob@example.com"}]}}}')
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"hillmeet_create_poll","arguments":{"title":"Team standup","duration_minutes":30,"options":[{"start":"2026-03-01T14:00:00Z"},{"start":"2026-03-01T15:00:00Z"},{"start":"2026-03-01T16:00:00Z"}],"participants":[{"contact":"alice@example.com"},{"contact":"bob@example.com"}]}}}')
 echo "Create poll: $CREATE"
 POLL_SLUG=$(echo "$CREATE" | jq -r '.result.structuredContent.poll_id // .result.content[0].text | if type == "string" then . | fromjson? | .poll_id // empty else empty end // empty')
 if [ -z "$POLL_SLUG" ]; then POLL_SLUG=$(echo "$CREATE" | jq -r '.result.content[0].text' | jq -r '.poll_id'); fi

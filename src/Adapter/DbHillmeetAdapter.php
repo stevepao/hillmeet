@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * DbHillmeetAdapter.php
+ * Purpose: Database-backed implementation of HillmeetAdapter for MCP (createPoll, findAvailability, listPolls, getPoll, closePoll, listNonresponders).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Adapter;
 
 use Hillmeet\Dto\HillmeetAvailabilityResult;
@@ -122,14 +130,14 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         $options = $payload['options'] ?? [];
         $sortOrder = 0;
         foreach ($options as $opt) {
-            if (!\is_array($opt) || !isset($opt['start'], $opt['end']) || !\is_string($opt['start']) || !\is_string($opt['end'])) {
+            if (!\is_array($opt) || !isset($opt['start']) || !\is_string($opt['start']) || trim($opt['start']) === '') {
                 continue;
             }
-            $startUtc = $this->parseUtcDatetime($opt['start']);
-            $endUtc = $this->parseUtcDatetime($opt['end']);
-            if ($startUtc === null || $endUtc === null) {
+            $startUtc = $this->parseUtcDatetime(trim($opt['start']));
+            if ($startUtc === null) {
                 continue;
             }
+            $endUtc = $startUtc->modify("+{$durationMinutes} minutes");
             $this->pollRepository->addOption(
                 $poll->id,
                 $startUtc->format('Y-m-d H:i:s'),
@@ -537,6 +545,9 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
             $nOpt,
             $nPart,
         );
+        if ($nPart > 0) {
+            $summary .= ' Share the share_url with participants so they can vote.';
+        }
         return new HillmeetPollResult(
             $poll->slug,
             $shareUrl,

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 /**
  * Auth.php
- * MCP API-key auth: Bearer token → tenant (owner_user_id). Keys stored as hash only.
+ * Purpose: MCP API-key auth: Bearer token → tenant (owner_user_id). Keys stored as hash only.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 
 namespace Hillmeet\Mcp;

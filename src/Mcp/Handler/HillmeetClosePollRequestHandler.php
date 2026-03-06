@@ -21,6 +21,9 @@ use Mcp\Server\Session\SessionInterface;
 /**
  * Handles tools/call for hillmeet_close_poll only.
  * Resolves owner from tenant; validates poll_id and optional final_slot; delegates to HillmeetAdapter.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 final class HillmeetClosePollRequestHandler implements RequestHandlerInterface
 {

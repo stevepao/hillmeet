@@ -12,7 +12,7 @@ $content = ob_start();
 ?>
 <div class="legal-page" style="max-width:720px; margin:0 auto;">
   <h1>Terms of Service</h1>
-  <p class="muted"><strong>Effective date:</strong> February 19, 2026</p>
+  <p class="muted"><strong>Effective date:</strong> March 6, 2026</p>
   <?php
   $companyName = \env('LEGAL_COMPANY_NAME', \Hillmeet\Support\config('legal.company_name', 'Your Company, LLC'));
   $companyType = \env('LEGAL_COMPANY_TYPE', \Hillmeet\Support\config('legal.company_type', 'a limited liability company'));
@@ -31,7 +31,8 @@ $content = ob_start();
     <ul style="margin:var(--space-2) 0; padding-left:1.25rem;">
       <li>Signing in with Google or using an email + one-time PIN mechanism;</li>
       <li>Optionally connecting Google Calendar to check free/busy availability and create calendar events when you request it;</li>
-      <li>Sending .ics calendar files by email as meeting invitations.</li>
+      <li>Sending .ics calendar files by email as meeting invitations;</li>
+      <li>Programmatic access via an API (e.g. for integrations or automated tools), subject to these Terms and any applicable documentation or limits.</li>
     </ul>
   </section>
 
@@ -48,7 +49,7 @@ $content = ob_start();
       <li>Google sign-in; and/or</li>
       <li>Email + one-time PIN verification.</li>
     </ul>
-    <p>You are responsible for maintaining the confidentiality of your account access and for all activity that occurs under your account.</p>
+    <p>API access may require an API key linked to your account. You are responsible for maintaining the confidentiality of your account credentials and any API keys, and for all activity that occurs under your account or using your API key.</p>
   </section>
 
   <section style="margin-top:var(--space-5);">

@@ -19,6 +19,9 @@ use Mcp\Server\Session\SessionInterface;
 /**
  * Handles tools/call for hillmeet_list_nonresponders only.
  * Resolves owner from tenant; validates poll_id and delegates to HillmeetAdapter.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 final class HillmeetListNonrespondersRequestHandler implements RequestHandlerInterface
 {

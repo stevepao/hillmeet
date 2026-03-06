@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * HillmeetListNonrespondersTest.php
+ * Purpose: MCP tool tests for hillmeet_list_nonresponders.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Tests\Mcp;
 
 use Hillmeet\Adapter\StubHillmeetAdapter;

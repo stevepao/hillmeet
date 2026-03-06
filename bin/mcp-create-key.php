@@ -5,9 +5,13 @@ declare(strict_types=1);
 
 /**
  * mcp-create-key.php
- * Create a tenant API key, store hash, and verify resolveTenantFromApiKey().
+ * Purpose: Create a tenant API key, store hash, and verify resolveTenantFromApiKey().
  * Usage: php bin/mcp-create-key.php [owner_email]
  *        If owner_email is omitted, uses the first user in the database.
+ *
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 
 require_once dirname(__DIR__) . '/config/env.php';

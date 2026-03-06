@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 /**
  * McpEndpoint.php
- * MCP v1 HTTP handler (POST-only JSON-RPC). No session/CSRF.
- * Invoked from front controller when path is /mcp/v1.
+ * Purpose: MCP v1 HTTP handler (POST-only JSON-RPC). No session/CSRF. Invoked from front controller when path is /mcp/v1.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 
 namespace Hillmeet\Support;
@@ -87,14 +89,13 @@ $hillmeetCreatePollInputSchema = [
         'duration_minutes' => ['type' => 'integer', 'description' => 'Duration of each option in minutes'],
         'options' => [
             'type' => 'array',
-            'description' => 'Time options; each start and end are ISO8601 timestamps in UTC (e.g. 2026-02-24T14:00:00Z)',
+            'description' => 'Time options; each item has start (ISO8601 UTC). End is computed by server from start + duration_minutes.',
             'items' => [
                 'type' => 'object',
                 'properties' => [
                     'start' => ['type' => 'string', 'description' => 'Start time ISO8601 UTC'],
-                    'end' => ['type' => 'string', 'description' => 'End time ISO8601 UTC'],
                 ],
-                'required' => ['start', 'end'],
+                'required' => ['start'],
             ],
         ],
         'participants' => [
@@ -116,7 +117,7 @@ $hillmeetCreatePollInputSchema = [
 ];
 
 $server = Server::builder()
-    ->setServerInfo('Hillmeet', '1.0.0', 'Hillmeet availability polls and calendar integration')
+    ->setServerInfo('Hillmeet', '1.1.0', 'Hillmeet availability polls and calendar integration')
     ->setSession(new \Hillmeet\Mcp\Session\DatabaseSessionStore(3600))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetCreatePollRequestHandler($hillmeetAdapter))
     ->addRequestHandler(new \Hillmeet\Mcp\Handler\HillmeetFindAvailabilityRequestHandler($hillmeetAdapter))
@@ -127,7 +128,7 @@ $server = Server::builder()
     ->addTool(
         $hillmeetPingHandler,
         'hillmeet_ping',
-        'Ping the Hillmeet service',
+        'Check that the Hillmeet MCP service is reachable. Call this first to verify the API key and connection.',
         null,
         ['type' => 'object', 'properties' => new \stdClass()],
         null,
@@ -139,7 +140,7 @@ $server = Server::builder()
             throw new \BadMethodCallException('hillmeet_create_poll is handled by HillmeetCreatePollRequestHandler');
         },
         'hillmeet_create_poll',
-        'Create a Hillmeet availability poll',
+        'Create an availability poll with time options and optional participants. Provide options as start times only (ISO8601 UTC); the server computes each option end from start + duration_minutes. Returns poll_id and share_url — share the share_url with participants so they can vote.',
         null,
         $hillmeetCreatePollInputSchema,
         null,
@@ -151,7 +152,7 @@ $server = Server::builder()
             throw new \BadMethodCallException('hillmeet_find_availability is handled by HillmeetFindAvailabilityRequestHandler');
         },
         'hillmeet_find_availability',
-        'Find best time slots for a poll given optional constraints (min attendees, preferred times, exclude emails)',
+        'Find the best time slots for a poll based on how many participants voted "available" for each option. Call this after participants have voted. Returns best_slots (start, end, available_count, total_invited), summary, and share_url. Optionally pass min_attendees, prefer_times (windows to boost), or exclude_emails.',
         null,
         [
             'type' => 'object',
@@ -187,7 +188,7 @@ $server = Server::builder()
             throw new \BadMethodCallException('hillmeet_get_poll is handled by HillmeetGetPollRequestHandler');
         },
         'hillmeet_get_poll',
-        'Fetch details for a poll owned by the current user, including options and participants',
+        'Fetch full details for one poll: title, description, timezone, duration_minutes, options (start/end in poll timezone), participants, status. Use poll_id from create_poll or list_polls. Only returns polls owned by the authenticated user.',
         null,
         [
             'type' => 'object',
@@ -205,7 +206,7 @@ $server = Server::builder()
             throw new \BadMethodCallException('hillmeet_list_nonresponders is handled by HillmeetListNonrespondersRequestHandler');
         },
         'hillmeet_list_nonresponders',
-        'List participants who have not yet responded to a poll',
+        'List participants who have not yet voted on a poll. Use this to see who still needs to respond; you can share the poll share_url with them or send a reminder. Returns nonresponders (email, name) and a summary.',
         null,
         [
             'type' => 'object',
@@ -223,7 +224,7 @@ $server = Server::builder()
             throw new \BadMethodCallException('hillmeet_list_polls is handled by HillmeetListPollsRequestHandler');
         },
         'hillmeet_list_polls',
-        'List polls owned by the current user (organizer)',
+        'List all polls owned by the authenticated user. Returns poll_id, title, created_at, timezone, status, share_url for each. Use poll_id from this list when calling find_availability, get_poll, list_nonresponders, or close_poll.',
         null,
         ['type' => 'object', 'properties' => new \stdClass()],
         null,
@@ -235,7 +236,7 @@ $server = Server::builder()
             throw new \BadMethodCallException('hillmeet_close_poll is handled by HillmeetClosePollRequestHandler');
         },
         'hillmeet_close_poll',
-        'Close a poll, optionally with a final chosen slot and notification',
+        'Close (lock) a poll, optionally to a final chosen time slot. Provide final_slot (start and end, ISO8601 UTC) matching one of the poll options. If notify is true, participants are emailed and a Google Calendar event can be created. Call this when the organizer has decided the meeting time.',
         null,
         [
             'type' => 'object',

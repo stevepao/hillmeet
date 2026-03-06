@@ -18,6 +18,9 @@ use Mcp\Server\Session\SessionInterface;
 /**
  * Handles tools/call for hillmeet_list_polls only.
  * Resolves owner from tenant; no arguments. Returns polls owned by the tenant's owner.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 final class HillmeetListPollsRequestHandler implements RequestHandlerInterface
 {

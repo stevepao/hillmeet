@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 /**
  * DatabaseSessionStore.php
- * MCP session store backed by MySQL so sessions persist across HTTP requests.
+ * Purpose: MCP session store backed by MySQL so sessions persist across HTTP requests.
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 
 namespace Hillmeet\Mcp\Session;

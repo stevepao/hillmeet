@@ -11,6 +11,10 @@ namespace Hillmeet\Dto;
  *
  * @property list<array{poll_id: string, title: string, created_at: string, timezone: string, status: string, share_url: string}> $polls
  * @property string $summary Short human-readable summary (e.g. "You have N polls. Most recent: 'X'.")
+ *
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 final readonly class HillmeetPollListResult
 {

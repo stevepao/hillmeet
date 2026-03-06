@@ -21,6 +21,9 @@ use Mcp\Server\Session\SessionInterface;
 /**
  * Handles tools/call for hillmeet_get_poll only.
  * Resolves owner from tenant; validates poll_id; returns full poll details (options in poll timezone).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
  */
 final class HillmeetGetPollRequestHandler implements RequestHandlerInterface
 {

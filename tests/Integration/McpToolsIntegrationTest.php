@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/**
+ * McpToolsIntegrationTest.php
+ * Purpose: End-to-end integration tests for MCP tools (create poll, find availability, list nonresponders, close poll, list polls, get poll).
+ * Project: Hillmeet
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Hillwork, LLC
+ */
+
 namespace Hillmeet\Tests\Integration;
 
 use Hillmeet\Adapter\DbHillmeetAdapter;
@@ -151,9 +159,9 @@ final class McpToolsIntegrationTest extends TestCase
         $session = new MockSession();
 
         $options = [
-            ['start' => '2026-03-10T14:00:00Z', 'end' => '2026-03-10T14:30:00Z'],
-            ['start' => '2026-03-10T15:00:00Z', 'end' => '2026-03-10T15:30:00Z'],
-            ['start' => '2026-03-10T16:00:00Z', 'end' => '2026-03-10T16:30:00Z'],
+            ['start' => '2026-03-10T14:00:00Z'],
+            ['start' => '2026-03-10T15:00:00Z'],
+            ['start' => '2026-03-10T16:00:00Z'],
         ];
         $participants = [
             ['contact' => 'alice-int@example.com'],

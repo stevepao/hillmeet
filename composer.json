@@ -3,7 +3,7 @@
   "description": "Doodle-like group availability polls with Google Calendar integration",
   "type": "project",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "require": {
     "php": ">=8.4",
     "ext-json": "*",
