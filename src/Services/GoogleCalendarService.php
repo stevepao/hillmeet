@@ -168,9 +168,10 @@ final class GoogleCalendarService
         }
         $timeMin = $toFetch[0]->start_utc;
         $timeMax = end($toFetch)->end_utc;
+        $utc = new \DateTimeZone('UTC');
         $body = [
-            'timeMin' => date('c', strtotime($timeMin)),
-            'timeMax' => date('c', strtotime($timeMax)),
+            'timeMin' => (new \DateTimeImmutable($timeMin, $utc))->format('c'),
+            'timeMax' => (new \DateTimeImmutable($timeMax, $utc))->format('c'),
             'items' => array_map(fn($id) => ['id' => $id], $calendarIds),
         ];
         $freebusyUrl = 'https://www.googleapis.com/calendar/v3/freeBusy';
@@ -198,10 +199,11 @@ final class GoogleCalendarService
             ];
         }
         $tentativeAsBusy = $this->selectionRepo->getTentativeAsBusy($userId);
+        $utc = new \DateTimeZone('UTC');
         foreach ($toFetch as $opt) {
             $busy = false;
-            $optStart = strtotime($opt->start_utc);
-            $optEnd = strtotime($opt->end_utc);
+            $optStart = (new \DateTimeImmutable($opt->start_utc, $utc))->getTimestamp();
+            $optEnd = (new \DateTimeImmutable($opt->end_utc, $utc))->getTimestamp();
             foreach ($res['calendars'] as $cal) {
                 foreach ($cal['busy'] ?? [] as $busySlot) {
                     $start = strtotime($busySlot['start']);
@@ -244,8 +246,14 @@ final class GoogleCalendarService
             'summary' => $title,
             'description' => $description,
             'location' => $location,
-            'start' => ['dateTime' => date('c', strtotime($startUtc)), 'timeZone' => 'UTC'],
-            'end' => ['dateTime' => date('c', strtotime($endUtc)), 'timeZone' => 'UTC'],
+            'start' => [
+                'dateTime' => (new \DateTimeImmutable($startUtc, new \DateTimeZone('UTC')))->format('c'),
+                'timeZone' => 'UTC',
+            ],
+            'end' => [
+                'dateTime' => (new \DateTimeImmutable($endUtc, new \DateTimeZone('UTC')))->format('c'),
+                'timeZone' => 'UTC',
+            ],
         ];
         $attendees = array_map(fn($e) => ['email' => $e], $attendeeEmails);
         $organizerEmailNormalized = $organizerEmail !== null && $organizerEmail !== '' ? strtolower(trim($organizerEmail)) : '';
