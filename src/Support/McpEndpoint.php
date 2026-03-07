@@ -70,6 +70,12 @@ $hillmeetAdapter = new \Hillmeet\Adapter\DbHillmeetAdapter(
         new \Hillmeet\Repositories\PollInviteRepository(),
         new \Hillmeet\Repositories\UserRepository(),
     ),
+    new \Hillmeet\Services\PollAccessService(
+        new \Hillmeet\Repositories\UserRepository(),
+        new \Hillmeet\Repositories\PollRepository(),
+        new \Hillmeet\Repositories\PollInviteRepository(),
+        \Hillmeet\Support\config('app.url', 'https://meet.hillwork.net'),
+    ),
     \Hillmeet\Support\config('app.url', 'https://meet.hillwork.net'),
     new \Hillmeet\Services\PollService(
         new \Hillmeet\Repositories\PollRepository(),

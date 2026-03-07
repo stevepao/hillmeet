@@ -84,6 +84,19 @@ final class PollInviteRepository
     }
 
     /**
+     * Find invite by poll id and normalized email (for invitee access without token).
+     * @return object{id: int, poll_id: int, email: string}|null
+     */
+    public function findByPollIdAndEmail(int $pollId, string $email): ?object
+    {
+        $email = strtolower(trim($email));
+        $stmt = Database::get()->prepare("SELECT id, poll_id, email FROM poll_invites WHERE poll_id = ? AND LOWER(TRIM(email)) = ? LIMIT 1");
+        $stmt->execute([$pollId, $email]);
+        $row = $stmt->fetch(PDO::FETCH_OBJ);
+        return $row ?: null;
+    }
+
+    /**
      * Find invite by poll slug and token hash (constant-time comparison).
      * @return object{id, poll_id, email, token_hash}|null
      */

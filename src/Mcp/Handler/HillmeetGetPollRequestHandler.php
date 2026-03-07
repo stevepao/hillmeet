@@ -7,6 +7,7 @@ namespace Hillmeet\Mcp\Handler;
 use Hillmeet\Exception\HillmeetConflict;
 use Hillmeet\Exception\HillmeetNotFound;
 use Hillmeet\Exception\HillmeetValidationError;
+use Hillmeet\Exception\PollForbidden;
 use Hillmeet\HillmeetAdapter;
 use Hillmeet\Mcp\McpContext;
 use Mcp\Schema\Content\TextContent;
@@ -31,6 +32,7 @@ final class HillmeetGetPollRequestHandler implements RequestHandlerInterface
 
     private const CODE_VALIDATION = -32010;
     private const CODE_NOT_FOUND = -32020;
+    private const CODE_FORBIDDEN = -32002;
     private const CODE_CONFLICT = -32030;
     private const CODE_INTERNAL = -32050;
 
@@ -77,6 +79,10 @@ final class HillmeetGetPollRequestHandler implements RequestHandlerInterface
             $durationMs = (int) round((hrtime(true) - $start) / 1e6);
             $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_VALIDATION);
             return new Error($id, self::CODE_VALIDATION, $e->getMessage(), $e->data ?? []);
+        } catch (PollForbidden $e) {
+            $durationMs = (int) round((hrtime(true) - $start) / 1e6);
+            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_FORBIDDEN);
+            return new Error($id, self::CODE_FORBIDDEN, 'Poll not found or access denied');
         } catch (HillmeetNotFound $e) {
             $durationMs = (int) round((hrtime(true) - $start) / 1e6);
             $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_NOT_FOUND);

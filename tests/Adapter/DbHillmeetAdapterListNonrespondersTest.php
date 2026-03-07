@@ -70,6 +70,12 @@ final class DbHillmeetAdapterListNonrespondersTest extends TestCase
                 $this->pollInviteRepository,
                 $this->userRepository,
             ),
+            new \Hillmeet\Services\PollAccessService(
+                $this->userRepository,
+                $this->pollRepository,
+                $this->pollInviteRepository,
+                'https://meet.hillwork.net',
+            ),
             'https://meet.hillwork.net',
         );
     }

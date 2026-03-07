@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hillmeet\Mcp\Handler;
 
 use Hillmeet\Exception\HillmeetNotFound;
+use Hillmeet\Exception\PollForbidden;
 use Hillmeet\HillmeetAdapter;
 use Hillmeet\Mcp\McpContext;
 use Mcp\Schema\Content\TextContent;
@@ -29,6 +30,7 @@ final class HillmeetListNonrespondersRequestHandler implements RequestHandlerInt
 
     private const CODE_VALIDATION = -32010;
     private const CODE_NOT_FOUND = -32020;
+    private const CODE_FORBIDDEN = -32002;
     private const CODE_INTERNAL = -32050;
 
     public function __construct(
@@ -74,6 +76,10 @@ final class HillmeetListNonrespondersRequestHandler implements RequestHandlerInt
             $durationMs = (int) round((hrtime(true) - $start) / 1e6);
             $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_NOT_FOUND);
             return new Error($id, self::CODE_NOT_FOUND, 'Poll not found or access denied');
+        } catch (PollForbidden $e) {
+            $durationMs = (int) round((hrtime(true) - $start) / 1e6);
+            $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_FORBIDDEN);
+            return new Error($id, self::CODE_FORBIDDEN, 'Poll not found or access denied');
         } catch (\Throwable $e) {
             $durationMs = (int) round((hrtime(true) - $start) / 1e6);
             $this->logAudit($tenant, $durationMs, false, $id, $e->getMessage(), self::CODE_INTERNAL);

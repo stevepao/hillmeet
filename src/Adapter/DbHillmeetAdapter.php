@@ -21,6 +21,8 @@ use Hillmeet\Dto\HillmeetPollResult;
 use Hillmeet\Exception\HillmeetConflict;
 use Hillmeet\Exception\HillmeetNotFound;
 use Hillmeet\Exception\HillmeetValidationError;
+use Hillmeet\Exception\PollForbidden;
+use Hillmeet\Exception\PollNotFound;
 use Hillmeet\HillmeetAdapter as HillmeetAdapterInterface;
 use Hillmeet\Repositories\CalendarEventRepository;
 use Hillmeet\Repositories\PollInviteRepository;
@@ -29,6 +31,7 @@ use Hillmeet\Repositories\UserRepository;
 use Hillmeet\Services\AvailabilityService;
 use Hillmeet\Services\EmailService;
 use Hillmeet\Services\NonresponderService;
+use Hillmeet\Services\PollAccessService;
 use Hillmeet\Services\PollDetailsService;
 use Hillmeet\Services\PollService;
 use Hillmeet\Support\Database;
@@ -47,6 +50,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         private readonly AvailabilityService $availabilityService,
         private readonly NonresponderService $nonresponderService,
         private readonly PollDetailsService $pollDetailsService,
+        private readonly PollAccessService $pollAccessService,
         private readonly string $baseUrl = 'https://meet.hillwork.net',
         private readonly ?PollService $pollService = null,
         private readonly ?CalendarEventRepository $calendarEventRepository = null,
@@ -55,7 +59,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     /**
      * Accept either a short slug (e.g. "8tjrm6pnq43p") or a full poll URL;
-     * returns the slug for lookup.
+     * returns the slug for lookup. Used only when not using PollAccessService.
      */
     private function normalizePollId(string $pollId): string
     {
@@ -185,22 +189,16 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     public function findAvailability(string $ownerEmail, string $pollId, array $constraints): HillmeetAvailabilityResult
     {
-        $pollId = $this->normalizePollId($pollId);
-        $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
-        $user = $this->userRepository->findByEmail($ownerEmail);
-        if ($user === null) {
-            return new HillmeetAvailabilityResult([], 'Owner not found.', rtrim($this->baseUrl, '/') . '/poll/' . $pollId);
-        }
-        $poll = $this->pollRepository->findBySlug($pollId);
-        if ($poll === null || $poll->organizer_id !== $user->id) {
+        try {
+            $ctx = $this->pollAccessService->resolveForOrganizerByEmail($ownerEmail, $pollId);
+        } catch (PollNotFound|PollForbidden $e) {
+            $pollId = $this->normalizePollId($pollId);
             return new HillmeetAvailabilityResult([], 'Poll not found or access denied.', rtrim($this->baseUrl, '/') . '/poll/' . $pollId);
         }
+        $poll = $ctx->poll;
         $normalized = $this->normalizeAvailabilityConstraints($constraints);
-        $slots = $this->availabilityService->computeBestSlots($user->id, $poll->id, $normalized);
-        $secret = $this->pollRepository->getDecryptedSecretForOwner($poll->id, $user->id);
-        $shareUrl = ($secret !== null && $secret !== '')
-            ? \Hillmeet\Support\url('/poll/' . $poll->slug, ['secret' => $secret])
-            : rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug;
+        $slots = $this->availabilityService->computeBestSlots($ctx->poll->organizer_id, $poll->id, $normalized);
+        $shareUrl = $ctx->shareUrl ?? rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug;
         $bestSlots = [];
         foreach ($slots as $s) {
             $bestSlots[] = [
@@ -291,17 +289,9 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     public function listNonresponders(string $ownerEmail, string $pollId): HillmeetNonrespondersResult
     {
-        $pollId = $this->normalizePollId($pollId);
-        $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
-        $user = $this->userRepository->findByEmail($ownerEmail);
-        if ($user === null) {
-            throw new HillmeetNotFound('Owner not found.');
-        }
-        $poll = $this->pollRepository->findBySlug($pollId);
-        if ($poll === null || $poll->organizer_id !== $user->id) {
-            throw new HillmeetNotFound('Poll not found or access denied.');
-        }
-        $list = $this->nonresponderService->findNonrespondersForPoll($user->id, $poll->id);
+        $ctx = $this->pollAccessService->resolveForOrganizerByEmail($ownerEmail, $pollId);
+        $userId = $ctx->poll->organizer_id;
+        $list = $this->nonresponderService->findNonrespondersForPoll($userId, $ctx->pollId);
         $summary = $this->buildNonrespondersSummary($list);
         return new HillmeetNonrespondersResult($list, $summary);
     }
@@ -361,16 +351,9 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     public function closePoll(string $ownerEmail, string $pollId, ?array $finalSlot, bool $notify): HillmeetCloseResult
     {
-        $pollId = $this->normalizePollId($pollId);
-        $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
-        $user = $this->userRepository->findByEmail($ownerEmail);
-        if ($user === null) {
-            throw new HillmeetNotFound('Owner not found.');
-        }
-        $poll = $this->pollRepository->findBySlug($pollId);
-        if ($poll === null || $poll->organizer_id !== $user->id) {
-            throw new HillmeetNotFound('Poll not found or access denied.');
-        }
+        $ctx = $this->pollAccessService->resolveForOrganizerByEmail($ownerEmail, $pollId);
+        $poll = $ctx->poll;
+        $userId = $poll->organizer_id;
 
         $options = $this->pollRepository->getOptions($poll->id);
         $lockedOptionId = $poll->locked_option_id;
@@ -417,7 +400,7 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
         $calendarEventCreated = null;
         if ($notify && $this->pollService !== null) {
             $pollUrl = rtrim($this->baseUrl, '/') . '/poll/' . $poll->slug;
-            $result = $this->pollService->afterLockNotifyAndCalendar($poll, $matched, $pollUrl, $user->id);
+            $result = $this->pollService->afterLockNotifyAndCalendar($poll, $matched, $pollUrl, $userId);
             $notified = $result['notified'];
             if ($this->calendarEventRepository !== null) {
                 $calendarEventCreated = $this->calendarEventRepository->existsForPollAndOption($poll->id, $matched->id);
@@ -471,18 +454,9 @@ final class DbHillmeetAdapter implements HillmeetAdapterInterface
 
     public function getPoll(string $ownerEmail, string $pollId): HillmeetPollDetails
     {
-        $pollId = $this->normalizePollId($pollId);
-        $ownerEmail = UserRepository::normalizeEmail($ownerEmail);
-        $user = $this->userRepository->findByEmail($ownerEmail);
-        if ($user === null) {
-            throw new HillmeetNotFound('Owner not found.');
-        }
-        $data = $this->pollDetailsService->getPollDetailsForOwner($user->id, $pollId);
-        $poll = $this->pollRepository->findBySlug($data->pollId);
-        $secret = $poll !== null ? $this->pollRepository->getDecryptedSecretForOwner($poll->id, $user->id) : null;
-        $shareUrl = ($secret !== null && $secret !== '')
-            ? \Hillmeet\Support\url('/poll/' . $data->pollId, ['secret' => $secret])
-            : null;
+        $ctx = $this->pollAccessService->resolveForOrganizerByEmail($ownerEmail, $pollId);
+        $data = $this->pollDetailsService->getPollDetailsForOwner($ctx->poll->organizer_id, $ctx->pollSlug);
+        $shareUrl = $ctx->shareUrl;
         $options = [];
         foreach ($data->options as $opt) {
             $options[] = [

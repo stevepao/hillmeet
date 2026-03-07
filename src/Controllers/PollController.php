@@ -23,8 +23,10 @@ use Hillmeet\Repositories\UserRepository;
 use Hillmeet\Repositories\VoteRepository;
 use Hillmeet\Services\EmailService;
 use Hillmeet\Services\GoogleCalendarService;
+use Hillmeet\Services\PollAccessService;
 use Hillmeet\Services\PollService;
 use Hillmeet\Support\Csrf;
+use function Hillmeet\Support\config;
 use function Hillmeet\Support\current_user;
 use function Hillmeet\Support\e;
 use function Hillmeet\Support\poll_back_url;
@@ -35,6 +37,7 @@ final class PollController
 {
     private PollRepository $pollRepo;
     private PollService $pollService;
+    private PollAccessService $pollAccessService;
 
     private function auth(): void
     {
@@ -127,11 +130,18 @@ final class PollController
     public function __construct()
     {
         $this->pollRepo = new PollRepository();
+        $pollInviteRepo = new PollInviteRepository();
+        $this->pollAccessService = new PollAccessService(
+            new UserRepository(),
+            $this->pollRepo,
+            $pollInviteRepo,
+            config('app.url', 'https://meet.hillwork.net'),
+        );
         $this->pollService = new PollService(
             $this->pollRepo,
             new VoteRepository(),
             new PollParticipantRepository(),
-            new PollInviteRepository(),
+            $pollInviteRepo,
             new \Hillmeet\Services\EmailService()
         );
     }
@@ -373,15 +383,36 @@ final class PollController
         $this->auth();
         $secret = $_GET['secret'] ?? '';
         $inviteToken = $_GET['invite'] ?? '';
-        $resolved = $this->resolvePollForAccess($slug, $secret, $inviteToken, false, true);
-        if ($resolved === null) {
-            http_response_code(404);
-            $pageMessage = 'This poll no longer exists.';
-            require dirname(__DIR__, 2) . '/views/errors/404.php';
-            exit;
+        $userId = (int) current_user()->id;
+        $userEmail = UserRepository::normalizeEmail((string) (current_user()->email ?? ''));
+
+        $ctx = null;
+        try {
+            $ctx = $this->pollAccessService->resolveForOrganizerByUserId($userId, $slug);
+        } catch (\Hillmeet\Exception\PollNotFound|\Hillmeet\Exception\PollForbidden $e) {
+            try {
+                $ctx = $this->pollAccessService->resolveForInvitee(
+                    $userEmail,
+                    $slug,
+                    $secret !== '' ? $secret : null,
+                    $inviteToken !== '' ? $inviteToken : null,
+                );
+            } catch (\Hillmeet\Exception\PollNotFound $e2) {
+                http_response_code(404);
+                $pageMessage = 'This poll no longer exists.';
+                require dirname(__DIR__, 2) . '/views/errors/404.php';
+                exit;
+            }
         }
-        $poll = $resolved['poll'];
-        $accessByInvite = $resolved['access_by_invite'];
+
+        if ($ctx->invite !== null) {
+            $inviteRepo = new PollInviteRepository();
+            $inviteRepo->markAccepted((int) $ctx->invite->id, $userId);
+            (new PollParticipantRepository())->add($ctx->pollId, $userId);
+        }
+
+        $poll = $ctx->poll;
+        $accessByInvite = !$ctx->isOrganizer && $ctx->invite !== null;
 
         $results = $this->pollService->getResults($poll);
         $options = $results['options'];

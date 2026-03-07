@@ -30,6 +30,7 @@ use Hillmeet\Services\EmailService;
 use Hillmeet\Services\NonresponderService;
 use Hillmeet\Services\PollService;
 use Hillmeet\Services\PollDetailsService;
+use Hillmeet\Services\PollAccessService;
 use Hillmeet\Support\Database;
 use Hillmeet\Tests\Mcp\MockSession;
 use Mcp\Schema\JsonRpc\Response;
@@ -101,6 +102,7 @@ final class McpToolsIntegrationTest extends TestCase
             new AvailabilityService($this->pollRepository, $voteRepo, $participantRepo, $pollInviteRepo),
             new NonresponderService($this->pollRepository, $pollInviteRepo, $participantRepo, $voteRepo),
             new PollDetailsService($this->pollRepository, $pollInviteRepo, $userRepo),
+            new PollAccessService($userRepo, $this->pollRepository, $pollInviteRepo, self::BASE_URL),
             self::BASE_URL,
             new PollService($this->pollRepository, $voteRepo, $participantRepo, $pollInviteRepo, new EmailService()),
             new CalendarEventRepository(),
