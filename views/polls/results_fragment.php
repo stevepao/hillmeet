@@ -2,9 +2,7 @@
 /**
  * results_fragment.php
  * Purpose: Poll results partial (totals, matrix, debug).
- * Project: Hillmeet
- * SPDX-License-Identifier: MIT
- * Copyright (c) 2026 Hillwork, LLC
+ * Uses $displayTimezone when set (viewer TZ), else $poll->timezone, else UTC.
  */
 $voteLabels = $voteLabels ?? ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
 $resultsDebug = $resultsDebug ?? null;
@@ -13,6 +11,7 @@ $options = $options ?? [];
 $results = $results ?? ['totals' => [], 'matrix' => [], 'best_option_id' => null];
 $participants = $participants ?? [];
 $myVotes = $myVotes ?? [];
+$displayTz = isset($displayTimezone) && $displayTimezone !== '' ? $displayTimezone : ($poll->timezone ?? 'UTC');
 ?>
 <?php if (!empty($resultsError)): ?>
   <p class="muted" style="color:var(--danger);"><?= \Hillmeet\Support\e($resultsError) ?></p>
@@ -45,7 +44,7 @@ $myVotes = $myVotes ?? [];
   <h4 style="font-size:var(--text-base); margin:0 0 var(--space-2);">Your saved votes</h4>
   <ul class="your-votes-list" style="list-style:none; padding:0; margin:0; font-size:var(--text-sm);">
     <?php foreach ($options as $opt):
-      $startLocal = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('D M j, g:i A');
+      $startLocal = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($displayTz))->format('D M j, g:i A');
       $v = $myVotes[$opt->id] ?? null;
       $label = $v ? ($voteLabels[$v] ?? $v) : '—';
     ?>
@@ -78,7 +77,7 @@ foreach ($results['totals'] ?? [] as $t) {
     </thead>
     <tbody>
       <?php foreach ($options as $opt):
-        $startLocal = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('D M j, g:i A');
+        $startLocal = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($displayTz))->format('D M j, g:i A');
         $totals = $results['totals'][$opt->id] ?? ['yes' => 0, 'maybe' => 0, 'no' => 0];
         $score = $totals['yes'] * 2 + $totals['maybe'];
         $isBest = ($results['best_option_id'] ?? null) === $opt->id;

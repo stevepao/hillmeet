@@ -70,8 +70,8 @@ final class IcsGenerator
 
     private static function formatUtcIcs(string $mysqlUtc): string
     {
-        $ts = strtotime($mysqlUtc);
-        return gmdate('Ymd\THis\Z', $ts);
+        $dt = new \DateTimeImmutable($mysqlUtc, new \DateTimeZone('UTC'));
+        return $dt->format('Ymd\THis\Z');
     }
 
     private static function escapeIcs(string $s): string

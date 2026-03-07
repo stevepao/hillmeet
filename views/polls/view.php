@@ -2,12 +2,11 @@
 /**
  * view.php
  * Purpose: Poll view (vote, results, lock, create event).
- * Project: Hillmeet
- * SPDX-License-Identifier: MIT
- * Copyright (c) 2026 Hillwork, LLC
+ * Expects $displayTimezone (viewer TZ when known, else poll TZ) from controller; falls back to poll->timezone if not set.
  */
 $pageTitle = \Hillmeet\Support\e($poll->title);
 $content = ob_start();
+$displayTz = isset($displayTimezone) && $displayTimezone !== '' ? $displayTimezone : ($poll->timezone ?? 'UTC');
 $pollUrlWithSecret = !empty($accessByInvite) && $inviteToken !== ''
   ? \Hillmeet\Support\url('/poll/' . $poll->slug, ['invite' => $inviteToken])
   : \Hillmeet\Support\url('/poll/' . $poll->slug . '?secret=' . urlencode($_GET['secret'] ?? ''));
@@ -96,8 +95,8 @@ $canEdit = !$poll->isLocked();
 <div class="poll-view-list" id="poll-options-list">
   <?php foreach ($options as $opt):
     $vote = $userVotes[$opt->id] ?? '';
-    $startLocal = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('D M j, g:i A');
-    $endLocal = (new DateTime($opt->end_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('g:i A');
+    $startLocal = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($displayTz))->format('D M j, g:i A');
+    $endLocal = (new DateTime($opt->end_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($displayTz))->format('g:i A');
   ?>
     <div class="option-card" data-option-id="<?= (int)$opt->id ?>">
       <div style="font-weight:500;"><?= \Hillmeet\Support\e($startLocal) ?> – <?= \Hillmeet\Support\e($endLocal) ?></div>
@@ -217,6 +216,7 @@ $canEdit = !$poll->isLocked();
           <li style="padding:var(--space-2) 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:var(--space-3);">
             <span><?= \Hillmeet\Support\e($inv->email) ?></span>
             <span class="muted" style="font-size:var(--text-sm);"><?= $inv->sent_at ? \Hillmeet\Support\e(date('M j, g:i A', strtotime($inv->sent_at))) : '—' ?></span>
+          <?php // sent_at is MySQL DATETIME (server local); display uses PHP default TZ — keep PHP and MySQL in sync (see README Timezone) ?>
           </li>
         <?php endforeach; ?>
       </ul>
@@ -236,8 +236,8 @@ $canEdit = !$poll->isLocked();
       <fieldset class="lock-options-list" aria-label="Select final time">
         <legend class="sr-only">Choose which time to lock</legend>
         <?php foreach ($options as $opt):
-          $startLocalLock = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('D M j, g:i A');
-          $endLocalLock = (new DateTime($opt->end_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($poll->timezone))->format('g:i A');
+          $startLocalLock = (new DateTime($opt->start_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($displayTz))->format('D M j, g:i A');
+          $endLocalLock = (new DateTime($opt->end_utc, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($displayTz))->format('g:i A');
         ?>
           <label class="lock-option-row">
             <input type="radio" name="option_id" value="<?= (int)$opt->id ?>" data-start-local="<?= \Hillmeet\Support\e($startLocalLock) ?>" data-end-local="<?= \Hillmeet\Support\e($endLocalLock) ?>">

@@ -419,9 +419,17 @@ final class PollController
             $myVotes[$opt->id] = $myVotesByOption[$opt->id] ?? null;
         }
         $voteLabels = ['yes' => 'Works', 'maybe' => 'If needed', 'no' => "Can't"];
+        $displayTimezone = null;
+        $curUser = current_user();
+        if ($curUser !== null && !empty(trim((string) ($curUser->timezone ?? '')))) {
+            $displayTimezone = trim((string) $curUser->timezone);
+        }
+        if ($displayTimezone === null || $displayTimezone === '') {
+            $displayTimezone = $poll->timezone ?? 'UTC';
+        }
         $finalTimeLabel = null;
         if ($poll->isLocked() && $poll->locked_option_id !== null) {
-            $tz = new \DateTimeZone($poll->timezone);
+            $tz = new \DateTimeZone($displayTimezone);
             foreach ($options as $o) {
                 if ((int) $o->id === (int) $poll->locked_option_id) {
                     $finalTimeLabel = (new \DateTime($o->start_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('D M j, g:i A') . ' – ' . (new \DateTime($o->end_utc, new \DateTimeZone('UTC')))->setTimezone($tz)->format('g:i A');
@@ -610,6 +618,14 @@ final class PollController
                 'participants' => $participants,
                 'voters' => $voteRepo->getVotersWithUsers($poll->id),
             ];
+        }
+        $displayTimezone = null;
+        $curUserForTz = current_user();
+        if ($curUserForTz !== null && !empty(trim((string) ($curUserForTz->timezone ?? '')))) {
+            $displayTimezone = trim((string) $curUserForTz->timezone);
+        }
+        if ($displayTimezone === null || $displayTimezone === '') {
+            $displayTimezone = $poll->timezone ?? 'UTC';
         }
         require dirname(__DIR__, 2) . '/views/polls/results_fragment.php';
     }

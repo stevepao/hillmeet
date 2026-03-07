@@ -90,6 +90,8 @@ If OAuth is not configured, the app still works with **Use email instead** (emai
 | `FREEBUSY_CACHE_TTL` | Free/busy cache TTL in seconds |
 | `LEGAL_*` | Company name, support email, governing state (for Privacy & Terms pages) |
 
+**Timezone:** Poll time options are stored in UTC. Display uses the viewer’s timezone when set (e.g. from browser), else the poll’s timezone, else UTC. MySQL `DATETIME` columns such as `sent_at` and `created_at` use the server’s default (e.g. `NOW()`); for correct display of “sent at” and similar, ensure PHP’s default timezone and MySQL’s session timezone match (e.g. both UTC or both the same local timezone). See `docs/TIMEZONE_AUDIT.md` for details.
+
 ---
 
 ## Manual testing
