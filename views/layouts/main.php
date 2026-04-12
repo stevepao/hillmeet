@@ -33,6 +33,7 @@
           <a href="<?= \Hillmeet\Support\url('/') ?>">Home</a>
           <a href="<?= \Hillmeet\Support\url('/poll/new') ?>">Create poll</a>
           <a href="<?= \Hillmeet\Support\url('/calendar') ?>">Calendar</a>
+          <a href="<?= \Hillmeet\Support\url('/settings/mcp-gateway-key') ?>">API Key</a>
           <a href="<?= \Hillmeet\Support\url('/auth/signout') ?>">Sign out</a>
         <?php else: ?>
           <a href="<?= \Hillmeet\Support\url('/') ?>">Sign in</a>

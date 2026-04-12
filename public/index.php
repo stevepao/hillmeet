@@ -58,6 +58,7 @@ $routes = [
         '/poll/{slug}' => [\Hillmeet\Controllers\PollController::class, 'view'],
         '/poll/{slug}/results' => [\Hillmeet\Controllers\PollController::class, 'resultsFragment'],
         '/calendar' => [\Hillmeet\Controllers\CalendarController::class, 'settings'],
+        '/settings/mcp-gateway-key' => [\Hillmeet\Controllers\SettingsController::class, 'mcpGatewayKey'],
         '/calendar/connect' => [\Hillmeet\Controllers\CalendarController::class, 'connect'],
         '/calendar/callback' => [\Hillmeet\Controllers\CalendarController::class, 'callback'],
     ],
@@ -80,6 +81,7 @@ $routes = [
         '/poll/{slug}/check-availability' => [\Hillmeet\Controllers\PollController::class, 'checkAvailability'],
         '/poll/{slug}/auto-accept-availability' => [\Hillmeet\Controllers\PollController::class, 'autoAcceptAvailability'],
         '/settings/timezone' => [\Hillmeet\Controllers\AuthController::class, 'setTimezone'],
+        '/settings/mcp-gateway-key' => [\Hillmeet\Controllers\SettingsController::class, 'mcpGatewayKey'],
         '/calendar/save' => [\Hillmeet\Controllers\CalendarController::class, 'save'],
     ],
 ];
