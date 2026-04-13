@@ -9,9 +9,11 @@
 
 $pageTitle = 'MCP Gateway API Key';
 
-// Load the 1Password Save Button web component only when a key is present.
+// Load the 1Password Save Button web component (ESM, via jsDelivr) only when a
+// key is present on this response. type="module" scripts are deferred by default
+// so the element upgrades retroactively once the definition arrives.
 if (!empty($apiKey)) {
-    $extraScripts = '<script type="module" src="https://cdn.1password.com/save-button/latest/1password-save-button.esm.js"></script>';
+    $extraScripts = '<script type="module" src="https://cdn.jsdelivr.net/npm/@1password/save-button/+esm"></script>';
 }
 
 $content = ob_start();
@@ -41,12 +43,13 @@ $content = ob_start();
       <div style="display:flex; gap:var(--space-2); align-items:center; flex-wrap:wrap;">
         <input
           id="mcp-api-key-field"
+          class="input"
           type="password"
           value="<?= \Hillmeet\Support\e($apiKey) ?>"
           readonly
           autocomplete="off"
           spellcheck="false"
-          style="font-family:monospace; letter-spacing:0.05em; flex:1 1 300px;"
+          style="font-family:var(--font-mono); letter-spacing:0.05em; flex:1 1 300px;"
           aria-label="MCP Gateway API key (masked)"
         >
         <button
@@ -61,10 +64,23 @@ $content = ob_start();
 
     <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:center;">
       <button type="button" id="mcp-copy-btn" class="btn btn-primary">Copy to clipboard</button>
+
       <?php if (!empty($onePasswordValue)): ?>
+        <!-- The web component is invisible until the 1Password extension activates it.
+             #op-save-fallback is shown by default and hidden by JS once the button
+             has rendered with non-zero size (i.e. extension IS present). -->
         <onepassword-save-button
+          id="op-save-btn"
           value="<?= \Hillmeet\Support\e($onePasswordValue) ?>"
         ></onepassword-save-button>
+        <span id="op-save-fallback" class="muted" style="font-size:var(--text-sm);">
+          <a
+            href="https://1password.com/downloads/browser-extension"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="color:var(--muted);"
+          >Install the 1Password browser extension</a> to save this key.
+        </span>
       <?php endif; ?>
     </div>
 
@@ -72,7 +88,7 @@ $content = ob_start();
       id="mcp-copy-status"
       role="status"
       aria-live="polite"
-      style="margin-top:var(--space-2); font-size:0.875em;"
+      style="margin-top:var(--space-2); font-size:var(--text-sm);"
       hidden
     ></p>
   </div>
@@ -100,7 +116,9 @@ $content = ob_start();
     function showStatus(msg, isError) {
       if (!copyStatus) { return; }
       copyStatus.textContent = msg;
-      copyStatus.style.color = isError ? 'var(--color-error, #c0392b)' : 'var(--color-success, #27ae60)';
+      copyStatus.style.color = isError
+        ? 'var(--danger, #ef4444)'
+        : 'var(--accent-2, #22c55e)';
       copyStatus.hidden = false;
       setTimeout(function () { copyStatus.hidden = true; }, 3500);
     }
@@ -135,6 +153,43 @@ $content = ob_start();
         }
       });
     }
+
+    // ---- 1Password Save Button visibility / fallback ----
+    // The <onepassword-save-button> component renders as an invisible element until
+    // the 1Password browser extension activates it. We poll for a rendered size; once
+    // the button has non-zero dimensions the extension is present and we hide the
+    // "install extension" fallback text. If it never becomes visible we leave the
+    // fallback so the user sees a helpful prompt rather than nothing.
+    var opBtn      = document.getElementById('op-save-btn');
+    var opFallback = document.getElementById('op-save-fallback');
+
+    if (opBtn && opFallback) {
+      // Notify 1Password (for cases where it needs an explicit nudge, e.g. SPAs).
+      if (typeof window.activateOPButton === 'function') {
+        window.activateOPButton();
+      }
+
+      // Poll up to ~3 s in increasing intervals.
+      var opChecks = [300, 800, 1500, 3000];
+      function checkOpButton() {
+        var rect = opBtn.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          opFallback.hidden = true;   // extension present — button rendered
+          return;
+        }
+        var delay = opChecks.shift();
+        if (delay !== undefined) {
+          setTimeout(checkOpButton, delay);
+        }
+        // If all checks exhausted and still not visible, fallback remains shown.
+      }
+      // Wait until the ESM module (deferred) has had a chance to run.
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(checkOpButton, 300); });
+      } else {
+        setTimeout(checkOpButton, 300);
+      }
+    }
   }());
   </script>
 <?php endif; ?>
@@ -143,7 +198,7 @@ $content = ob_start();
 <div class="card">
   <h2 style="margin-top:0; margin-bottom:var(--space-3);">Generate a new key</h2>
 
-  <div style="padding:var(--space-3); background:var(--color-warning-bg, #fff8e1); border-left:4px solid var(--color-warning, #f0a500); border-radius:var(--radius, 4px); margin-bottom:var(--space-4);">
+  <div style="padding:var(--space-3); background:rgba(245,158,11,0.12); border-left:4px solid var(--warn); border-radius:var(--radius-sm); margin-bottom:var(--space-4);">
     <strong>One-time display.</strong>
     The key will appear on screen once and is <em>never</em> stored by Hillmeet.
     Save it to 1Password or another secret manager immediately after generating.
@@ -161,7 +216,7 @@ $content = ob_start();
           id="mcp-owner-email"
           name="owner_email"
           value="<?= \Hillmeet\Support\e($ownerEmail) ?>"
-          class="form-control"
+          class="input"
           required
           autocomplete="email"
         >
@@ -171,7 +226,7 @@ $content = ob_start();
           type="email"
           id="mcp-owner-email"
           value="<?= \Hillmeet\Support\e($ownerEmail) ?>"
-          class="form-control"
+          class="input"
           readonly
           aria-readonly="true"
         >
