@@ -71,6 +71,7 @@ $content = ob_start();
              has rendered with non-zero size (i.e. extension IS present). -->
         <onepassword-save-button
           id="op-save-btn"
+          data-onepassword-type="login"
           value="<?= \Hillmeet\Support\e($onePasswordValue) ?>"
         ></onepassword-save-button>
         <span id="op-save-fallback" class="muted" style="font-size:var(--text-sm);">

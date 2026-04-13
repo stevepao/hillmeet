@@ -62,13 +62,21 @@ final class SettingsController
 
                         // Build the 1Password Save Button payload (base64-encoded JSON).
                         $appUrl = config('app.url', '');
+                        // Save Button only supports: login, credit-card, crypto-wallet.
+                        // Use login: username = owner email, current-password = API key.
                         $savePayload = [
                             'title'  => 'Hillmeet MCP Gateway API Key',
                             'fields' => [
                                 ['autocomplete' => 'username',         'value' => $ownerEmail],
                                 ['autocomplete' => 'current-password', 'value' => $apiKey],
                             ],
-                            'notes' => 'Hillmeet MCP Gateway API Key' . "\n" . 'App URL: ' . $appUrl,
+                            'notes' => implode("\n", [
+                                'Hillmeet MCP Gateway API Key',
+                                'Service: MCP Gateway',
+                                'App URL: ' . $appUrl,
+                                'Generated: ' . gmdate('Y-m-d\TH:i:s\Z'),
+                                'Use as: Authorization: Bearer <key>',
+                            ]),
                         ];
                         $onePasswordValue = base64_encode((string) json_encode($savePayload, JSON_UNESCAPED_SLASHES));
 
