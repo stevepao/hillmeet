@@ -62,23 +62,12 @@ final class SettingsController
 
                         // Build the 1Password Save Button payload (base64-encoded JSON).
                         $appUrl = config('app.url', '');
-                        // Save Button only supports: login, credit-card, crypto-wallet.
-                        // Use login: username = owner email, current-password = API key.
-                        $savePayload = [
-                            'title'  => 'Hillmeet MCP Gateway API Key',
-                            'fields' => [
-                                ['autocomplete' => 'username',         'value' => $ownerEmail],
-                                ['autocomplete' => 'current-password', 'value' => $apiKey],
-                            ],
-                            'notes' => implode("\n", [
-                                'Hillmeet MCP Gateway API Key',
-                                'Service: MCP Gateway',
-                                'App URL: ' . $appUrl,
-                                'Generated: ' . gmdate('Y-m-d\TH:i:s\Z'),
-                                'Use as: Authorization: Bearer <key>',
-                            ]),
-                        ];
-                        $onePasswordValue = base64_encode((string) json_encode($savePayload, JSON_UNESCAPED_SLASHES));
+                        $onePasswordValue = base64_encode(
+                            (string) json_encode(
+                                self::buildOnePasswordPayload($apiKey, $ownerEmail, $appUrl),
+                                JSON_UNESCAPED_SLASHES
+                            )
+                        );
 
                         // Prevent the key-bearing response from being cached anywhere.
                         header('Cache-Control: no-store');
@@ -102,8 +91,28 @@ final class SettingsController
     }
 
     // -------------------------------------------------------------------------
-    // Private helpers
+    // Helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Build the 1Password Save Button payload for a credential item.
+     *
+     * Extracted as a public static method so it can be unit-tested independently
+     * of the HTTP request lifecycle and auth middleware.
+     *
+     * @return array{title: string, fields: list<array<string, string>>}
+     */
+    public static function buildOnePasswordPayload(string $apiKey, string $ownerEmail, string $appUrl): array
+    {
+        return [
+            'title'  => 'Hillmeet MCP Gateway API Key',
+            'fields' => [
+                ['id' => 'credential', 'type' => 'password', 'value' => $apiKey],
+                ['id' => 'url',        'value' => rtrim($appUrl, '/') . '/mcp/v1'],
+                ['id' => 'username',   'value' => $ownerEmail],
+            ],
+        ];
+    }
 
     /**
      * Execute bin/mcp-create-key.php via php8.4-cli and parse the API key from stdout.
