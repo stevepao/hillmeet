@@ -104,13 +104,18 @@ final class SettingsController
      */
     public static function buildOnePasswordPayload(string $apiKey, string $ownerEmail, string $appUrl): array
     {
+        // The Save Button only supports three item types: login, credit-card, crypto-wallet.
+        // We use "login" with standard HTML autocomplete field names.
+        // The MCP endpoint URL cannot be set as a first-class field for login items
+        // (1Password assigns item URLs automatically from the page domain), so we
+        // carry it in the notes field for reference.
         return [
             'title'  => 'Hillmeet MCP Gateway API Key',
             'fields' => [
-                ['id' => 'credential', 'type' => 'password', 'value' => $apiKey],
-                ['id' => 'url',        'value' => rtrim($appUrl, '/') . '/mcp/v1'],
-                ['id' => 'username',   'value' => $ownerEmail],
+                ['autocomplete' => 'username',         'value' => $ownerEmail],
+                ['autocomplete' => 'current-password', 'value' => $apiKey],
             ],
+            'notes' => 'MCP Gateway endpoint: ' . rtrim($appUrl, '/') . '/mcp/v1',
         ];
     }
 
