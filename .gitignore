@@ -2,6 +2,9 @@
 config/config.php
 .env
 
+# Node (Tailwind build)
+node_modules/
+
 # Composer
 /vendor/
 composer.lock

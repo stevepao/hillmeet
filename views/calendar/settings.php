@@ -9,6 +9,7 @@
 $pageTitle = 'Calendar settings';
 $content = ob_start();
 ?>
+<p class="mb-4"><a href="<?= \Hillmeet\Support\url('/me') ?>" class="text-sm font-medium text-teal-700 hover:text-teal-900">← Account</a></p>
 <h1>Calendar settings</h1>
 
 <?php if (!$connected): ?>

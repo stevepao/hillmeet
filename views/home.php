@@ -15,9 +15,14 @@ $participatedPolls = $participatedPolls ?? [];
 $debugCounts = $debugCounts ?? null;
 $csrfToken = \Hillmeet\Support\Csrf::token();
 ?>
-<h1><?= !empty($_SESSION['user']) ? 'Welcome ' . \Hillmeet\Support\e($_SESSION['user']->email ?? '') : 'Hillmeet' ?></h1>
-<div class="home-actions" style="margin-bottom: var(--space-6);">
-  <a href="<?= \Hillmeet\Support\url('/poll/new') ?>" class="btn btn-primary btn-lg">Create poll</a>
+<div class="mb-10 space-y-3">
+  <h1 class="text-2xl font-semibold tracking-tight text-zinc-900"><?= !empty($_SESSION['user']) ? 'Welcome' : 'Hillmeet' ?></h1>
+  <?php if (!empty($_SESSION['user'])): ?>
+    <p class="text-sm text-zinc-500 leading-relaxed"><?= \Hillmeet\Support\e($_SESSION['user']->email ?? '') ?></p>
+  <?php endif; ?>
+  <div class="pt-2">
+    <a href="<?= \Hillmeet\Support\url('/poll/new') ?>" class="btn btn-primary btn-lg inline-flex w-full justify-center rounded-xl shadow-sm shadow-teal-900/10 sm:w-auto sm:min-w-[11rem]">Create poll</a>
+  </div>
 </div>
 
 <?php if ($debugCounts !== null): ?>

@@ -40,6 +40,7 @@
     "migrate": "php bin/migrate.php",
     "seed": "php bin/seed.php",
     "cron": "php bin/cron.php",
-    "test": "phpunit"
+    "test": "phpunit",
+    "build:css": "npm run build:css"
   }
 }

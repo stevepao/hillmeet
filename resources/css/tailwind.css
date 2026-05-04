@@ -1,0 +1,4 @@
+/**
+ * Tailwind entry — utilities only (preflight off; base reset lives in base.css).
+ */
+@tailwind utilities;

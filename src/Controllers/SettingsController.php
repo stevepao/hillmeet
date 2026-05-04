@@ -20,6 +20,15 @@ use function Hillmeet\Support\current_user;
 final class SettingsController
 {
     /**
+     * GET /me — Account hub (calendar, advanced MCP API keys link).
+     */
+    public function account(): void
+    {
+        \Hillmeet\Middleware\RequireAuth::check();
+        require dirname(__DIR__, 2) . '/views/settings/account.php';
+    }
+
+    /**
      * Expected key format: 48 lowercase hex chars.
      * = KEY_PREFIX_LENGTH(16) hex chars + bin2hex(random_bytes(16))(32) hex chars.
      */

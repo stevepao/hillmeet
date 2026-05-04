@@ -1,0 +1,11 @@
+{
+  "name": "hillmeet",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./resources/css/tailwind.css -o ./public/assets/css/tailwind.css --minify && cp ./public/assets/css/tailwind.css ./assets/css/tailwind.css",
+    "watch:css": "tailwindcss -i ./resources/css/tailwind.css -o ./public/assets/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

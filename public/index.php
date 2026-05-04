@@ -58,6 +58,7 @@ $routes = [
         '/poll/{slug}' => [\Hillmeet\Controllers\PollController::class, 'view'],
         '/poll/{slug}/results' => [\Hillmeet\Controllers\PollController::class, 'resultsFragment'],
         '/calendar' => [\Hillmeet\Controllers\CalendarController::class, 'settings'],
+        '/me' => [\Hillmeet\Controllers\SettingsController::class, 'account'],
         '/settings/mcp-gateway-key' => [\Hillmeet\Controllers\SettingsController::class, 'mcpGatewayKey'],
         '/calendar/connect' => [\Hillmeet\Controllers\CalendarController::class, 'connect'],
         '/calendar/callback' => [\Hillmeet\Controllers\CalendarController::class, 'callback'],

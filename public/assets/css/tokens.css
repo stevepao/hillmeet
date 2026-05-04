@@ -1,6 +1,6 @@
 /**
  * tokens.css
- * Purpose: Design tokens (colors, spacing, typography, radii).
+ * Purpose: Design tokens — light, airy theme (Thankhill family alignment).
  * Project: Hillmeet
  * SPDX-License-Identifier: MIT
  * Copyright (c) 2026 Hillwork, LLC
@@ -12,16 +12,37 @@
   --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.125rem; --text-xl: 1.25rem; --text-2xl: 1.5rem;
   --leading-tight: 1.2; --leading-normal: 1.5;
   --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.5rem; --space-6: 2rem; --space-7: 3rem; --space-8: 4rem;
-  --radius-sm: 0.375rem; --radius-md: 0.625rem; --radius-lg: 1rem; --radius-pill: 9999px;
-  --bg: #0b0f17; --surface: #0f172a; --card: rgba(255,255,255,0.06); --card-2: rgba(255,255,255,0.08); --border: rgba(255,255,255,0.12);
-  --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.70); --subtle: rgba(255,255,255,0.55);
-  --accent: #7c5cff; --accent-2: #22c55e; --warn: #f59e0b; --danger: #ef4444; --info: #38bdf8;
-  --vote-yes: #22c55e; --vote-maybe: #f59e0b; --vote-no: #ef4444;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
-  --shadow-md: 0 6px 18px rgba(0,0,0,0.35);
-  --shadow-lg: 0 18px 40px rgba(0,0,0,0.45);
-  --focus: 0 0 0 3px rgba(124,92,255,0.45);
+  --radius-sm: 0.375rem; --radius-md: 0.625rem; --radius-lg: 0.875rem; --radius-pill: 9999px;
+
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card-2: #f4f4f5;
+  --border: #e4e4e7;
+  --text: #18181b;
+  --muted: #71717a;
+  --subtle: #a1a1aa;
+
+  --accent: #0d9488;
+  --accent-hover: #0f7668;
+  --accent-2: #059669;
+  --warn: #d97706;
+  --danger: #dc2626;
+  --info: #0284c7;
+
+  --vote-yes: #059669;
+  --vote-maybe: #d97706;
+  --vote-no: #dc2626;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.08);
+
+  --focus: 0 0 0 3px rgba(13, 148, 136, 0.28);
   --ease: cubic-bezier(.2,.8,.2,1);
   --dur-1: 120ms; --dur-2: 180ms;
-  --container: 68rem;
+  --container: 36rem;
+
+  --bottom-nav-height: 4rem;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
