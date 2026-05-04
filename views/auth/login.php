@@ -8,7 +8,7 @@
  */
 $pageTitle = 'Sign in';
 $canonicalUrl = \Hillmeet\Support\url('/');
-$content = ob_start();
+ob_start();
 $googleClientId = $googleClientId ?? '';
 $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
 ?>
@@ -46,7 +46,7 @@ $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
       </a>
     <?php endif; ?>
     <div class="auth-divider">or</div>
-    <a href="<?= \Hillmeet\Support\url('/auth/email') ?>" class="btn btn-secondary" style="width:100%;">Use email instead</a>
+    <a href="<?= \Hillmeet\Support\url('/auth/email') ?>" class="btn btn-secondary" style="width:100%;">Sign in with email</a>
   </div>
   <p class="auth-footer">© 2026 Hillwork, LLC. All rights reserved.</p>
 </div>

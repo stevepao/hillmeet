@@ -9,7 +9,8 @@ if ($navPath !== '/') {
     $navPath = rtrim($navPath, '/') ?: '/';
 }
 $loggedIn = !empty($_SESSION['user']);
-$navHome = ($navPath === '/' || $navPath === '');
+$navAuth = str_starts_with($navPath, '/auth');
+$navHome = ($navPath === '/' || $navPath === '') && !$navAuth;
 $navCreate = str_starts_with($navPath, '/poll/new') || str_starts_with($navPath, '/poll/create');
 $navMe = str_starts_with($navPath, '/me') || str_starts_with($navPath, '/calendar') || str_starts_with($navPath, '/settings');
 ?>
@@ -74,7 +75,7 @@ $navMe = str_starts_with($navPath, '/me') || str_starts_with($navPath, '/calenda
           <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
           Home
         </a>
-        <a href="<?= \Hillmeet\Support\url('/auth/email') ?>" class="flex flex-1 flex-col items-center gap-1 py-3 text-[11px] font-medium text-zinc-500 hover:text-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500/35">
+        <a href="<?= \Hillmeet\Support\url('/auth/login') ?>" class="flex flex-1 flex-col items-center gap-1 py-3 text-[11px] font-medium <?= $navAuth ? 'text-teal-700' : 'text-zinc-500 hover:text-zinc-800' ?> transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500/35">
           <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
           Sign in
         </a>

@@ -75,6 +75,8 @@
   max-width: 24rem;
   margin: 0 auto;
   padding-top: var(--space-8);
+  /* Clear fixed bottom nav so Google + email actions stay reachable on short viewports */
+  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-6));
 }
 
 .auth-tagline {

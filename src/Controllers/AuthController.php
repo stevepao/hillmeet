@@ -39,8 +39,9 @@ final class AuthController
             header('Location: ' . url('/'));
             exit;
         }
-        header('Location: ' . url('/'), true, 301);
-        exit;
+        $googleClientId = config('google.client_id', '');
+        $isLocal = (function_exists('env') ? env('APP_ENV', '') : '') === 'local';
+        require dirname(__DIR__, 2) . '/views/auth/login.php';
     }
 
     /** Redirect to Google OAuth for sign-in (League OAuth2). */
