@@ -20,7 +20,11 @@ $navMe = str_starts_with($navPath, '/me') || str_starts_with($navPath, '/calenda
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#f8fafc">
   <meta name="color-scheme" content="light">
-  <link rel="manifest" href="<?= \Hillmeet\Support\url('/manifest.webmanifest') ?>">
+  <link rel="manifest" href="<?= \Hillmeet\Support\url('/manifest.json') ?>">
+  <link rel="apple-touch-icon" href="<?= \Hillmeet\Support\url('/icons/apple-touch-icon.png') ?>">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Hillmeet">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title><?= isset($pageTitle) ? \Hillmeet\Support\e($pageTitle) . ' — ' : '' ?>Hillmeet</title>
   <?php if (!empty($canonicalUrl)): ?>
   <link rel="canonical" href="<?= \Hillmeet\Support\e($canonicalUrl) ?>">
@@ -80,6 +84,11 @@ $navMe = str_starts_with($navPath, '/me') || str_starts_with($navPath, '/calenda
 
   <script src="<?= \Hillmeet\Support\url('/assets/js/app.js') ?>"></script>
   <script src="<?= \Hillmeet\Support\url('/assets/js/progressive.js') ?>"></script>
+  <script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("<?= \Hillmeet\Support\url('/service-worker.js') ?>");
+  }
+  </script>
   <?= $extraScripts ?? '' ?>
 </body>
 </html>
