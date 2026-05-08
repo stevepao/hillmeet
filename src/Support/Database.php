@@ -47,7 +47,8 @@ final class Database
         sort($files);
         foreach ($files as $file) {
             $name = basename($file);
-            $stmt = $pdo->query("SELECT 1 FROM _migrations WHERE name = " . $pdo->quote($name));
+            $stmt = $pdo->prepare("SELECT 1 FROM _migrations WHERE name = ?");
+            $stmt->execute([$name]);
             if ($stmt->fetch()) {
                 continue;
             }

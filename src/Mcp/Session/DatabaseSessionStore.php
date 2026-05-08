@@ -68,7 +68,8 @@ final class DatabaseSessionStore implements SessionStoreInterface
     {
         $pdo = Database::get();
         $cutoff = time() - $this->ttl;
-        $stmt = $pdo->query("SELECT id FROM mcp_sessions WHERE updated_at < " . (int) $cutoff);
+        $stmt = $pdo->prepare("SELECT id FROM mcp_sessions WHERE updated_at < ?");
+        $stmt->execute([$cutoff]);
         $ids = [];
         while (($id = $stmt->fetchColumn()) !== false && \is_string($id)) {
             $ids[] = Uuid::fromString($id);

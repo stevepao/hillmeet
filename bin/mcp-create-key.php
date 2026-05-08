@@ -52,7 +52,9 @@ $prefix = bin2hex(random_bytes(Auth::KEY_PREFIX_LENGTH / 2));
 $secret = bin2hex(random_bytes(16));
 $fullKey = $prefix . $secret;
 
-$tenantId = $pdo->query("SELECT tenant_id FROM tenants WHERE owner_user_id = " . (int) $ownerUserId . " LIMIT 1")->fetchColumn();
+$tenantIdStmt = $pdo->prepare("SELECT tenant_id FROM tenants WHERE owner_user_id = ? LIMIT 1");
+$tenantIdStmt->execute([$ownerUserId]);
+$tenantId = $tenantIdStmt->fetchColumn();
 if ($tenantId === false) {
     $tenantId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x', random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff));
     $pdo->prepare("INSERT INTO tenants (tenant_id, owner_user_id, name) VALUES (?, ?, ?)")
