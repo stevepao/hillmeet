@@ -1,0 +1,47 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/var/www/html
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-hillmeet}
+      DB_USER: ${DB_USER:-hillmeet}
+      DB_PASS: ${DB_PASS:-hillmeet}
+      DB_CHARSET: utf8mb4
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - default
+      - proxy-tier
+
+  db:
+    image: mysql:8.0
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-hillmeet}
+      MYSQL_USER: ${DB_USER:-hillmeet}
+      MYSQL_PASSWORD: ${DB_PASS:-hillmeet}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-hillmeet_root}
+    volumes:
+      - hillmeet_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD:-hillmeet_root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  hillmeet_data:
+
+networks:
+  default:
+    internal: true
+  proxy-tier:
+    external: true

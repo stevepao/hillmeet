@@ -10,6 +10,22 @@ node_modules/
 composer.lock
 composer.phar
 
+# Docker / local container runtime
+docker-compose.override.yml
+.docker/
+docker-data/
+db-data/
+mysql-data/
+/data/
+
+# Local database dumps and backups
+/dumps/
+/backups/
+*.sql.gz
+*.sql.zip
+*.dump
+*.bak
+
 # IDE
 .idea/
 .vscode/
