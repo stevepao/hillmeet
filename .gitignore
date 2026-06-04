@@ -45,3 +45,9 @@ Thumbs.db
 phpunit.xml
 .phpunit.result.cache
 coverage/
+
+# Ignore all log files inside the logs directory
+/logs/*
+   
+# But do not ignore the .gitkeep file itself
+!/logs/.gitkeep
