@@ -1,5 +1,4 @@
-# Config with secrets
-config/config.php
+# Local secrets
 .env
 
 # Node (Tailwind build)
