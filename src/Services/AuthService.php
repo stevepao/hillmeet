@@ -58,6 +58,11 @@ final class AuthService
         if ($email === '') {
             return 'Please enter your email.';
         }
+        $emailKey = 'pin_request_email:' . hash('sha256', $email);
+        $emailLimit = (int) config('rate.pin_request_email', config('rate.pin_request', 3));
+        if (!RateLimit::check($emailKey, $emailLimit)) {
+            return 'Too many attempts—please wait a minute and try again.';
+        }
         $pin = (string) random_int(100000, 999999);
         $pinHash = password_hash($pin, PASSWORD_DEFAULT);
         $this->pinRepo->create($email, $pinHash);
