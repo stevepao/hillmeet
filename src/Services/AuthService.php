@@ -48,7 +48,7 @@ final class AuthService
     }
 
     /** Send PIN to email. Returns error message or null on success. */
-    public function sendPin(string $email, string $ip): ?string
+    public function sendPin(string $email, string $ip, string $turnstileToken = ''): ?string
     {
         $key = 'pin_request:' . $ip;
         if (!RateLimit::check($key, (int) config('rate.pin_request'))) {
@@ -57,6 +57,9 @@ final class AuthService
         $email = strtolower(trim($email));
         if ($email === '') {
             return 'Please enter your email.';
+        }
+        if (!$this->verifyTurnstile($turnstileToken, $ip)) {
+            return 'Please complete the security check and try again.';
         }
         $emailKey = 'pin_request_email:' . hash('sha256', $email);
         $emailLimit = (int) config('rate.pin_request_email', config('rate.pin_request', 3));
@@ -70,6 +73,43 @@ final class AuthService
             return 'We couldn\'t send the email. Check SMTP settings in .env (see README) or try again.';
         }
         return null;
+    }
+
+    private function verifyTurnstile(string $token, string $ip): bool
+    {
+        $siteKey = (string) config('turnstile.site_key', '');
+        $secretKey = (string) config('turnstile.secret_key', '');
+        if ($siteKey === '' || $secretKey === '') {
+            return true;
+        }
+        if ($token === '') {
+            return false;
+        }
+
+        $remoteIp = trim(explode(',', $ip)[0] ?? '');
+        $payload = [
+            'secret' => $secretKey,
+            'response' => $token,
+        ];
+        if ($remoteIp !== '') {
+            $payload['remoteip'] = $remoteIp;
+        }
+
+        $response = @file_get_contents('https://challenges.cloudflare.com/turnstile/v0/siteverify', false, stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => 'Content-Type: application/x-www-form-urlencoded',
+                'content' => http_build_query($payload),
+                'ignore_errors' => true,
+                'timeout' => 5,
+            ],
+        ]));
+        if ($response === false) {
+            return false;
+        }
+
+        $decoded = json_decode($response, true);
+        return \is_array($decoded) && ($decoded['success'] ?? false) === true;
     }
 
     /** Verify PIN and sign in. Returns error message or null on success (user set in session). */

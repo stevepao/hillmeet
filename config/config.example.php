@@ -11,9 +11,8 @@ declare(strict_types=1);
  */
 
 /**
- * Copy to config.php and fill in values.
- * config.php is gitignored.
- * Uses env() so .env and server vars work on IONOS.
+ * Example env-backed config.
+ * config.php is tracked; secrets belong in .env or deployment environment vars.
  */
 $e = function (string $key, $default = '') { return env($key, $default); };
 
@@ -44,6 +43,10 @@ return [
         'client_id'     => $e('GOOGLE_CLIENT_ID', ''),
         'client_secret' => $e('GOOGLE_CLIENT_SECRET', ''),
         'redirect_uri'  => $e('GOOGLE_REDIRECT_URI', ''),
+    ],
+    'turnstile' => [
+        'site_key'   => $e('TURNSTILE_SITE_KEY', ''),
+        'secret_key' => $e('TURNSTILE_SECRET_KEY', ''),
     ],
     'rate' => [
         'pin_request'       => (int) $e('RATE_PIN_REQUEST', 3),

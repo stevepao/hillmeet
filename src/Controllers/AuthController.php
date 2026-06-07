@@ -90,8 +90,9 @@ final class AuthController
     public function sendPin(): void
     {
         $email = trim($_POST['email'] ?? '');
+        $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
         $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
-        $err = $this->auth->sendPin($email, $ip);
+        $err = $this->auth->sendPin($email, $ip, $turnstileToken);
         if ($err !== null) {
             $_SESSION['auth_error'] = $err;
             $_SESSION['auth_email'] = $email;

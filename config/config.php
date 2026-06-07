@@ -40,6 +40,10 @@ return [
         'client_secret' => $e('GOOGLE_CLIENT_SECRET', ''),
         'redirect_uri'  => $e('GOOGLE_REDIRECT_URI', ''),
     ],
+    'turnstile' => [
+        'site_key'   => $e('TURNSTILE_SITE_KEY', ''),
+        'secret_key' => $e('TURNSTILE_SECRET_KEY', ''),
+    ],
     'rate' => [
         'pin_request'       => (int) $e('RATE_PIN_REQUEST', 3),
         'pin_request_email' => (int) $e('RATE_PIN_REQUEST_EMAIL', 3),

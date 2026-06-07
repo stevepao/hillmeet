@@ -10,6 +10,7 @@ $pageTitle = 'Sign in with email';
 $canonicalUrl = \Hillmeet\Support\url('/auth/email');
 $content = ob_start();
 $email = $_SESSION['auth_email'] ?? '';
+$turnstileSiteKey = \Hillmeet\Support\config('turnstile.site_key', '');
 ?>
 <div class="auth-page">
   <h1>Sign in with email</h1>
@@ -28,11 +29,17 @@ $email = $_SESSION['auth_email'] ?? '';
         <label for="email">Email</label>
         <input type="email" id="email" name="email" class="input" value="<?= \Hillmeet\Support\e($email) ?>" required autocomplete="email">
       </div>
+      <?php if ($turnstileSiteKey !== ''): ?>
+        <div class="cf-turnstile" data-sitekey="<?= \Hillmeet\Support\e($turnstileSiteKey) ?>" style="margin:var(--space-4) 0;"></div>
+      <?php endif; ?>
       <button type="submit" class="btn btn-primary" style="width:100%;">Send PIN</button>
     </form>
   </div>
   <p style="margin-top:var(--space-4);"><a href="<?= \Hillmeet\Support\url('/auth/login') ?>">← Back to sign in</a></p>
 </div>
+<?php if ($turnstileSiteKey !== ''): ?>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<?php endif; ?>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';
